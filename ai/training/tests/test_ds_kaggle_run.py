@@ -247,11 +247,12 @@ def test_unsupported_annotation_formats_are_refused_clearly(tmp_path):
     assert res["status"] == "NEEDS_CONFIG" and "unsupported annotation format 'tfrecord'" in stage(res, "annotation_format")["detail"] and "voc" in res["next_steps"][0]
 
 
-def test_an_archive_only_copy_is_not_usable_and_says_why(tmp_path):
+def test_a_corrupt_archive_is_reported_precisely_not_guessed_at(tmp_path):
     root = tmp_path / "in"
-    make_rdd_copy(root / "rdd-2022", "archives_only")
+    make_rdd_copy(root / "rdd-2022", "archives_only")                      # a 4-byte "PK.." file named RDD2022.zip
     res = kr.run_dataset(cfg_for(tmp_path, root), "rdd2022")
-    assert res["status"] == "NOT_ATTACHED" and "NOT USABLE" in res["next_steps"][0] and "archive" in res["next_steps"][0]
+    assert res["status"] == "BLOCKED" and "cannot be read" in res["next_steps"][0] and "RDD2022.zip" in res["next_steps"][0]
+    assert not list((tmp_path / "work").rglob("records.jsonl")) and not (tmp_path / "work" / "extracted").exists()
 
 
 def test_rdd2022_voc_first_run_end_to_end_with_licence_conflict_and_claim_blockers(tmp_path):

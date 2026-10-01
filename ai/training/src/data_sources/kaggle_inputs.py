@@ -120,15 +120,26 @@ def mounted_dirs(root: Path, max_depth: int = 3) -> list[Path]:
     return out
 
 
+_KNOWN_EXTS = IMAGE_EXTS | TABULAR_EXTS | {".xml", ".txt", ".yaml", ".yml", ".names", ".mp4", ".avi", ".mov", ".mkv", ".mpg", ".mpeg", ".wmv", ".md", ".pdf"}
+MAX_SNIFFS = 400
+
+
 def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
-    """Bounded file census of one mount (counts by extension, annotation folders, class-name-like files). Reads names only."""
+    """Bounded census of one mount: counts by extension, files whose TYPE was sniffed from their first bytes (extension-less or unknown files are
+    often archives), archive files, top-level entries and a sample of files with sizes. Reads names and <= 512 bytes of unknown files only."""
+    from .archive_tools import ARCHIVE_KINDS, sniff_kind
+    path = Path(path)
     ext: dict[str, int] = {}
     n = 0
     xml_in_annotations = 0
-    archives = 0
+    ext_archives = 0
     tabular: list[dict] = []
+    archive_files: list[dict] = []
+    by_magic: dict[str, int] = {}
+    sample: list[dict] = []
+    sniffs = 0
     capped = False
-    for p in Path(path).rglob("*"):
+    for p in path.rglob("*"):
         if not p.is_file():
             continue
         n += 1
@@ -137,14 +148,40 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
             break
         e = p.suffix.lower()
         ext[e or "(none)"] = ext.get(e or "(none)", 0) + 1
-        archives += e in (".zip", ".tar", ".tgz", ".7z", ".rar")
+        try:
+            size = p.stat().st_size
+        except OSError:
+            size = -1
+        ext_archives += e in (".zip", ".tar", ".tgz", ".7z", ".rar")
         if e == ".xml" and "annotations" in {x.lower() for x in p.parts}:
             xml_in_annotations += 1
         if e in TABULAR_EXTS and len(tabular) < 50:
-            tabular.append({"relpath": str(p.relative_to(path)), "bytes": p.stat().st_size})
+            tabular.append({"relpath": str(p.relative_to(path)), "bytes": size})
+        kind = None
+        if e not in _KNOWN_EXTS and sniffs < MAX_SNIFFS:
+            sniffs += 1
+            kind = sniff_kind(p)
+            by_magic[kind or "unrecognised"] = by_magic.get(kind or "unrecognised", 0) + 1
+            if kind in ARCHIVE_KINDS or e in (".zip", ".tar", ".tgz", ".7z", ".rar", ".gz"):
+                archive_files.append({"relpath": str(p.relative_to(path)), "kind": kind, "bytes": size})
+        elif e in (".zip", ".tar", ".tgz", ".7z", ".rar", ".gz") and len(archive_files) < 50:
+            archive_files.append({"relpath": str(p.relative_to(path)), "kind": sniff_kind(p), "bytes": size})
+        if len(sample) < 15:
+            sample.append({"relpath": str(p.relative_to(path)), "bytes": size, "extension": e or "(none)", "content_type": kind})
+    top = []
+    for c in sorted(path.iterdir())[:30]:
+        top.append({"name": c.name, "type": "symlink" if c.is_symlink() else "dir" if c.is_dir() else "file",
+                    "bytes": c.stat().st_size if c.is_file() else None})
     return {"files": n, "capped": capped, "extensions": dict(sorted(ext.items(), key=lambda kv: -kv[1])[:12]),
-            "images": sum(v for k, v in ext.items() if k in IMAGE_EXTS), "xml_annotation_files": xml_in_annotations, "archives": archives,
-            "tabular_files": tabular}
+            "images": sum(v for k, v in ext.items() if k in IMAGE_EXTS), "xml_annotation_files": xml_in_annotations, "archives": max(ext_archives, len(archive_files)),
+            "archive_files": archive_files, "content_types_of_unknown_files": by_magic, "top_level_entries": top, "sample_files": sample, "tabular_files": tabular}
+
+
+def census_text(st: dict) -> str:
+    """One-paragraph human description of what a mount actually contains (used in every 'not usable' message)."""
+    tops = ", ".join(f"{e['name']} ({e['type']}{', ' + format(e['bytes'] / 1e6, '.1f') + ' MB' if e['bytes'] else ''})" for e in st["top_level_entries"][:8]) or "nothing"
+    return (f"it contains {st['files']} file(s); top-level entries: {tops}; extensions {st['extensions']}; "
+            f"content types of unrecognised files {st['content_types_of_unknown_files'] or 'n/a'}; archives {[(a['relpath'], a['kind']) for a in st['archive_files'][:5]] or 'none'}")
 
 
 def describe_inputs(root: Path | None = None) -> list[dict]:
@@ -161,15 +198,20 @@ def describe_inputs(root: Path | None = None) -> list[dict]:
 def _structure_problem(spec: DatasetSpec, st: dict) -> str | None:
     """Minimal usability check only. Format/layout questions are answered by the profile, never assumed here."""
     if st["files"] == 0:
-        return "the mount is empty"
+        return "the mount is empty (no files)"
     if spec.kind == "tabular":
         if not st["tabular_files"]:
-            return "no CSV/JSON(L) data file found under the mount"
+            return f"no CSV/JSON(L) data file found; {census_text(st)}"
         return None
     if st["images"] == 0:
-        arch = st.get("archives", 0)
-        return ("no image files found under the mount" + (f" ({arch} archive file(s) present: Kaggle did not extract them — attach an extracted copy)" if arch else
-                                                          " (videos only? frames must be extracted first)"))
+        if any(a["kind"] in ("zip", "tar", "gzip", "bzip2", "xz") for a in st["archive_files"]):
+            return None                                         # usable: profiled from the archive listing; extraction is an explicit opt-in
+        why = "no image files found"
+        if any(a["kind"] in ("7z", "rar") for a in st["archive_files"]):
+            why += " — the archive is 7z/rar, which is not supported (re-upload it as zip or tar)"
+        elif st["extensions"].get(".mp4") or st["extensions"].get(".avi"):
+            why += " (videos only? frames must be extracted first)"
+        return f"{why}; {census_text(st)}"
     return None
 
 
@@ -196,7 +238,7 @@ def locate(spec: DatasetSpec, root: Path | None = None, override: str | Path | N
         st = scan_tree(d)
         prob = _structure_problem(spec, st)
         if prob:
-            rejected.append({"mount": str(d), "problem": prob})
+            rejected.append({"mount": str(d), "problem": prob, "census": {k: st[k] for k in ("files", "extensions", "content_types_of_unknown_files", "archive_files", "top_level_entries", "sample_files")}})
             continue
         return Location(spec.id, True, d, "name+structure", attached=attached, structure=st)
     if rejected:
@@ -205,7 +247,8 @@ def locate(spec: DatasetSpec, root: Path | None = None, override: str | Path | N
         msg = (f"NOT FOUND: {spec.title}. No directory under {r} has a name containing any of {list(spec.name_hints)}. "
                f"Attached right now: {attached or 'nothing'}. HOW TO ATTACH: {spec.attach} EXPECTED LAYOUT: {spec.layout} "
                "(or pass an explicit path in the notebook's PATHS dict).")
-    return Location(spec.id, False, None, "", candidates_rejected=rejected, attached=attached, message=msg)
+    return Location(spec.id, False, Path(rejected[0]["mount"]) if rejected else None, "", candidates_rejected=rejected, attached=attached, message=msg,
+                    structure=rejected[0]["census"] if rejected else {})
 
 
 def _is_test_file(name: str) -> bool:

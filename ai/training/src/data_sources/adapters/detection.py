@@ -26,19 +26,15 @@ _TRAILING = re.compile(r"(\d+)$")
 _GENERIC_DIRS = {"images", "image", "imgs", "labels", "label", "annotations", "annotation", "xmls", "xml", "jpegimages", "txt", "yolo", "voc"}
 
 
-def load_class_names(path: Path) -> list[str]:
+def parse_class_names(text: str, suffix: str, label: str = "class names") -> list[str]:
     """Class names from classes.txt / obj.names / .json (list or {"names": ...}) / data.yaml (names: [..] or block list/map)."""
-    p = Path(path)
-    if not p.is_file():
-        raise SchemaMismatch(f"class names file not found: {p}")
-    text = p.read_text(encoding="utf-8")
-    if p.suffix == ".json":
+    if suffix == ".json":
         d = json.loads(text)
         names = d.get("names", d) if isinstance(d, dict) else d
         if isinstance(names, dict):
             return [names[k] for k in sorted(names, key=lambda x: int(x))]
         return [str(n) for n in names]
-    if p.suffix in (".yaml", ".yml"):
+    if suffix in (".yaml", ".yml"):
         m = re.search(r"^names\s*:\s*\[(.*?)\]", text, re.M | re.S)
         if m:
             return [x.strip().strip("'\"") for x in m.group(1).split(",") if x.strip()]
@@ -53,8 +49,15 @@ def load_class_names(path: Path) -> list[str]:
                     items.append(line.split(":", 1)[1].strip().strip("'\""))
             if items:
                 return items
-        raise SchemaMismatch(f"could not read 'names' from {p.name}; provide a .txt (one class per line) or .json list instead")
+        raise SchemaMismatch(f"could not read 'names' from {label}; provide a .txt (one class per line) or .json list instead")
     return [ln.strip() for ln in text.splitlines() if ln.strip()]
+
+
+def load_class_names(path: Path) -> list[str]:
+    p = Path(path)
+    if not p.is_file():
+        raise SchemaMismatch(f"class names file not found: {p}")
+    return parse_class_names(p.read_text(encoding="utf-8"), p.suffix, p.name)
 
 
 class DetectionDatasetAdapter:

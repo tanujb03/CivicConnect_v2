@@ -32,12 +32,13 @@ from ai.training.src.io_utils import read_jsonl
 
 from . import prepare as prep
 from .adapters.detection import FORMATS, load_class_names
+from .archive_tools import ArchiveError, extract_useful, sniff_kind
 from .canonical import ImageRecord
 from .card_schema import SourceCard, check_terms, load_card
 from .column_roles import TaskPolicy
 from .errors import DataSourceError, TermsNotAccepted
 from .image_audit import annotation_audit, group_audit, image_files_audit, video_frame_relationships
-from .image_profile import profile_image_dataset
+from .image_profile import profile_archive, profile_image_dataset
 from .kaggle_inputs import (
     SPECS,
     DatasetSpec,
@@ -79,6 +80,9 @@ class RunConfig:
     audit_max_files: int = 50_000
     audit_max_near_dup_images: int = 6000
     run_provider_eval: bool = False
+    extract: dict[str, bool] = field(default_factory=dict)       # id -> True: unpack the useful members of an archive into /kaggle/working/extracted/<id> (an explicit COPY inside Kaggle)
+    archive: dict[str, str] = field(default_factory=dict)        # id -> relative path of the archive to use when a mount holds several
+    extract_include_videos: bool = False
     retrieved_at: str | None = None
     meta: dict = field(default_factory=dict)                     # e.g. {"repo_url":..., "repo_ref":..., "repo_commit":...}: recorded in SUMMARY.json
 
@@ -333,13 +337,72 @@ def run_image_dataset(cfg: RunConfig, dataset_id: str) -> dict:
     loc = locate(spec, cfg.input_root, cfg.paths.get(dataset_id))
     res["location"] = loc.to_dict()
     if not loc.found:
-        res["status"] = "NOT_ATTACHED"
-        _stage(res, "locate", "blocked", loc.message)
+        res["status"] = "BLOCKED" if loc.candidates_rejected or loc.path else "NOT_ATTACHED"      # BLOCKED: attached but unusable (census in the detail)
+        _stage(res, "locate", "blocked", {"message": loc.message, "mount": str(loc.path) if loc.path else None, "census": loc.structure or None})
         res["next_steps"].append(loc.message)
         return res
     root = loc.path
     assert root is not None
-    _stage(res, "locate", "ok", {"path": str(root), "how": loc.how, "files": loc.structure["files"], "images": loc.structure["images"], "archives": loc.structure["archives"]})
+    _stage(res, "locate", "ok", {"path": str(root), "how": loc.how, "files": loc.structure["files"], "images": loc.structure["images"], "archives": loc.structure["archives"],
+                                 "top_level_entries": loc.structure["top_level_entries"], "extensions": loc.structure["extensions"],
+                                 "content_types_of_unknown_files": loc.structure["content_types_of_unknown_files"]})
+    # ---- 0. a mount that holds an archive instead of files: list it (no extraction); unpack ONLY on explicit request
+    if loc.structure["images"] == 0:
+        arcs = [a for a in loc.structure["archive_files"] if a["kind"] in ("zip", "tar", "gzip", "bzip2", "xz")]
+        want = cfg.archive.get(dataset_id)
+        if want:
+            arcs = [a for a in arcs if a["relpath"] == want] or [{"relpath": want, "kind": sniff_kind(root / want), "bytes": (root / want).stat().st_size if (root / want).is_file() else 0}]
+        if len(arcs) != 1:
+            res["status"] = "NEEDS_CONFIG"
+            _stage(res, "archive_selection", "blocked", f"{len(arcs)} candidate archives {[(a['relpath'], a['kind'], a['bytes']) for a in arcs]}")
+            res["next_steps"].append(f"Several archives in the mount: set ARCHIVE['{dataset_id}'] to the relative path of the one to use.")
+            return res
+        arc = root / arcs[0]["relpath"]
+        try:
+            aprof = profile_archive(arc)
+        except ArchiveError as e:
+            res["status"] = "BLOCKED"
+            _stage(res, "archive_listing", "blocked", str(e))
+            res["next_steps"].append(str(e))
+            return res
+        _write_json(d / "image_profile.json", aprof)
+        res["artifacts"].append(f"{dataset_id}/image_profile.json")
+        _stage(res, "archive_listing", "ok", {"archive": arcs[0]["relpath"], "kind": arcs[0]["kind"], "bytes": arcs[0]["bytes"], "n_images_inside": aprof["n_images"],
+                                              "format_candidates_NOT_DECISIONS": aprof["format_candidates"], "extensions": aprof["extensions"], "directory_outline": aprof["directory_outline"],
+                                              "class_name_files": aprof["class_name_files"], "class_name_previews": aprof["class_name_previews"], "n_videos": aprof["n_videos"],
+                                              "split_directories_images": aprof["split_directories_images"], "country_markers_images": aprof["country_markers_images"],
+                                              "sample_members": aprof["sample_relative_paths"], "warnings": aprof["warnings"], "suggested_config_NOT_APPLIED": aprof["suggested_config_NOT_APPLIED"]})
+        if not aprof["n_images"]:
+            res["status"] = "BLOCKED"
+            res["next_steps"].append(f"The archive {arcs[0]['relpath']} contains no image files (extensions {aprof['extensions']}).")
+            return res
+        dest = Path(cfg.work_dir) / "extracted" / dataset_id
+        if not cfg.extract.get(dataset_id):
+            res["status"] = "NEEDS_CONFIG"
+            _stage(res, "extraction", "blocked", "the images are inside an archive; nothing was extracted (the notebook never copies data unless you ask)")
+            res["next_steps"].append(f"The data is an archive ({arcs[0]['kind']}, {arcs[0]['bytes'] / 1e9:.2f} GB, {aprof['n_images']} images inside). Set EXTRACT['{dataset_id}'] = True to unpack ONLY images + "
+                                     f"annotation/class files into {dest} (a copy inside Kaggle's working disk, never bundled; videos skipped unless EXTRACT_VIDEOS=True).")
+            return res
+        marker = dest / ".extracted.json"
+        stamp = {"archive": arcs[0]["relpath"], "bytes": arcs[0]["bytes"], "videos": cfg.extract_include_videos}
+        if marker.is_file() and json.loads(marker.read_text(encoding="utf-8")) == stamp:
+            _stage(res, "extraction", "ok", {"reused": str(dest), **stamp})
+        elif dest.exists() and any(dest.iterdir()):
+            res["status"] = "BLOCKED"
+            _stage(res, "extraction", "blocked", f"{dest} already exists with different content; remove it manually or choose another work_dir (the notebook never deletes data)")
+            res["next_steps"].append(f"Remove {dest} (it does not match this archive) and re-run.")
+            return res
+        else:
+            try:
+                info = extract_useful(arc, dest, include_videos=cfg.extract_include_videos)
+            except ArchiveError as e:
+                res["status"] = "BLOCKED"
+                _stage(res, "extraction", "blocked", str(e))
+                res["next_steps"].append(str(e))
+                return res
+            marker.write_text(json.dumps(stamp), encoding="utf-8")
+            _stage(res, "extraction", "ok", info)
+        root = dest
     # ---- 1. discover + inspect: facts only; nothing below this line depends on an assumed layout
     prof = profile_image_dataset(root)
     _write_json(d / "image_profile.json", prof)
