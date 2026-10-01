@@ -1,0 +1,64 @@
+# CivicConnect v2 — `ai/`
+
+AI training, evaluation and production inference for the frozen V1 system design (`docs/CivicConnect_v2_V1_System_Design.md`, §11–14, §37–40, §51A.5/7/8/15, §57–58). **Owner: Tanuj. Backend wiring: with Parth** (see `INTEGRATION_HANDOFF.md`).
+
+> Everything trained or measured here uses **synthetic data**. No result is a real-world accuracy claim. Provider (OpenAI) code paths have **not** been run live from the authoring environment.
+
+## Layout (per `docs/COMMON_DIRECTORY_STRUCTURE.md`)
+```
+ai/
+├── inference/          PRODUCTION adapters — importable by the FastAPI backend (pydantic + numpy + httpx only)
+│   ├── service.py        AIService facade (single entry point)
+│   ├── schemas.py        Pydantic models mirroring 51A.5/7/8/15 (+ additive fields)
+│   ├── provider.py       AIProvider protocol · providers/{openai_provider,fake}.py
+│   ├── intake/ fusion/ triage/ resolution/ analytics/ copilot/   AI-1 … AI-6
+│   ├── local/            numpy-only B0 classifier loader + shared featurizer
+│   ├── prompts.py        versioned prompts + JSON schemas
+│   ├── config/           taxonomy.v1.json (+TAXONOMY.md), triage_rules, fusion_policy, ai_policy
+│   └── tests/            unit/schema/fixture/smoke tests
+├── training/           Kaggle notebooks + scripts (NEVER imported by inference)
+├── evaluation/         datasets (synthetic), metrics, run_eval.py, reports, regression floors
+└── artifacts/          generated models/data — large files gitignored; manifests/cards/fixtures tracked
+```
+`ai/pyproject.toml` ships **only** `ai.inference` (`pip install ./ai`); training/evaluation cannot be imported by the backend.
+
+## Capability strategy (no separate model per capability)
+| | Approach | Trained here? |
+|---|---|---|
+| AI-1 intake | provider multimodal structured output → taxonomy validation → local B0 cross-check; **local B0 fallback** + manual-entry floor | B0 (TF-IDF char n-gram + logistic regression, numpy inference) |
+| AI-2 fusion | deterministic gate (category/radius/window) → semantic (embeddings if available, else lexical) + geo + time + category → calibrated logistic score | weights only (synthetic pairs, non-negative) |
+| AI-3 triage | deterministic priority/SLA (§36); AI *recommends* severity (bounded, never lowers safety-critical) | no |
+| AI-4 resolution | provider multimodal comparison; **flag-only**, `autonomous_closure_allowed=False` | no |
+| AI-5 analytics | backend facts → validated explanation (numbers verified, template fallback) | no |
+| AI-6 copilot | whitelisted read-only tools, scope enforced, answer/citation grounding; no DB credentials | no |
+
+## Quick start
+```bash
+pip install -e "ai[training,dev]"
+python -m pytest ai -q -rs                       # all tests runnable offline
+python -m ai.training.src.build_dataset --out ai/artifacts/datasets/synthetic_v1 --eval-out ai/evaluation/datasets
+python -m ai.training.src.train_text_classifier --data ai/artifacts/datasets/synthetic_v1 --out ai/artifacts/civic_text_b0
+```
+```python
+from ai.inference.service import AIService
+from ai.inference.schemas import IntakeRequest
+ai = AIService.from_env({"AI_LOCAL_CLASSIFIER_PATH": "ai/artifacts/civic_text_b0/<version>"})   # no provider needed
+print(ai.analyze_intake(IntakeRequest(text="सड़क पर बड़ा गड्ढा है")).proposal)
+```
+Kaggle: see `training/README.md`. Backend: see `INTEGRATION_HANDOFF.md`. Taxonomy: `inference/config/TAXONOMY.md` (**draft — needs Tanuj + Parth review before DB seeding**).
+
+## Current measured results (synthetic, held-out template families; see `evaluation/reports/`)
+| System | Result | Notes |
+|---|---|---|
+| B0 local intake | category 0.616, subcategory 0.556 (95% CI 0.489–0.620), macro-F1 0.530, ECE 0.068 | 5-fold family-grouped CV: category 0.669 ± 0.091, subcategory 0.572 ± 0.102 — **weak on unseen wording by design of the test**; fallback only |
+| Fusion (calibrated, lexical) | AUC 0.984, gate recall 1.0 | distance dominates on synthetic pairs; lexical semantic weight is ~0 → provider embeddings needed |
+| Fusion (uncalibrated prior) | AUC 0.930 | for comparison |
+| Provider intake / embeddings / transcription | **not run** | needs credentials + validated model IDs |
+| B1 encoder | **not run** | needs Kaggle (GPU/Internet) |
+
+## Test status (last run: 250 passed, 3 skipped, ~42 s)
+| Category | Tests | Status |
+|---|---|---|
+| **Executed offline, passing** | 250: taxonomy integrity, schemas/contract shapes, featurizer/language, local classifier + artifact validation, triage, intake (incl. all fallbacks), OpenAI provider via **mock transport**, fusion, resolution, analytics grounding, copilot safety, service smoke, production-separation, dataset generator/splits, B0 trainer (sklearn↔numpy parity), fusion calibrator, B1 *pipeline logic* (fake encoder), evaluation metrics/harness/regression floors, notebooks (structure + **end-to-end execution of all three** — notebook 02 with a CI-only fake encoder) | ✅ |
+| **Require Kaggle (GPU / Internet / sentence-transformers)** | `training/tests/test_b1_logic.py::test_b1_with_a_real_sentence_encoder` (`-m requires_kaggle`, `RUN_B1_TESTS=1`) and the real B1 notebook run | ⏭ skipped here |
+| **Require provider credentials** | `inference/tests/test_live_provider.py` (`-m requires_provider`): live embeddings + live structured intake; plus `run_eval --system provider/hybrid` and fusion `--semantic-mode provider` | ⏭ skipped here — OpenAI path **never run live** |

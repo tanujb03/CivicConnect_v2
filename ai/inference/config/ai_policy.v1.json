@@ -1,0 +1,19 @@
+{
+  "policy_version": "1.0.0-draft",
+  "notes": "Thresholds and limits are configuration (admin-adjustable per A13). Values here are conservative defaults, not tuned on real data.",
+  "intake": {
+    "max_text_chars": 4000,
+    "max_images": 6,
+    "max_audio_clips": 1,
+    "max_image_bytes": 8000000,
+    "max_audio_bytes": 25000000,
+    "low_confidence_threshold": 0.55,
+    "local_disagreement_confidence_cap": 0.6,
+    "local_disagreement_min_local_prob": 0.6,
+    "title_max_chars": 80
+  },
+  "triage": {"min_ai_confidence": 0.6, "max_severity_divergence": 1},
+  "resolution": {"min_ai_confidence": 0.5},
+  "provider": {"timeout_s": 30, "max_retries": 1},
+  "copilot": {"max_tool_calls": 4, "max_rows": 50, "max_query_chars": 1000}
+}

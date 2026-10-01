@@ -1,0 +1,33 @@
+# Model card — civic_text_b0_fixture fixture-1
+
+> **SYNTHETIC-DATA MODEL.** Trained only on template-generated reports. Do not quote its metrics as real-world accuracy.
+
+## What it is
+- Kind: `tfidf_char_ngram_logreg` (character n-gram TF-IDF + multinomial logistic regression, numpy inference)
+- Labels: 27 subcategories (`category/subcategory`), taxonomy `1.0.0-draft` (DRAFT_REQUIRES_REVIEW)
+- Vectoriser: `char_wb` n-grams [2, 4], 1000 features, normaliser `civic-norm/1`
+- Calibration: temperature scaling, T=0.7
+- Intended use: offline/unavailable-provider **fallback** for AI-1 intake, cross-check of the provider answer, evaluation baseline.
+- Not intended for: autonomous decisions, severity/priority, any real-world accuracy claim.
+
+## Training
+- Dataset: in-memory-fixtur… (see DATASET_MANIFEST.json); seed 7
+- Hyperparameters: {"C": 3.0, "ngram_range": [2, 4], "min_df": 3, "max_features": 1000, "solver": "lbfgs", "seed": 7, "refit_on_trainval": false}
+- Git SHA: `fba7ffe39c7810c28a2448824004068c87a83310`; created 2026-10-01T11:46:14+00:00; runtime {"python": "3.11.15", "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39", "kaggle": false, "numpy": "2.4.6", "sklearn": "1.9.1", "scipy": "1.17.1", "pydantic": "2.13.4"}
+
+## Metrics (synthetic validation split; unseen template families)
+- note: fixture artifact for tests; not a quality model
+- val_accuracy: 0.2222
+- val_macro_f1: 0.2105
+- train_accuracy: 0.9861
+- val_category_accuracy: 0.4259
+- c_sweep_val_macro_f1: {'3.0': 0.2105}
+
+Held-out *test* metrics are produced by `ai/evaluation/run_eval.py` and stored in the evaluation report.
+
+## Limitations
+- Trained and evaluated on SYNTHETIC template-generated reports only; metrics do not estimate real-world accuracy.
+- Char n-gram model: no cross-lingual transfer; paraphrases that share no characters with training phrases may fail.
+- Hindi/Marathi/Hinglish phrasing is hand-written and unreviewed by native speakers.
+- Calibration (temperature) was fitted on synthetic validation data; probabilities are optimistic for real text.
+- Not suitable as the sole basis for any workflow decision; proposals always require human confirmation.

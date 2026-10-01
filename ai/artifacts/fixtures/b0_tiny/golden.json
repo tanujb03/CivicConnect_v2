@@ -1,0 +1,44 @@
+[
+  {
+    "text": "there is a big pothole in the road near the school",
+    "label_id": "roads/pothole",
+    "abstained": false,
+    "subcategory_probability": 0.7437
+  },
+  {
+    "text": "paani ki pipe leak ho rahi hai aur road par paani beh raha hai",
+    "label_id": "water_supply/pipe_leakage",
+    "abstained": false,
+    "subcategory_probability": 0.802
+  },
+  {
+    "text": "रस्त्यावर मोठा खड्डा पडला आहे",
+    "label_id": "roads/pothole",
+    "abstained": false,
+    "subcategory_probability": 0.5207
+  },
+  {
+    "text": "the garbage bin is overflowing onto the street",
+    "label_id": "sanitation/garbage_overflow",
+    "abstained": false,
+    "subcategory_probability": 0.8084
+  },
+  {
+    "text": "street light band hai aur road par andhera hai",
+    "label_id": "street_lighting/light_not_working",
+    "abstained": false,
+    "subcategory_probability": 0.69
+  },
+  {
+    "text": "",
+    "label_id": "parks_trees/fallen_tree",
+    "abstained": true,
+    "subcategory_probability": 0.0548
+  },
+  {
+    "text": "zzzz qqqq xxxx",
+    "label_id": "parks_trees/fallen_tree",
+    "abstained": true,
+    "subcategory_probability": 0.0548
+  }
+]

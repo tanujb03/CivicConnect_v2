@@ -1,0 +1,26 @@
+{
+  "policy_version": "1.0.0-draft",
+  "candidate_generation": {
+    "radius_m": 150,
+    "time_window_days": 30,
+    "same_category_required": true,
+    "max_candidates": 50,
+    "note": "Backend runs these bounds in PostGIS/pgvector (Section 20/37). The adapter re-checks them so out-of-policy candidates can never be scored."
+  },
+  "signals": {
+    "geospatial": "max(0, 1 - distance_m / radius_m)",
+    "temporal": "max(0, 1 - age_hours / (24 * time_window_days))",
+    "category": "1.0 same subcategory, 0.5 same category different subcategory, 0.0 otherwise",
+    "semantic": "cosine similarity of embeddings when both are present, else char-n-gram lexical cosine"
+  },
+  "prior_weights": {
+    "status": "uncalibrated_prior",
+    "bias": -3.5,
+    "semantic": 2.0,
+    "geospatial": 2.5,
+    "temporal": 0.5,
+    "category": 1.5
+  },
+  "thresholds": {"possible_duplicate": 0.8, "related": 0.5},
+  "max_matches": 5
+}
