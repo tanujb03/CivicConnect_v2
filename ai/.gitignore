@@ -1,0 +1,51 @@
+# --- CivicConnect AI: large/generated artifacts are never committed (system design Section 49) ---
+# Everything under ai/artifacts is ignored by default...
+artifacts/**
+!artifacts/
+!artifacts/README.md
+# ...except small, reviewable files: manifests, model cards, eval reports, fusion weights, fixtures.
+!artifacts/*/
+!artifacts/*/*/
+!artifacts/**/manifest.json
+!artifacts/**/MODEL_CARD.md
+!artifacts/**/fusion_weights.json
+!artifacts/**/b1_report.json
+!artifacts/**/DATASET_MANIFEST.json
+!artifacts/fixtures/
+!artifacts/fixtures/**
+# Large binaries are ignored even inside tracked folders (the tiny fixture is allowed above).
+artifacts/civic_text_b0/**/weights.npz
+artifacts/civic_text_b0/**/vocab.json
+artifacts/datasets/**/*.jsonl
+*.onnx
+*.safetensors
+*.pt
+*.pth
+*.joblib
+*.pkl
+*.zip
+
+# local env / secrets
+.env
+.env.*
+kaggle.json
+
+# python / notebooks
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# stale local artifacts from superseded runs (dataset hash no longer matches the repo); kept on disk, never committed.
+# Must stay below the artifacts/ negation rules above so they take precedence.
+artifacts/civic_text_b0/0.1.0+e0795fc3/
+artifacts/civic_text_b0/0.1.0+f1adbd3f/
+artifacts/fusion_calibrator/0.1.0+e0795fc3/
+artifacts/fusion_calibrator/0.1.0+f1adbd3f/
+
+# real/external datasets and anything derived from them: NEVER committed (see training/src/data_sources cards)
+artifacts/real_data/**

@@ -1,0 +1,109 @@
+{
+  "dataset": "civicconnect-synthetic-civic-reports",
+  "version": "1.0.0",
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC DATA. Generated from hand-written templates for model development and regression testing. Not real citizen reports. Metrics measured on it do not estimate real-world accuracy. Hindi/Marathi text requires native-speaker review.",
+  "generator_version": "synthetic-civic/1.0",
+  "params": {
+    "seed": 42,
+    "test_fold": 4,
+    "n_per_family": {
+      "train": 10,
+      "val": 6,
+      "test": 2
+    },
+    "pairs": {
+      "train": 4000,
+      "val": 1000,
+      "test": 300
+    }
+  },
+  "split_design": {
+    "unit": "template family (core phrase) and place pool",
+    "family_indices": {
+      "train": [
+        0,
+        1,
+        2
+      ],
+      "val": [
+        3
+      ],
+      "test": [
+        4
+      ]
+    },
+    "place_indices": {
+      "train": [
+        0,
+        1,
+        2,
+        5,
+        6,
+        7,
+        10,
+        11,
+        12,
+        15,
+        16,
+        17
+      ],
+      "val": [
+        3,
+        8,
+        13,
+        18
+      ],
+      "test": [
+        4,
+        9,
+        14,
+        19
+      ]
+    },
+    "leakage_note": "Core issue phrases and place names are disjoint across splits. Frames, prefixes, suffixes and noise processes are shared, as are the languages and the label taxonomy."
+  },
+  "languages": [
+    "en",
+    "hi",
+    "mr",
+    "hi-Latn"
+  ],
+  "files": {
+    "train.jsonl": {
+      "rows": 3240,
+      "sha256": "2779b3e24546c3ec7303e8fe8114335b8d2ba46ac50737dc57a941839e57b3a1"
+    },
+    "pairs_train.jsonl": {
+      "rows": 4000,
+      "sha256": "e30c0c0da8466cd2426704532c41f70de838feb6447cf07bf7f4665d4f9d9bb1"
+    },
+    "val.jsonl": {
+      "rows": 648,
+      "sha256": "c7c93d0aeaf7798f0314cf5a09037e77f1101a26065d128b32849db86da2560b"
+    },
+    "pairs_val.jsonl": {
+      "rows": 1000,
+      "sha256": "b5dc7c40a40a45ab017f8e53cbb5780930f901da26c4776decdc39e378df3d36"
+    },
+    "test.jsonl": {
+      "rows": 216,
+      "sha256": "3c749d0d432293e346776d74d5093fefaf8d4f60b7104df7111d9c4a28ab4ca6"
+    },
+    "pairs_test.jsonl": {
+      "rows": 300,
+      "sha256": "503f4ddc08aa5e234b252d161c9011694bdb30971dc2a58281920798253bd592"
+    }
+  },
+  "created_at": "2026-10-01T11:46:00+00:00",
+  "git_sha": "fba7ffe39c7810c28a2448824004068c87a83310",
+  "runtime": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+    "kaggle": false,
+    "numpy": "2.4.6",
+    "sklearn": "1.9.1",
+    "scipy": "1.17.1",
+    "pydantic": "2.13.4"
+  }
+}

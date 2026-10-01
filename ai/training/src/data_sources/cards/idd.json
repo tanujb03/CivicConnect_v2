@@ -1,0 +1,65 @@
+{
+  "id": "idd",
+  "name": "IIIT-Hyderabad Indian Driving Dataset (IDD) and variants — OPTIONAL / FUTURE",
+  "kind": "real_public",
+  "publisher": "IIIT Hyderabad (INSAAN / INAI)",
+  "landing_url": "https://insaan.iiit.ac.in/datasets/",
+  "official_source_url": "https://insaan.iiit.ac.in/datasets/",
+  "reference": "IDD / IDD Multimodal / IDD-3D",
+  "priority": "future",
+  "role_summary": "Future extension for Indian road-scene, device and multimodal research (stereo camera + GPS + LiDAR + OBD). NOT a V1 dependency; no adapter.",
+  "version_note": "Per search summaries (secondary): IDD launched 2018; >46,000 annotated images and >12,000 LiDAR frames reported; IDD Multimodal includes front stereo images at 15 fps, GPS at 15 Hz, 16-channel LiDAR and OBD; IDD-3D reported under CC BY 4.0. Which variants and licences apply to which download must be read at the source.",
+  "data_access": {
+    "method": "Registration/download at the INSAAN site (not automated; not planned for V1)"
+  },
+  "license": {
+    "name": "UNVERIFIED — described as open and free in a secondary source; IDD-3D reported CC BY 4.0",
+    "url": null,
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary",
+        "reliability": "secondary",
+        "note": "'open and free' (general IDD); IDD-3D variant 'available via a CC BY 4.0 license'.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://insaan.iiit.ac.in/datasets/",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Per the dataset page / paper (not read).",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "Different variants may have different terms."
+    ]
+  },
+  "subset_used": "None (future).",
+  "intended_use": [],
+  "restrictions": [
+    "Not used in V1. Review terms per variant before any future use."
+  ],
+  "supports": [],
+  "does_not_support": [
+    {
+      "capability": "Any V1 AI capability",
+      "why": "Driving-scene perception data (autonomy research), not civic-issue reports; kept as a documented future extension for device/multimodal research (§62: dashcam, sensors)."
+    }
+  ],
+  "known_limitations": [
+    "No adapter, mapping or evaluation task exists by design."
+  ],
+  "privacy_notes": [
+    "Road scenes may contain people and number plates."
+  ],
+  "expected_schema_notes": [],
+  "adapter": null,
+  "mapping_id": null,
+  "citation": null,
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

@@ -1,0 +1,96 @@
+{
+  "id": "mumbai_nashik_road_surface",
+  "name": "Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg, version 2)",
+  "kind": "real_public",
+  "publisher": "Authors of the Data in Brief article (names not captured); hosted on Mendeley Data",
+  "landing_url": "https://data.mendeley.com/datasets/tj2m7zz4rg/2",
+  "official_source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8933537/",
+  "reference": "doi:10.17632/tj2m7zz4rg.2",
+  "identity_status": "CONFIRMED_BY_USER",
+  "priority": "secondary",
+  "role_summary": "PRIORITY real Maharashtra/Indian visual grounding: AI-1 image evaluation at category level (potholes where explicitly labelled), infrastructure-scene coverage and demo realism. Claims limited to what the actual labels support.",
+  "version_note": "Version 2 of Mendeley Data dataset tj2m7zz4rg (https://data.mendeley.com/datasets/tj2m7zz4rg/2, doi 10.17632/tj2m7zz4rg.2; Data in Brief article PMC8933537). The repository owner confirms this is the exact dataset intended. Reported contents (owner-relayed, not read from the record by this tooling): 8,484 RGB images and 13 videos from Mumbai and Nashik under different road and weather conditions, showing potholes, speed breakers, roadside barriers and paved/unpaved roads. Whether the images carry per-image labels, folder labels or bounding boxes is NOT established: profile the files before any evaluation. A different Kaggle dataset ('Indian Roads Dataset') is explicitly NOT added.",
+  "data_access": {
+    "method": "Not hosted on Kaggle by its authors: download the Mendeley files yourself and upload them as a private Kaggle Dataset (so they are read in place from /kaggle/input), keeping the attribution/licence text. This repository never downloads or copies the data.",
+    "video": "Videos must be converted to frames outside the repository, keeping the video id in the file/dir name, so holdouts keep whole videos together."
+  },
+  "license": {
+    "name": "CC BY 4.0 — the source is REPORTED (by the repository owner) to currently state this; not read by this tooling, so UNVERIFIED here",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "Mendeley Data record tj2m7zz4rg (reported by the repository owner)",
+        "reliability": "secondary",
+        "note": "The owner reports the primary source states CC BY 4.0. Recorded as relayed (secondary), NOT as a primary read: to verify, open the record, quote the licence line and date, add it as a primary evidence entry and set status VERIFIED_PRIMARY with verified_on.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "web search summary of the PMC article",
+        "reliability": "secondary",
+        "note": "Describes content and DOI; no licence in the summary.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://data.mendeley.com/... / https://pmc.ncbi.nlm.nih.gov/...",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Attribution required (CC BY 4.0 as reported): cite the Data in Brief article and the Mendeley record, wording taken from the record itself.",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "Read the licence on the Mendeley record, then update this card with a primary evidence entry before any publishable claim.",
+      "If you re-upload the data as a private Kaggle Dataset, keep the original attribution and licence text with it and record the copy's provenance (who uploaded, when, from which record version)."
+    ]
+  },
+  "subset_used": "To be chosen after confirming identity and profiling the folder structure.",
+  "intended_use": [
+    "evaluation",
+    "demo"
+  ],
+  "restrictions": [
+    "Licence reported as CC BY 4.0 but not verified in this repo: no publishable/evaluation claim until the card has primary licence evidence.",
+    "Do not commit images/videos; process them in place from /kaggle/input."
+  ],
+  "supports": [
+    {
+      "capability": "AI-1",
+      "how": "Maharashtra road-surface scenes: category-level checks ('damaged road surface' → category roads) and demo realism for the road/surface modality.",
+      "caveats": [
+        "Labels reported at folder/scene level (paved/unpaved/video; damaged, speed breaker, water), not per-pothole boxes: pothole-subcategory evaluation only if the files carry explicit pothole labels.",
+        "Speed breakers, paved/unpaved and water-on-road are NOT taxonomy v1 issues (mapped out_of_scope, no new taxonomy category).",
+        "Images from the same video/session are near-identical: hold out whole groups."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-4, text, multilingual, severity, non-road categories",
+      "why": "Road-surface imagery only."
+    },
+    {
+      "capability": "Pothole detection with boxes",
+      "why": "No bounding-box annotations reported."
+    }
+  ],
+  "known_limitations": [
+    "Two cities (Mumbai, Nashik); capture period reported as 2020–2021 (secondary).",
+    "Label granularity (per-image, folder-level, boxes) unverified: nothing is claimed beyond what profiling shows.",
+    "Videos and the images extracted from them (if any) are near-duplicates: whole videos/sequences must be held out together."
+  ],
+  "privacy_notes": [
+    "Road imagery may show people and number plates."
+  ],
+  "expected_schema_notes": [
+    "Folder-labelled imagery expected: use `profile-images`, then `prepare --format folder` with an explicit group rule."
+  ],
+  "adapter": "detection",
+  "mapping_id": "mumbai_nashik_to_civic",
+  "citation": "Data in Brief — Dataset of road surface images with seasons for machine learning applications (PMC8933537); Mendeley doi 10.17632/tj2m7zz4rg.2 (from search results; verify).",
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

@@ -1,0 +1,77 @@
+{
+  "mapping_id": "rdd2020_to_civic",
+  "mapping_version": "0.1.1-draft",
+  "source_id": "rdd2020",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_CLASSES_FROM_PROJECT_README",
+  "provenance_note": "Classes D00/D10/D20/D40 were read from the RDD2022 project README. Only D40 (pothole) has an exact taxonomy v1 equivalent; the crack classes are mapped to category 'roads' only because taxonomy v1 has no crack subcategory (taxonomy review item: consider a 'road_surface_cracks' subcategory). (Same classes in RDD2020; class list per secondary sources.) v0.1.1: also accepts the descriptive class NAMES 'pothole' and '(longitudinal|transverse|alligator) crack' because third-party re-uploads may label classes by name instead of code; any other name stays unmapped and is reported.",
+  "match_fields": [
+    "class_code"
+  ],
+  "semantics": "equality on the annotation class code",
+  "rules": [
+    {
+      "id": "rdd-d40",
+      "when": {
+        "class_code": "D40"
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": "pothole"
+    },
+    {
+      "id": "rdd-d00",
+      "when": {
+        "class_code": "D00"
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": null,
+      "note": "longitudinal crack: no taxonomy subcategory"
+    },
+    {
+      "id": "rdd-d10",
+      "when": {
+        "class_code": "D10"
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": null,
+      "note": "transverse crack: no taxonomy subcategory"
+    },
+    {
+      "id": "rdd-d20",
+      "when": {
+        "class_code": "D20"
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": null,
+      "note": "alligator crack: no taxonomy subcategory"
+    },
+    {
+      "id": "rdd20-name-pothole",
+      "when": {
+        "class_code": {
+          "regex": "^potholes?$"
+        }
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": "pothole",
+      "note": "descriptive class NAME 'pothole' (README names D40 'Pothole'): for re-uploads whose labels carry names instead of codes"
+    },
+    {
+      "id": "rdd20-name-crack",
+      "when": {
+        "class_code": {
+          "regex": "^(longitudinal|transverse|alligator)[ _-]?cracks?$"
+        }
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": null,
+      "note": "descriptive crack class names (README names D00/D10/D20): no taxonomy subcategory"
+    }
+  ]
+}

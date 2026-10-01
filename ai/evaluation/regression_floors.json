@@ -1,0 +1,14 @@
+{
+  "_note": "Regression FLOORS (not targets) set a little below the first measured SYNTHETIC held-out results. They guard against silent regressions in the pipeline; they say nothing about real-world accuracy. Tighten only with evidence.",
+  "intake_b0_local": {
+    "category_accuracy_min": 0.55,
+    "subcategory_accuracy_min": 0.48,
+    "subcategory_macro_f1_min": 0.45,
+    "calibration_ece_category_max": 0.12,
+    "structured_output_validity_min": 1.0
+  },
+  "fusion_calibrated_lexical": {
+    "auc_roc_min": 0.95,
+    "gate_recall_of_true_duplicates_min": 0.98
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "id": "rdd2020",
+  "name": "RDD2020 — Road Damage Dataset (India, Japan, Czech Republic)",
+  "kind": "real_public",
+  "publisher": "Arya et al. (University of Tokyo / sekilab) — released on Mendeley Data",
+  "landing_url": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
+  "official_source_url": "https://github.com/sekilab/RoadDamageDetector",
+  "reference": "doi:10.17632/5ty2wb6gvg.1",
+  "priority": "secondary",
+  "role_summary": "Indian road-damage visual evaluation (India subset) — earlier release; same VOC format as RDD2022; DIFFERENT, more restrictive licence reported.",
+  "version_note": "Per search summaries (secondary): 26,336 images from India, Japan and the Czech Republic with >31,000 damage instances; four classes (D00 longitudinal crack, D10 transverse crack, D20 alligator crack, D40 pothole); subsets train / test1 / test2, each with India/Japan/Czech sub-directories of images and annotations; captured with vehicle-mounted smartphones. Version 1 published 2021-03-18.",
+  "data_access": {
+    "method": "Mendeley Data (not automated here)",
+    "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2020 INDIA subset. Record the copy's provenance; the reported CC BY-NC 3.0 licence comes from a secondary source and is NOT verified."
+  },
+  "license": {
+    "name": "Attribution-NonCommercial 3.0 Unported (CC BY-NC 3.0) for version 1 — per search summary of the Mendeley record; UNVERIFIED",
+    "url": "https://creativecommons.org/licenses/by-nc/3.0/",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary of the Mendeley Data record",
+        "reliability": "secondary",
+        "note": "States version 1 is licensed Attribution-NonCommercial 3.0 Unported.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [
+      "RDD2022 (a different, later release of the same group) is reported as CC BY 4.0 / CC BY-SA 4.0. The two releases do NOT share a licence: never carry assumptions from one card to the other."
+    ],
+    "attribution": "Cite the RDD2020 Data in Brief article and the Mendeley record (exact wording to be taken from the record).",
+    "share_alike": false,
+    "commercial_use": "NOT permitted if the NonCommercial licence is confirmed",
+    "notes": [
+      "NonCommercial: if this licence is confirmed, use is limited to non-commercial research/education — decide whether that is compatible with CivicConnect's intended use BEFORE adopting it."
+    ]
+  },
+  "subset_used": "India subset only (train split; test1/test2 are unannotated). Hold out by index block.",
+  "intended_use": [
+    "evaluation"
+  ],
+  "restrictions": [
+    "Reported NonCommercial licence: do not use in any commercial product or service.",
+    "Do not commit images or annotations."
+  ],
+  "supports": [
+    {
+      "capability": "AI-1",
+      "how": "Image-modality evaluation on Indian road damage: D40 → roads/pothole; cracks → category 'roads' only.",
+      "caveats": [
+        "Smartphone road-survey frames, not citizen close-ups.",
+        "Frames from the same drive are near-identical: hold out whole index blocks, not random frames."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-4",
+      "why": "No before/after pairs."
+    },
+    {
+      "capability": "Text, multilingual, severity, other civic categories",
+      "why": "Road-damage images only."
+    }
+  ],
+  "known_limitations": [
+    "Three countries; India subset is the relevant slice.",
+    "Test annotations withheld."
+  ],
+  "privacy_notes": [
+    "Images may contain people/vehicles; handle as external data."
+  ],
+  "expected_schema_notes": [
+    "PASCAL VOC XML (same adapter as RDD2022). Directory layout reported as train/test1/test2 × India/Japan/Czech — confirm with `profile-images`."
+  ],
+  "adapter": "rdd2022",
+  "mapping_id": "rdd2020_to_civic",
+  "related_sources": [
+    "rdd2022"
+  ],
+  "citation": "Arya, D., et al. (2021). RDD2020: An annotated image dataset for automatic road damage detection using deep learning. Data in Brief 36, 107133 (title/venue from search results; verify).",
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

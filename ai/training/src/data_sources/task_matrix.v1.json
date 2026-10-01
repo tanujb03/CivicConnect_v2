@@ -1,0 +1,672 @@
+[
+  {
+    "source_id": "bmc_mumbai",
+    "task": "citizen_satisfaction",
+    "capability": "—",
+    "status": "not_pursued",
+    "inputs": [],
+    "targets": [],
+    "forbidden": [
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "requires": [],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [],
+    "notes": "The competition target is a post-resolution outcome. CivicConnect V1 has no satisfaction/reputation scoring; the column is never an input to any task.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "demo_seed",
+    "capability": "AI-6",
+    "status": "demo_only",
+    "inputs": [
+      "source_category",
+      "category",
+      "subcategory",
+      "ward",
+      "latitude",
+      "longitude",
+      "created_at",
+      "filing_channel",
+      "locality",
+      "department",
+      "severity",
+      "priority",
+      "status",
+      "closed_at",
+      "resolution_hours"
+    ],
+    "targets": [],
+    "forbidden": [
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "requires": [],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [],
+    "notes": "Realistically-shaped SYNTHETIC rows for copilot/demo databases; labelled synthetic; never an evaluation; sensitive/PII roles excluded.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "fusion_pairs",
+    "capability": "AI-2",
+    "status": "conditional",
+    "inputs": [
+      "created_at",
+      "ward",
+      "latitude",
+      "longitude",
+      "category",
+      "subcategory"
+    ],
+    "targets": [
+      "duplicate_flag"
+    ],
+    "forbidden": [
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "escalated",
+      "parent_complaint_id",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "sla_breached",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "synthetic",
+    "implemented_in_eval_harness": false,
+    "requires": [
+      "duplicate_flag",
+      "parent_complaint_id"
+    ],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [],
+    "notes": "Possible only if the file carries duplicate/parent information; none is known. Any pairs would be synthetic.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "intake_text",
+    "capability": "AI-1",
+    "status": "conditional",
+    "inputs": [
+      "description",
+      "ward",
+      "latitude",
+      "longitude",
+      "filing_channel"
+    ],
+    "targets": [
+      "category",
+      "subcategory"
+    ],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "department",
+      "duplicate_flag",
+      "escalated",
+      "parent_complaint_id",
+      "priority",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "severity",
+      "sla_breached",
+      "sla_target_hours",
+      "source_category",
+      "source_subcategory",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "requires": [
+      "description",
+      "source_category"
+    ],
+    "requires_any": [],
+    "operator_confirmations": [
+      "description_is_citizen_text"
+    ],
+    "conditions": [
+      "the operator must inspect samples and confirm the column is citizen-written free text",
+      "source_category (the label) must not be an input",
+      "a description that echoes the label is refused"
+    ],
+    "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does. For the BMC competition data this can never run: the data is synthetic, so the description cannot be confirmed as citizen-written (the adapter refuses --confirm-citizen-text).",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "recurrence_hotspot",
+    "capability": "AI-5",
+    "status": "supported",
+    "inputs": [
+      "created_at",
+      "ward",
+      "latitude",
+      "longitude",
+      "category",
+      "subcategory"
+    ],
+    "targets": [],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "department",
+      "duplicate_flag",
+      "escalated",
+      "parent_complaint_id",
+      "priority",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "severity",
+      "sla_breached",
+      "sla_target_hours",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "requires": [],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [],
+    "notes": "Stress-test the deterministic recurrence/hotspot definitions (design §38-39) on a large synthetic Mumbai ward-level set.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "resolution_time_prior",
+    "capability": "AI-3/AI-5",
+    "status": "conditional",
+    "inputs": [
+      "category",
+      "subcategory",
+      "ward",
+      "latitude",
+      "longitude",
+      "created_at",
+      "filing_channel",
+      "severity",
+      "priority",
+      "department",
+      "sla_target_hours"
+    ],
+    "targets": [
+      "resolution_hours"
+    ],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "escalated",
+      "reassigned",
+      "reopened",
+      "resolution_remarks",
+      "sla_breached",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "requires": [],
+    "requires_any": [
+      "closed_at",
+      "resolution_duration"
+    ],
+    "operator_confirmations": [],
+    "conditions": [
+      "triage-time information (severity, priority, department, SLA) is legitimately known before resolution",
+      "unresolved complaints are right-censored: report the censored share, never silently drop them"
+    ],
+    "notes": "Resolution-duration distributions per category/ward (generated) to exercise the SLA-reference pipeline.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "routing_agreement",
+    "capability": "AI-3",
+    "status": "conditional",
+    "inputs": [
+      "source_category",
+      "source_subcategory",
+      "category",
+      "subcategory",
+      "ward"
+    ],
+    "targets": [
+      "department"
+    ],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "escalated",
+      "priority",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "severity",
+      "sla_breached",
+      "sla_target_hours",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "requires": [
+      "department",
+      "source_category"
+    ],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [
+      "report the purity of department given source_category; if >= 0.99 the agreement is vacuous"
+    ],
+    "notes": "Agreement between the dataset's recorded (synthetic) department, mapped to ours, and our category->department routing. Pipeline test, NOT model accuracy.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "taxonomy_coverage",
+    "capability": "AI-3/AI-5",
+    "status": "supported",
+    "inputs": [
+      "source_category",
+      "source_subcategory",
+      "category",
+      "subcategory"
+    ],
+    "targets": [],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "department",
+      "duplicate_flag",
+      "escalated",
+      "parent_complaint_id",
+      "priority",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "severity",
+      "sla_breached",
+      "sla_target_hours",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "descriptive",
+    "implemented_in_eval_harness": true,
+    "requires": [],
+    "requires_any": [],
+    "operator_confirmations": [],
+    "conditions": [],
+    "notes": "How the dataset's (synthetic) complaint label space lands in taxonomy v1, and which taxonomy labels have no examples.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bmc_mumbai",
+    "task": "triage_priority_prior",
+    "capability": "AI-3",
+    "status": "conditional",
+    "inputs": [
+      "category",
+      "subcategory",
+      "ward",
+      "latitude",
+      "longitude",
+      "created_at",
+      "filing_channel"
+    ],
+    "targets": [
+      "severity",
+      "priority"
+    ],
+    "forbidden": [
+      "assigned_contractor",
+      "citizen_rating",
+      "citizen_satisfied",
+      "closed_at",
+      "department",
+      "escalated",
+      "reassigned",
+      "reopened",
+      "resolution_duration",
+      "resolution_hours",
+      "resolution_remarks",
+      "sla_breached",
+      "sla_target_hours",
+      "status",
+      "every unclassified column",
+      "complainant_profile (sensitive)",
+      "pii (never read)"
+    ],
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
+    "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "requires": [],
+    "requires_any": [
+      "severity",
+      "priority"
+    ],
+    "operator_confirmations": [],
+    "conditions": [
+      "severity/priority are generated: a determinism check against category is mandatory",
+      "descriptive priors only: no learned triage model is trained on this data"
+    ],
+    "notes": "Distribution of generated severity/priority by category/ward/time; exercises the priority-prior pipeline, never ground truth.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "synthetic_civic",
+    "task": "before_after_resolution_evidence",
+    "capability": "AI-4",
+    "status": "not_available",
+    "inputs": [],
+    "targets": [],
+    "forbidden": [],
+    "labels": "—",
+    "taxonomy_mapping": "—",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "notes": "GAP: no synthetic before/after evidence is generated yet (no synthetic images); AI-4 is tested with scripted provider fixtures only. Build later if needed.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "synthetic_civic",
+    "task": "fusion_pairs",
+    "capability": "AI-2",
+    "status": "supported",
+    "inputs": [
+      "lat/lon",
+      "time",
+      "category",
+      "text"
+    ],
+    "targets": [
+      "duplicate label"
+    ],
+    "forbidden": [
+      "event ids"
+    ],
+    "labels": "duplicate / not duplicate",
+    "taxonomy_mapping": "—",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "notes": "Controlled duplicates incl. cross-language.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "synthetic_civic",
+    "task": "intake_text",
+    "capability": "AI-1",
+    "status": "supported",
+    "inputs": [
+      "text"
+    ],
+    "targets": [
+      "category",
+      "subcategory"
+    ],
+    "forbidden": [
+      "family/place ids (split design only)"
+    ],
+    "labels": "27 taxonomy subcategories (native labels)",
+    "taxonomy_mapping": "—",
+    "track": "synthetic",
+    "implemented_in_eval_harness": true,
+    "notes": "Hindi/Marathi/Hinglish/English, code-mixing, noise. Never a real-world accuracy claim.",
+    "source_priority": "primary"
+  },
+  {
+    "source_id": "bharatpothole",
+    "task": "visual_pothole_eval",
+    "capability": "AI-1 (image)",
+    "status": "conditional",
+    "inputs": [
+      "image bytes"
+    ],
+    "targets": [
+      "mapped image labels (roads/pothole; cracks → roads)"
+    ],
+    "forbidden": [
+      "bounding boxes / annotation files",
+      "file or directory names that encode the class",
+      "group id (used only to build splits)"
+    ],
+    "labels": "pothole (class names from the dataset's own class file)",
+    "taxonomy_mapping": "`bharatpothole_to_civic@0.1.0-draft` (DRAFT_CLASS_NAMES_NOT_VERIFIED)",
+    "track": "real_holdout",
+    "implemented_in_eval_harness": true,
+    "notes": "Positive-only expected; hold out whole videos/sequences.",
+    "source_priority": "secondary"
+  },
+  {
+    "source_id": "mumbai_nashik_road_surface",
+    "task": "visual_road_surface_eval",
+    "capability": "AI-1 (image)",
+    "status": "conditional",
+    "inputs": [
+      "image bytes"
+    ],
+    "targets": [
+      "mapped image labels (damaged surface → roads; pothole if explicitly labelled)"
+    ],
+    "forbidden": [
+      "bounding boxes / annotation files",
+      "file or directory names that encode the class",
+      "group id (used only to build splits)"
+    ],
+    "labels": "folder/scene labels (paved, unpaved, damaged, speed breaker, water) — hypothesised",
+    "taxonomy_mapping": "`mumbai_nashik_to_civic@0.1.0-draft` (DRAFT_LABELS_HYPOTHESISED_FROM_ARTICLE_SUMMARY_NOT_VERIFIED)",
+    "track": "real_holdout",
+    "implemented_in_eval_harness": true,
+    "notes": "Category-level only; speed breakers/paved/unpaved/water are out_of_scope; identity of the dataset needs your confirmation.",
+    "source_priority": "secondary"
+  },
+  {
+    "source_id": "rdd2020",
+    "task": "visual_pothole_eval",
+    "capability": "AI-1 (image)",
+    "status": "conditional",
+    "inputs": [
+      "image bytes"
+    ],
+    "targets": [
+      "mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)"
+    ],
+    "forbidden": [
+      "bounding boxes / annotation files",
+      "file or directory names that encode the class",
+      "group id (used only to build splits)"
+    ],
+    "labels": "D00, D10, D20, D40",
+    "taxonomy_mapping": "`rdd2020_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
+    "track": "real_holdout",
+    "implemented_in_eval_harness": true,
+    "notes": "India subset; NonCommercial licence reported.",
+    "source_priority": "secondary"
+  },
+  {
+    "source_id": "rdd2022",
+    "task": "visual_pothole_eval",
+    "capability": "AI-1 (image)",
+    "status": "conditional",
+    "inputs": [
+      "image bytes"
+    ],
+    "targets": [
+      "mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)"
+    ],
+    "forbidden": [
+      "bounding boxes / annotation files",
+      "file or directory names that encode the class",
+      "group id (used only to build splits)"
+    ],
+    "labels": "D00, D10, D20, D40",
+    "taxonomy_mapping": "`rdd2022_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
+    "track": "real_holdout",
+    "implemented_in_eval_harness": true,
+    "notes": "India subset first; hold out index blocks/countries; provider needed.",
+    "source_priority": "secondary"
+  },
+  {
+    "source_id": "chicago311",
+    "task": "fusion_pairs",
+    "capability": "AI-2",
+    "status": "conditional",
+    "inputs": [
+      "lat/lon",
+      "created time",
+      "mapped category"
+    ],
+    "targets": [
+      "agency duplicate/parent link"
+    ],
+    "forbidden": [
+      "narrative text (none exists)",
+      "parent fields as inputs"
+    ],
+    "labels": "duplicate / unlinked nearby same-type",
+    "taxonomy_mapping": "`chicago311_to_civic@0.1.0-draft` (DRAFT_NOT_VERIFIED_AGAINST_DATA)",
+    "track": "real_holdout",
+    "implemented_in_eval_harness": true,
+    "notes": "Requires duplicate/parent columns (names unconfirmed).",
+    "source_priority": "optional"
+  },
+  {
+    "source_id": "chicago311",
+    "task": "taxonomy_coverage",
+    "capability": "AI-3/AI-5",
+    "status": "supported",
+    "inputs": [
+      "sr_type"
+    ],
+    "targets": [],
+    "forbidden": [
+      "address columns (never read)"
+    ],
+    "labels": "Chicago service request types",
+    "taxonomy_mapping": "`chicago311_to_civic@0.1.0-draft` (DRAFT_NOT_VERIFIED_AGAINST_DATA)",
+    "track": "descriptive",
+    "implemented_in_eval_harness": true,
+    "notes": "",
+    "source_priority": "optional"
+  },
+  {
+    "source_id": "nyc311",
+    "task": "intake_text",
+    "capability": "AI-1",
+    "status": "unsupported",
+    "inputs": [],
+    "targets": [],
+    "forbidden": [
+      "category text (label leakage)"
+    ],
+    "labels": "—",
+    "taxonomy_mapping": "—",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "notes": "No citizen narrative text; category text would be label leakage.",
+    "source_priority": "optional"
+  },
+  {
+    "source_id": "nyc311",
+    "task": "taxonomy_coverage",
+    "capability": "AI-3/AI-5",
+    "status": "supported",
+    "inputs": [
+      "complaint_type",
+      "descriptor"
+    ],
+    "targets": [],
+    "forbidden": [
+      "address columns (never read)"
+    ],
+    "labels": "NYC complaint types/descriptors",
+    "taxonomy_mapping": "`nyc311_to_civic@0.1.0-draft` (DRAFT_NOT_VERIFIED_AGAINST_DATA)",
+    "track": "descriptive",
+    "implemented_in_eval_harness": true,
+    "notes": "",
+    "source_priority": "optional"
+  },
+  {
+    "source_id": "idd",
+    "task": "—",
+    "capability": "—",
+    "status": "future",
+    "inputs": [],
+    "targets": [],
+    "forbidden": [],
+    "labels": "—",
+    "taxonomy_mapping": "—",
+    "track": "none",
+    "implemented_in_eval_harness": false,
+    "notes": "Optional/future Indian road-scene/multimodal source; no adapter, no V1 dependency.",
+    "source_priority": "future"
+  }
+]

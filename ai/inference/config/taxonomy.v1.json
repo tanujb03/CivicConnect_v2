@@ -1,0 +1,680 @@
+{
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_REQUIRES_REVIEW",
+  "review": {
+    "required_reviewers": [
+      "Tanuj",
+      "Parth"
+    ],
+    "approved_by": [],
+    "note": "Parth must NOT seed the database from this file until both reviewers have signed off (set status to APPROVED and fill approved_by)."
+  },
+  "id_conventions": {
+    "category_subcategory_department": "lowercase snake_case, stable machine ID; never reused or renamed once seeded",
+    "severity_priority_sla_class": "UPPER_SNAKE_CASE enum (matches Section 51A)",
+    "labels": "human-readable text per language (en/hi/mr); Hindi/Marathi labels need native-speaker review",
+    "department_code": "short uppercase display code / accepted alias (e.g. 51A example 'WATER'); the canonical ID is the lowercase id"
+  },
+  "supported_languages": [
+    "en",
+    "hi",
+    "mr",
+    "hi-Latn"
+  ],
+  "severities": [
+    {
+      "id": "LOW",
+      "rank": 1,
+      "label": {
+        "en": "Low",
+        "hi": "निम्न",
+        "mr": "कमी"
+      },
+      "description": "Inconvenience; no safety or service-continuity risk."
+    },
+    {
+      "id": "MEDIUM",
+      "rank": 2,
+      "label": {
+        "en": "Medium",
+        "hi": "मध्यम",
+        "mr": "मध्यम"
+      },
+      "description": "Noticeable service degradation or nuisance; limited safety risk."
+    },
+    {
+      "id": "HIGH",
+      "rank": 3,
+      "label": {
+        "en": "High",
+        "hi": "उच्च",
+        "mr": "उच्च"
+      },
+      "description": "Significant service loss or credible safety/health risk."
+    },
+    {
+      "id": "CRITICAL",
+      "rank": 4,
+      "label": {
+        "en": "Critical",
+        "hi": "गंभीर",
+        "mr": "गंभीर"
+      },
+      "description": "Immediate danger to life or major infrastructure failure."
+    }
+  ],
+  "sla_classes": [
+    {
+      "id": "EMERGENCY",
+      "hours": 4,
+      "label": {
+        "en": "Emergency",
+        "hi": "आपातकालीन",
+        "mr": "आणीबाणी"
+      }
+    },
+    {
+      "id": "URGENT",
+      "hours": 24,
+      "label": {
+        "en": "Urgent",
+        "hi": "तत्काल",
+        "mr": "तातडीचे"
+      }
+    },
+    {
+      "id": "EXPEDITED",
+      "hours": 48,
+      "label": {
+        "en": "Expedited",
+        "hi": "त्वरित",
+        "mr": "जलद"
+      }
+    },
+    {
+      "id": "STANDARD",
+      "hours": 72,
+      "label": {
+        "en": "Standard",
+        "hi": "सामान्य",
+        "mr": "सामान्य"
+      }
+    },
+    {
+      "id": "ROUTINE",
+      "hours": 168,
+      "label": {
+        "en": "Routine",
+        "hi": "नियमित",
+        "mr": "नियमित"
+      }
+    }
+  ],
+  "priorities": [
+    {
+      "id": "LOW",
+      "rank": 1,
+      "default_sla_class": "ROUTINE",
+      "label": {
+        "en": "Low",
+        "hi": "कम",
+        "mr": "कमी"
+      }
+    },
+    {
+      "id": "NORMAL",
+      "rank": 2,
+      "default_sla_class": "STANDARD",
+      "label": {
+        "en": "Normal",
+        "hi": "सामान्य",
+        "mr": "सामान्य"
+      }
+    },
+    {
+      "id": "HIGH",
+      "rank": 3,
+      "default_sla_class": "EXPEDITED",
+      "label": {
+        "en": "High",
+        "hi": "उच्च",
+        "mr": "उच्च"
+      }
+    },
+    {
+      "id": "URGENT",
+      "rank": 4,
+      "default_sla_class": "URGENT",
+      "label": {
+        "en": "Urgent",
+        "hi": "अत्यावश्यक",
+        "mr": "अत्यावश्यक"
+      }
+    }
+  ],
+  "departments": [
+    {
+      "id": "road_maintenance",
+      "code": "ROADS",
+      "label": {
+        "en": "Road Maintenance",
+        "hi": "सड़क रखरखाव",
+        "mr": "रस्ते देखभाल"
+      },
+      "category_ids": [
+        "roads"
+      ]
+    },
+    {
+      "id": "water_supply",
+      "code": "WATER",
+      "label": {
+        "en": "Water Supply",
+        "hi": "जल आपूर्ति",
+        "mr": "पाणीपुरवठा"
+      },
+      "category_ids": [
+        "water_supply"
+      ]
+    },
+    {
+      "id": "solid_waste",
+      "code": "SWM",
+      "label": {
+        "en": "Solid Waste Management",
+        "hi": "ठोस कचरा प्रबंधन",
+        "mr": "घनकचरा व्यवस्थापन"
+      },
+      "category_ids": [
+        "sanitation"
+      ]
+    },
+    {
+      "id": "drainage_sewerage",
+      "code": "DRAINAGE",
+      "label": {
+        "en": "Drainage & Sewerage",
+        "hi": "जल निकासी एवं सीवरेज",
+        "mr": "जलनिःसारण व मलनिःसारण"
+      },
+      "category_ids": [
+        "drainage_sewerage"
+      ]
+    },
+    {
+      "id": "street_lighting",
+      "code": "LIGHTING",
+      "label": {
+        "en": "Street Lighting",
+        "hi": "स्ट्रीट लाइटिंग",
+        "mr": "पथदिवे"
+      },
+      "category_ids": [
+        "street_lighting"
+      ]
+    },
+    {
+      "id": "parks_horticulture",
+      "code": "PARKS",
+      "label": {
+        "en": "Parks & Horticulture",
+        "hi": "उद्यान एवं वृक्ष",
+        "mr": "उद्याने व वृक्ष"
+      },
+      "category_ids": [
+        "parks_trees"
+      ]
+    },
+    {
+      "id": "public_health",
+      "code": "HEALTH",
+      "label": {
+        "en": "Public Health",
+        "hi": "जन स्वास्थ्य",
+        "mr": "सार्वजनिक आरोग्य"
+      },
+      "category_ids": [
+        "public_health"
+      ]
+    },
+    {
+      "id": "traffic_enforcement",
+      "code": "TRAFFIC",
+      "label": {
+        "en": "Traffic & Encroachment",
+        "hi": "यातायात एवं अतिक्रमण",
+        "mr": "वाहतूक व अतिक्रमण"
+      },
+      "category_ids": [
+        "traffic_encroachment"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "roads",
+      "label": {
+        "en": "Roads & Footpaths",
+        "hi": "सड़कें एवं फुटपाथ",
+        "mr": "रस्ते व पदपथ"
+      },
+      "department_id": "road_maintenance",
+      "subcategories": [
+        {
+          "id": "pothole",
+          "label": {
+            "en": "Pothole",
+            "hi": "गड्ढा",
+            "mr": "खड्डा"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "road_cave_in",
+          "label": {
+            "en": "Road cave-in / sinkhole",
+            "hi": "सड़क धँसना",
+            "mr": "रस्ता खचणे"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": true,
+          "department_id": null
+        },
+        {
+          "id": "damaged_footpath",
+          "label": {
+            "en": "Damaged footpath",
+            "hi": "टूटा फुटपाथ",
+            "mr": "तुटलेला पदपथ"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "water_supply",
+      "label": {
+        "en": "Water Supply",
+        "hi": "जल आपूर्ति",
+        "mr": "पाणीपुरवठा"
+      },
+      "department_id": "water_supply",
+      "subcategories": [
+        {
+          "id": "pipe_leakage",
+          "label": {
+            "en": "Pipe leakage",
+            "hi": "पाइप लीकेज",
+            "mr": "पाईप गळती"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "no_water_supply",
+          "label": {
+            "en": "No water supply",
+            "hi": "पानी की आपूर्ति नहीं",
+            "mr": "पाणीपुरवठा बंद"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "contaminated_water",
+          "label": {
+            "en": "Contaminated water",
+            "hi": "दूषित पानी",
+            "mr": "दूषित पाणी"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": true,
+          "department_id": null
+        },
+        {
+          "id": "low_water_pressure",
+          "label": {
+            "en": "Low water pressure",
+            "hi": "कम पानी का दबाव",
+            "mr": "कमी पाण्याचा दाब"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "sanitation",
+      "label": {
+        "en": "Sanitation & Waste",
+        "hi": "स्वच्छता एवं कचरा",
+        "mr": "स्वच्छता व कचरा"
+      },
+      "department_id": "solid_waste",
+      "subcategories": [
+        {
+          "id": "garbage_overflow",
+          "label": {
+            "en": "Overflowing garbage",
+            "hi": "कचरा ओवरफ्लो",
+            "mr": "कचरा ओसंडून वाहणे"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "missed_garbage_collection",
+          "label": {
+            "en": "Missed garbage collection",
+            "hi": "कचरा उठाव नहीं",
+            "mr": "कचरा उचलला नाही"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "illegal_dumping",
+          "label": {
+            "en": "Illegal dumping",
+            "hi": "अवैध कचरा डंपिंग",
+            "mr": "बेकायदेशीर कचरा टाकणे"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "dead_animal",
+          "label": {
+            "en": "Dead animal",
+            "hi": "मृत जानवर",
+            "mr": "मृत प्राणी"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "drainage_sewerage",
+      "label": {
+        "en": "Drainage & Sewerage",
+        "hi": "जल निकासी एवं सीवरेज",
+        "mr": "जलनिःसारण व मलनिःसारण"
+      },
+      "department_id": "drainage_sewerage",
+      "subcategories": [
+        {
+          "id": "blocked_drain",
+          "label": {
+            "en": "Blocked drain",
+            "hi": "जाम नाली",
+            "mr": "तुंबलेली गटार"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "sewage_overflow",
+          "label": {
+            "en": "Sewage overflow",
+            "hi": "सीवर ओवरफ्लो",
+            "mr": "मलनिःसारण ओसंडणे"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "missing_manhole_cover",
+          "label": {
+            "en": "Missing manhole cover",
+            "hi": "मैनहोल का ढक्कन गायब",
+            "mr": "मॅनहोलचे झाकण गायब"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": true,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "street_lighting",
+      "label": {
+        "en": "Street Lighting",
+        "hi": "स्ट्रीट लाइटिंग",
+        "mr": "पथदिवे"
+      },
+      "department_id": "street_lighting",
+      "subcategories": [
+        {
+          "id": "light_not_working",
+          "label": {
+            "en": "Streetlight not working",
+            "hi": "स्ट्रीट लाइट बंद",
+            "mr": "पथदिवा बंद"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "flickering_light",
+          "label": {
+            "en": "Flickering streetlight",
+            "hi": "स्ट्रीट लाइट टिमटिमाना",
+            "mr": "पथदिवा लुकलुकणे"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "exposed_live_wire",
+          "label": {
+            "en": "Exposed live wire",
+            "hi": "खुला बिजली का तार",
+            "mr": "उघडी विद्युत तार"
+          },
+          "base_severity": "CRITICAL",
+          "safety_critical": true,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "parks_trees",
+      "label": {
+        "en": "Parks & Trees",
+        "hi": "उद्यान एवं पेड़",
+        "mr": "उद्याने व झाडे"
+      },
+      "department_id": "parks_horticulture",
+      "subcategories": [
+        {
+          "id": "fallen_tree",
+          "label": {
+            "en": "Fallen tree / branch",
+            "hi": "गिरा हुआ पेड़",
+            "mr": "पडलेले झाड"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": true,
+          "department_id": null
+        },
+        {
+          "id": "overgrown_vegetation",
+          "label": {
+            "en": "Overgrown vegetation",
+            "hi": "बढ़ी हुई झाड़ियाँ",
+            "mr": "वाढलेली झुडपे"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "damaged_park_equipment",
+          "label": {
+            "en": "Damaged park equipment",
+            "hi": "टूटे पार्क उपकरण",
+            "mr": "तुटलेली उद्यान साधने"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "public_health",
+      "label": {
+        "en": "Public Health",
+        "hi": "जन स्वास्थ्य",
+        "mr": "सार्वजनिक आरोग्य"
+      },
+      "department_id": "public_health",
+      "subcategories": [
+        {
+          "id": "mosquito_breeding",
+          "label": {
+            "en": "Mosquito breeding / stagnant water",
+            "hi": "मच्छर प्रजनन / रुका पानी",
+            "mr": "डास उत्पत्ती / साचलेले पाणी"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "stray_animals",
+          "label": {
+            "en": "Stray animal menace",
+            "hi": "आवारा जानवर",
+            "mr": "भटके प्राणी"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "open_burning",
+          "label": {
+            "en": "Open burning",
+            "hi": "खुले में जलाना",
+            "mr": "उघड्यावर जाळणे"
+          },
+          "base_severity": "MEDIUM",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "traffic_encroachment",
+      "label": {
+        "en": "Traffic & Encroachment",
+        "hi": "यातायात एवं अतिक्रमण",
+        "mr": "वाहतूक व अतिक्रमण"
+      },
+      "department_id": "traffic_enforcement",
+      "subcategories": [
+        {
+          "id": "illegal_parking",
+          "label": {
+            "en": "Illegal parking",
+            "hi": "अवैध पार्किंग",
+            "mr": "बेकायदेशीर पार्किंग"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "footpath_encroachment",
+          "label": {
+            "en": "Footpath encroachment",
+            "hi": "फुटपाथ पर अतिक्रमण",
+            "mr": "पदपथावर अतिक्रमण"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        },
+        {
+          "id": "signal_not_working",
+          "label": {
+            "en": "Traffic signal not working",
+            "hi": "ट्रैफिक सिग्नल बंद",
+            "mr": "वाहतूक सिग्नल बंद"
+          },
+          "base_severity": "HIGH",
+          "safety_critical": true,
+          "department_id": null
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": {
+        "en": "Other / Unclear",
+        "hi": "अन्य / अस्पष्ट",
+        "mr": "इतर / अस्पष्ट"
+      },
+      "department_id": null,
+      "subcategories": [
+        {
+          "id": "unclassified",
+          "label": {
+            "en": "Unclassified",
+            "hi": "अवर्गीकृत",
+            "mr": "अवर्गीकृत"
+          },
+          "base_severity": "LOW",
+          "safety_critical": false,
+          "department_id": null
+        }
+      ]
+    }
+  ],
+  "aliases": {
+    "departments": {
+      "ROADS": "road_maintenance",
+      "WATER": "water_supply",
+      "SWM": "solid_waste",
+      "DRAINAGE": "drainage_sewerage",
+      "LIGHTING": "street_lighting",
+      "PARKS": "parks_horticulture",
+      "HEALTH": "public_health",
+      "TRAFFIC": "traffic_enforcement",
+      "ROAD_MAINTENANCE": "road_maintenance"
+    },
+    "categories": {
+      "road": "roads",
+      "roads_and_footpaths": "roads",
+      "water": "water_supply",
+      "garbage": "sanitation",
+      "waste": "sanitation",
+      "drainage": "drainage_sewerage",
+      "sewerage": "drainage_sewerage",
+      "lighting": "street_lighting",
+      "streetlight": "street_lighting",
+      "trees": "parks_trees",
+      "parks": "parks_trees",
+      "health": "public_health",
+      "traffic": "traffic_encroachment",
+      "encroachment": "traffic_encroachment"
+    }
+  }
+}

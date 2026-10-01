@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "civicconnect-ai"
+version = "0.1.0"
+description = "CivicConnect v2 AI inference layer (backend-importable). Training/evaluation are NOT part of this distribution."
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.5", "numpy>=1.26", "httpx>=0.27"]
+
+[project.optional-dependencies]
+# Offline tooling: dataset generation, B0/B1 training, evaluation, notebooks, tests.
+training = ["scikit-learn>=1.4", "scipy>=1.11", "pillow>=10"]   # pillow: optional near-duplicate image audit (Kaggle images ship it)
+b1 = ["sentence-transformers>=3.0"]
+dev = ["pytest>=8", "ruff>=0.5", "nbformat>=5.9", "nbclient>=0.10", "ipykernel>=6.29"]
+
+# Only the production inference package is shipped. `ai.training`, `ai.evaluation`, notebooks and
+# tests are deliberately NOT listed, so `pip install ./ai` can never import training code.
+[tool.setuptools]
+package-dir = { "ai" = "." }
+packages = [
+  "ai", "ai.inference", "ai.inference.local", "ai.inference.providers", "ai.inference.intake",
+  "ai.inference.fusion", "ai.inference.triage", "ai.inference.resolution", "ai.inference.analytics",
+  "ai.inference.copilot",
+]
+
+[tool.setuptools.package-data]
+"ai.inference" = ["config/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["inference/tests", "training/tests", "evaluation/tests"]
+addopts = "-ra"
+markers = [
+  "requires_provider: needs live provider credentials (OPENAI_API_KEY + model env vars); skipped otherwise",
+  "requires_kaggle: needs GPU / sentence-transformers / internet (Kaggle); skipped otherwise",
+  "slow: executes notebooks end-to-end (tens of seconds)",
+]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501", "B008", "B905", "E741", "E702"]

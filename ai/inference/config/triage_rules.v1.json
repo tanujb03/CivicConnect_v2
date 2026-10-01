@@ -1,0 +1,150 @@
+{
+  "rules_version": "1.0.0-draft",
+  "notes": "Deterministic priority model (system design Section 36). Weights are configuration, not domain logic; the backend may override them from admin settings (A13). AI may recommend a severity, but never the priority score.",
+  "severity_score": {
+    "LOW": 10,
+    "MEDIUM": 30,
+    "HIGH": 55,
+    "CRITICAL": 80
+  },
+  "modifiers": {
+    "support_count": {
+      "per_unit": 2,
+      "cap": 10,
+      "reason": "affected-citizen signal"
+    },
+    "location_sensitivity": {
+      "per_tag": 10,
+      "cap": 15,
+      "tags": [
+        "school",
+        "hospital",
+        "market",
+        "transit_stop"
+      ],
+      "reason": "sensitive location"
+    },
+    "case_age_days": {
+      "per_unit": 1,
+      "cap": 10,
+      "reason": "case age"
+    },
+    "recurrence_count": {
+      "per_unit": 5,
+      "cap": 10,
+      "reason": "recurring problem"
+    },
+    "sla_risk": {
+      "threshold_fraction": 0.75,
+      "bonus": 10,
+      "reason": "SLA at risk"
+    },
+    "incident_active": {
+      "bonus": 10,
+      "reason": "active incident context"
+    }
+  },
+  "priority_thresholds": [
+    {
+      "min_score": 80,
+      "priority": "URGENT"
+    },
+    {
+      "min_score": 55,
+      "priority": "HIGH"
+    },
+    {
+      "min_score": 30,
+      "priority": "NORMAL"
+    },
+    {
+      "min_score": 0,
+      "priority": "LOW"
+    }
+  ],
+  "sla_overrides": [
+    {
+      "when_severity": "CRITICAL",
+      "sla_class": "EMERGENCY",
+      "reason": "critical severity requires emergency SLA"
+    }
+  ],
+  "force_priority": [
+    {
+      "when_severity": "CRITICAL",
+      "priority": "URGENT",
+      "reason": "critical severity is always urgent"
+    }
+  ],
+  "severity_escalators": [
+    {
+      "id": "vulnerable_site",
+      "bump": 1,
+      "tag": "school",
+      "reason": "report mentions a school or children",
+      "patterns": [
+        "school",
+        "children",
+        "child",
+        "kids",
+        "स्कूल",
+        "बच्चे",
+        "बच्चों",
+        "शाळा",
+        "शाळेजवळ",
+        "मुले",
+        "मुलांना",
+        "bachche",
+        "bacche",
+        "bachhon"
+      ]
+    },
+    {
+      "id": "hospital_site",
+      "bump": 1,
+      "tag": "hospital",
+      "reason": "report mentions a hospital or patients",
+      "patterns": [
+        "hospital",
+        "clinic",
+        "ambulance",
+        "अस्पताल",
+        "हॉस्पिटल",
+        "रुग्णालय",
+        "दवाखान",
+        "aspatal",
+        "haspital"
+      ]
+    },
+    {
+      "id": "injury_or_accident",
+      "bump": 1,
+      "tag": null,
+      "reason": "report mentions injury, accident or electric shock",
+      "patterns": [
+        "accident",
+        "injured",
+        "injury",
+        "fell down",
+        "electric shock",
+        "got shock",
+        "sparking",
+        "दुर्घटना",
+        "चोट",
+        "करंट",
+        "झटका",
+        "अपघात",
+        "जखमी",
+        "shock laga",
+        "chot lagi",
+        "accident hua",
+        "accident ho",
+        "caught fire",
+        "on fire",
+        "fire broke"
+      ]
+    }
+  ],
+  "rules_only_confidence": 0.5,
+  "rules_only_confidence_note": "Nominal quality marker for the deterministic path; it is NOT a probability."
+}

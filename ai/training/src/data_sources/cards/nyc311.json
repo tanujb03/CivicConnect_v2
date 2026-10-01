@@ -1,0 +1,121 @@
+{
+  "id": "nyc311",
+  "name": "NYC 311 Service Requests from 2020 to Present",
+  "kind": "real_public",
+  "publisher": "City of New York (NYC Open Data)",
+  "landing_url": "https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2020-to-Present/erm2-nwe9",
+  "official_source_url": "https://data.cityofnewyork.us/resource/erm2-nwe9",
+  "version_note": "Rolling dataset, updated by the publisher (Socrata id erm2-nwe9). Pin every pull by recording the query, retrieval timestamp and file sha256 (done automatically in RETRIEVAL.json). A web-search result listed the same id under the title '311 Service Requests from 2010 to Present': the portal title/coverage may have changed, so confirm the title and date range at download time.",
+  "data_access": {
+    "method": "Socrata SODA API (JSON/CSV) or bulk CSV export",
+    "endpoint": "https://data.cityofnewyork.us/resource/erm2-nwe9.json",
+    "api_docs": "https://dev.socrata.com/",
+    "app_token": "optional; supply via env SOCRATA_APP_TOKEN, never commit"
+  },
+  "license": {
+    "name": "NYC Open Data Terms of Use",
+    "url": "https://www.nyc.gov/html/data/terms.html",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary (third-party aggregation)",
+        "reliability": "secondary",
+        "note": "Summary states the dataset is published under the NYC Open Data Terms of Use ('free to use and redistribute; no warranty'). Not read from the official terms.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://data.cityofnewyork.us/...erm2-nwe9",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Source: City of New York, NYC Open Data — 311 Service Requests (dataset erm2-nwe9). Cite retrieval date. Exact attribution wording must be taken from the Terms of Use.",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "Read the Terms of Use yourself before use. Even if redistribution is permitted, this repository does not redistribute the data.",
+      "The terms URL on this card was recalled from memory and not verified."
+    ]
+  },
+  "subset_used": "To be selected by the team (suggest: a bounded date window and complaint types that map to taxonomy v1; see mappings/nyc311_to_civic.v1.json and run `cli profile` first).",
+  "intended_use": [
+    "analytics_validation",
+    "calibration",
+    "evaluation",
+    "demo"
+  ],
+  "restrictions": [
+    "Terms of Use not yet read at the primary source.",
+    "Do not attempt to re-identify requesters; the public file is not designed for individual-level analysis.",
+    "Do not commit raw or prepared rows."
+  ],
+  "supports": [
+    {
+      "capability": "AI-5",
+      "how": "Realistic spatio-temporal request data to validate deterministic hotspot / recurrence / baseline-comparison logic and analytics SQL (facts come from SQL, not models).",
+      "caveats": [
+        "Categories are NYC's, mapped to ours via an explicit draft mapping; use the mapped subset only."
+      ]
+    },
+    {
+      "capability": "AI-3",
+      "how": "Closed-date minus created-date distributions per complaint type to sanity-check SLA hours and case-age scoring ranges.",
+      "caveats": [
+        "Provides resolution-time priors only; it does NOT provide severity or priority ground truth."
+      ]
+    },
+    {
+      "capability": "AI-2",
+      "how": "Distributional study of how requests cluster in space/time (candidate-gate radius and window).",
+      "caveats": [
+        "No duplicate ground-truth label is expected in this dataset: it cannot score duplicate-detection accuracy."
+      ]
+    },
+    {
+      "capability": "AI-6",
+      "how": "Realistically distributed rows to seed a demo database for grounded-copilot demonstrations.",
+      "caveats": [
+        "Demo realism only, not a model evaluation. Must be labelled as NYC real public data."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-1 text intake classification",
+      "why": "Public columns hold agency category/descriptor fields, not citizen narrative text (to be confirmed with `cli profile` on the real file). Classifying category text back into the category it came from is label leakage."
+    },
+    {
+      "capability": "Multilingual / Hindi / Marathi / Hinglish",
+      "why": "No Indian-language civic narrative."
+    },
+    {
+      "capability": "AI-4 resolution evidence",
+      "why": "No before/after media."
+    },
+    {
+      "capability": "Severity ground truth",
+      "why": "No severity field."
+    }
+  ],
+  "known_limitations": [
+    "City-specific agencies and categories (NYC, not an Indian municipality).",
+    "Many rows lack coordinates.",
+    "Timestamps are source-local, timezone not stated.",
+    "Complaint types change over time."
+  ],
+  "privacy_notes": [
+    "Addresses/coordinates may be present. Use coordinates only; drop address columns during preparation (the adapter never reads them)."
+  ],
+  "expected_schema_notes": [
+    "Expected (not verified) columns: unique_key, created_date, closed_date, agency, agency_name, complaint_type, descriptor, status, latitude, longitude, borough. The adapter resolves columns by alias and fails loudly with the real header list."
+  ],
+  "adapter": "nyc311",
+  "mapping_id": "nyc311_to_civic",
+  "citation": null,
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW",
+  "priority": "optional",
+  "role_summary": "Optional external / cross-city generalisation source (not Indian)."
+}

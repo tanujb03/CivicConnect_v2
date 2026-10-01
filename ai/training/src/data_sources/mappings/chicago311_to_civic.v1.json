@@ -1,0 +1,233 @@
+{
+  "mapping_id": "chicago311_to_civic",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "chicago311",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_NOT_VERIFIED_AGAINST_DATA",
+  "provenance_note": "Rules were written from general knowledge of Chicago 311 service-request type names WITHOUT access to the live dataset (egress blocked). Verify with `cli profile --source chicago311` before use.",
+  "match_fields": [
+    "sr_type"
+  ],
+  "semantics": "first matching rule wins; case-insensitive; contains/regex conditions on sr_type",
+  "rules": [
+    {
+      "id": "chi-pothole",
+      "when": {
+        "sr_type": {
+          "contains": "pothole"
+        }
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": "pothole"
+    },
+    {
+      "id": "chi-cave-in",
+      "when": {
+        "sr_type": {
+          "contains": "cave-in"
+        }
+      },
+      "confidence": "low",
+      "category": "roads",
+      "subcategory": "road_cave_in",
+      "note": "Chicago 'cave-in' requests concern sewer-related street collapses"
+    },
+    {
+      "id": "chi-no-water",
+      "when": {
+        "sr_type": {
+          "contains": "no water"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "no_water_supply"
+    },
+    {
+      "id": "chi-low-pressure",
+      "when": {
+        "sr_type": {
+          "contains": "low water pressure"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "low_water_pressure"
+    },
+    {
+      "id": "chi-water-quality",
+      "when": {
+        "sr_type": {
+          "contains": "water quality"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "contaminated_water"
+    },
+    {
+      "id": "chi-water-street",
+      "when": {
+        "sr_type": {
+          "contains": "water on street"
+        }
+      },
+      "confidence": "low",
+      "category": "water_supply",
+      "subcategory": "pipe_leakage"
+    },
+    {
+      "id": "chi-sewer-clean",
+      "when": {
+        "sr_type": {
+          "contains": "sewer cleaning"
+        }
+      },
+      "confidence": "low",
+      "category": "drainage_sewerage",
+      "subcategory": "blocked_drain"
+    },
+    {
+      "id": "chi-sewer",
+      "when": {
+        "sr_type": {
+          "contains": "sewer"
+        }
+      },
+      "confidence": "medium",
+      "category": "drainage_sewerage",
+      "subcategory": null
+    },
+    {
+      "id": "chi-street-light",
+      "when": {
+        "sr_type": {
+          "regex": "(street|alley) light out"
+        }
+      },
+      "confidence": "medium",
+      "category": "street_lighting",
+      "subcategory": "light_not_working"
+    },
+    {
+      "id": "chi-traffic-signal",
+      "when": {
+        "sr_type": {
+          "contains": "traffic signal"
+        }
+      },
+      "confidence": "medium",
+      "category": "traffic_encroachment",
+      "subcategory": "signal_not_working"
+    },
+    {
+      "id": "chi-dead-animal",
+      "when": {
+        "sr_type": {
+          "contains": "dead animal"
+        }
+      },
+      "confidence": "high",
+      "category": "sanitation",
+      "subcategory": "dead_animal"
+    },
+    {
+      "id": "chi-fly-dump",
+      "when": {
+        "sr_type": {
+          "contains": "fly dump"
+        }
+      },
+      "confidence": "medium",
+      "category": "sanitation",
+      "subcategory": "illegal_dumping"
+    },
+    {
+      "id": "chi-missed-garbage",
+      "when": {
+        "sr_type": {
+          "regex": "missed.*(garbage|pick)"
+        }
+      },
+      "confidence": "low",
+      "category": "sanitation",
+      "subcategory": "missed_garbage_collection"
+    },
+    {
+      "id": "chi-sanitation",
+      "when": {
+        "sr_type": {
+          "contains": "sanitation"
+        }
+      },
+      "confidence": "medium",
+      "category": "sanitation",
+      "subcategory": null
+    },
+    {
+      "id": "chi-garbage-cart",
+      "when": {
+        "sr_type": {
+          "contains": "garbage cart"
+        }
+      },
+      "confidence": "low",
+      "category": "sanitation",
+      "subcategory": null
+    },
+    {
+      "id": "chi-tree-fallen",
+      "when": {
+        "sr_type": {
+          "regex": "tree.*(debris|fallen)"
+        }
+      },
+      "confidence": "low",
+      "category": "parks_trees",
+      "subcategory": "fallen_tree"
+    },
+    {
+      "id": "chi-tree",
+      "when": {
+        "sr_type": {
+          "contains": "tree"
+        }
+      },
+      "confidence": "medium",
+      "category": "parks_trees",
+      "subcategory": null
+    },
+    {
+      "id": "chi-rodent",
+      "when": {
+        "sr_type": {
+          "regex": "rodent|rat complaint"
+        }
+      },
+      "confidence": "medium",
+      "category": "public_health",
+      "subcategory": null
+    },
+    {
+      "id": "chi-oos-graffiti",
+      "when": {
+        "sr_type": {
+          "contains": "graffiti"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    },
+    {
+      "id": "chi-oos-vehicle",
+      "when": {
+        "sr_type": {
+          "contains": "vehicle"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    }
+  ]
+}
