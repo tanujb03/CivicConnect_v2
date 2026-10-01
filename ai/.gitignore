@@ -39,3 +39,10 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# stale local artifacts from superseded runs (dataset hash no longer matches the repo); kept on disk, never committed.
+# Must stay below the artifacts/ negation rules above so they take precedence.
+artifacts/civic_text_b0/0.1.0+e0795fc3/
+artifacts/civic_text_b0/0.1.0+f1adbd3f/
+artifacts/fusion_calibrator/0.1.0+e0795fc3/
+artifacts/fusion_calibrator/0.1.0+f1adbd3f/
