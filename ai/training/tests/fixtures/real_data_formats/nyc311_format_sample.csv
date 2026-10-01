@@ -1,0 +1,13 @@
+Unique Key,Created Date,Closed Date,Agency,Agency Name,Complaint Type,Descriptor,Status,Latitude,Longitude,Borough
+FMT-0001,09/01/2025 08:15:00 AM,09/03/2025 10:00:00 AM,DOT,Department of Transportation,Street Condition,Pothole,Closed,40.7301,-73.9950,MANHATTAN
+FMT-0002,09/01/2025 09:00:00 AM,,DOT,Department of Transportation,Street Condition,Cave-In,Open,40.7302,-73.9951,MANHATTAN
+FMT-0003,09/02/2025 11:30:00 PM,09/05/2025 09:00:00 AM,DEP,Department of Environmental Protection,Water System,Leak (Use Comments) (WA2),Closed,40.6501,-73.9496,BROOKLYN
+FMT-0004,09/02/2025 12:05:00 PM,09/02/2025 05:00:00 PM,DEP,Department of Environmental Protection,Sewer,Catch Basin Clogged/Flooding (Use Comments) (SC),Closed,40.6502,-73.9497,BROOKLYN
+FMT-0005,09/03/2025 01:00:00 AM,,DOT,Department of Transportation,Street Light Condition,Street Light Out,Open,40.8501,-73.8800,BRONX
+FMT-0006,09/03/2025 02:00:00 AM,,NYPD,New York City Police Department,Noise - Residential,Loud Music/Party,Closed,40.7001,-73.9001,QUEENS
+FMT-0007,09/04/2025 03:00:00 PM,,DSNY,Department of Sanitation,Missed Collection (All Materials),1R Missed Recycling-All Materials,Open,40.7502,-73.9003,QUEENS
+FMT-0008,09/04/2025 04:00:00 PM,,NYPD,New York City Police Department,Illegal Parking,Blocked Hydrant,Closed,40.7503,-73.9004,QUEENS
+FMT-0009,09/05/2025 05:00:00 PM,,XXX,Some Agency,Totally New Complaint Type,Something,Open,,,STATEN ISLAND
+FMT-0010,09/05/2025 06:00:00 PM,,DPR,Department of Parks and Recreation,Damaged Tree,Branch or Limb Has Fallen Down,Open,0,0,BROOKLYN
+FMT-0011,not a date,,DOT,Department of Transportation,Traffic Signal Condition,Controller,Open,40.7601,-73.9801,MANHATTAN
+FMT-0012,09/06/2025 07:00:00 AM,,DOT,Department of Transportation,Sidewalk Condition,Broken Sidewalk,Open,40.7701,-73.9701,MANHATTAN

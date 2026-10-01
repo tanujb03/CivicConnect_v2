@@ -18,11 +18,12 @@ def evaluate(service: IntakeService, rows: Sequence[dict], low_conf_threshold: f
         resp = service.analyze(IntakeRequest(text=r["text"]))
         p = resp.proposal
         recs.append({
-            "gold_sub": f"{r['category']}/{r['subcategory']}", "gold_cat": r["category"], "gold_dept": r["department"],
-            "gold_sev": r["gold_severity"], "pred_sub": f"{p.category}/{p.subcategory}", "pred_cat": p.category,
+            "gold_sub": f"{r['category']}/{r['subcategory']}", "gold_cat": r["category"], "gold_dept": r.get("department"),
+            "gold_sev": r.get("gold_severity"), "pred_sub": f"{p.category}/{p.subcategory}", "pred_cat": p.category,
             "pred_dept": p.suggested_department, "pred_sev": p.severity, "conf": resp.confidence,
             "degraded": resp.ai_metadata.degraded, "source": resp.ai_metadata.source,
-            "lang": r["language"], "code_mixed": r["code_mixed"], "noisy": r["noisy"], "family": r["family_id"],
+            "lang": r.get("language") or "unknown", "code_mixed": r.get("code_mixed", False), "noisy": r.get("noisy", False),
+            "family": r.get("family_id") or "",
         })
     n = len(recs)
     sub_ok = [x["gold_sub"] == x["pred_sub"] for x in recs]
@@ -51,7 +52,8 @@ def evaluate(service: IntakeService, rows: Sequence[dict], low_conf_threshold: f
         "subcategory_accuracy_ci95": [round(k_lo, 3), round(k_hi, 3)],
         "subcategory_macro_f1": round(M.macro_f1([x["gold_sub"] for x in recs], [x["pred_sub"] for x in recs], labels), 4),
         "routing_accuracy_department": round(M.accuracy([x["gold_dept"] for x in recs], [x["pred_dept"] for x in recs]), 4),
-        "severity_agreement": round(M.accuracy([x["gold_sev"] for x in recs], [x["pred_sev"] for x in recs]), 4),
+        "severity_agreement": (round(M.accuracy([x["gold_sev"] for x in recs if x["gold_sev"]], [x["pred_sev"] for x in recs if x["gold_sev"]]), 4)
+                               if any(x["gold_sev"] for x in recs) else None),
         "severity_note": "CIRCULAR on synthetic data: gold severity is derived from the same taxonomy+keyword assumptions as the rules. Measures rule consistency only.",
         "calibration_ece_category": round(M.expected_calibration_error([x["conf"] for x in recs], cat_ok), 4),
         "low_confidence_threshold": thr,
@@ -64,5 +66,5 @@ def evaluate(service: IntakeService, rows: Sequence[dict], low_conf_threshold: f
         "by_code_mixed": {k: block(v) for k, v in sorted(groups["code_mixed"].items())},
         "by_noisy": {k: block(v) for k, v in sorted(groups["noisy"].items())},
         "top_confusions": M.top_confusions([x["gold_sub"] for x in recs], [x["pred_sub"] for x in recs]),
-        "held_out_families": len({x["family"] for x in recs}),
+        "held_out_families": len({x["family"] for x in recs if x["family"]}),
     }

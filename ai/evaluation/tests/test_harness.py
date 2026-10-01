@@ -69,7 +69,9 @@ def test_cli_writes_a_report_with_disclaimer_dataset_hash_and_artifact(tmp_path)
     rc = run_eval.main(["--task", "intake", "--system", "local", "--artifact", str(FIXTURE), "--out", str(tmp_path), "--name", "t"])
     assert rc == 0
     rep = json.loads((tmp_path / "t.json").read_text(encoding="utf-8"))
-    assert "SYNTHETIC" in rep["disclaimer"] and rep["dataset"]["sha256"] and rep["artifact"].startswith("civic_text_b0_fixture@fixture-1")
+    assert "SYNTHETIC" in rep["claims"]["banner"] and rep["claims"]["real_world_accuracy_claim_allowed"] is False
+    assert rep["track"] == "synthetic" and rep["datasets"]["intake_eval.v1.jsonl"] and rep["provenance"]["kinds"] == {"synthetic": 216}
+    assert rep["artifact"].startswith("civic_text_b0_fixture@fixture-1")
     md = (tmp_path / "t.md").read_text(encoding="utf-8")
     assert "SYNTHETIC" in md and "By language" in md and "Top confusions" in md
 

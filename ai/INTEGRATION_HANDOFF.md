@@ -61,7 +61,7 @@ Protocol: `ai.inference.copilot.tools.ToolExecutor.execute(tool, arguments, *, s
 | `AI_TRANSCRIPTION_MODEL` | speech-to-text |
 | `AI_REQUEST_TIMEOUT_S` (30), `AI_MAX_RETRIES` (1) | provider HTTP behaviour |
 | `AI_LOCAL_CLASSIFIER_PATH` | e.g. `ai/artifacts/civic_text_b0/<version>` (offline fallback for AI-1) |
-| `AI_FUSION_WEIGHTS_PATH`, `AI_FUSION_EMBEDDING_WEIGHTS_PATH` | calibrated weights for the lexical / embedding semantic signal |
+| `AI_FUSION_WEIGHTS_PATH`, `AI_FUSION_EMBEDDING_WEIGHTS_PATH` | calibrated weights for the lexical / embedding semantic signal (`status`: `calibrated_synthetic`, `calibrated_real`, or the uncalibrated prior; real-data calibration has not been run yet) |
 
 With none of these set the service still works in a **degraded, visible** mode (rules + manual entry).
 

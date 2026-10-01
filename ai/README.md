@@ -32,6 +32,13 @@ ai/
 | AI-5 analytics | backend facts → validated explanation (numbers verified, template fallback) | no |
 | AI-6 copilot | whitelisted read-only tools, scope enforced, answer/citation grounding; no DB credentials | no |
 
+## Hybrid data strategy (real public + synthetic)
+Synthetic data is **not** the only source. Real public datasets (NYC 311, Chicago 311, RDD2022) are acquired *outside git*, prepared into a canonical schema through
+explicit, versioned taxonomy mappings, and evaluated on **separate tracks** (`synthetic`, `real_holdout`, `hybrid`, plus descriptive statistics). Synthetic data covers
+multilingual text, code-mixing, edge cases and fixtures; real data supplies realism, holdout evaluation and geo/temporal behaviour. **No real data has been downloaded yet**
+and no source's licence is verified. See `training/src/data_sources/README.md` for dataset cards, the capability matrix (what each dataset can/cannot support), the
+licence status and the workflow. Reports always state their provenance and what may be claimed.
+
 ## Quick start
 ```bash
 pip install -e "ai[training,dev]"
@@ -56,9 +63,9 @@ Kaggle: see `training/README.md`. Backend: see `INTEGRATION_HANDOFF.md`. Taxonom
 | Provider intake / embeddings / transcription | **not run** | needs credentials + validated model IDs |
 | B1 encoder | **not run** | needs Kaggle (GPU/Internet) |
 
-## Test status (last run: 250 passed, 3 skipped, ~42 s)
+## Test status (last run: 339 passed, 3 skipped, ~60 s)
 | Category | Tests | Status |
 |---|---|---|
-| **Executed offline, passing** | 250: taxonomy integrity, schemas/contract shapes, featurizer/language, local classifier + artifact validation, triage, intake (incl. all fallbacks), OpenAI provider via **mock transport**, fusion, resolution, analytics grounding, copilot safety, service smoke, production-separation, dataset generator/splits, B0 trainer (sklearn↔numpy parity), fusion calibrator, B1 *pipeline logic* (fake encoder), evaluation metrics/harness/regression floors, notebooks (structure + **end-to-end execution of all three** — notebook 02 with a CI-only fake encoder) | ✅ |
+| **Executed offline, passing** | 339: taxonomy integrity, schemas/contract shapes, featurizer/language, local classifier + artifact validation, triage, intake (incl. all fallbacks), OpenAI provider via **mock transport**, fusion, resolution, analytics grounding, copilot safety, service smoke, production-separation, dataset generator/splits, B0 trainer (sklearn↔numpy parity), fusion calibrator, B1 *pipeline logic* (fake encoder), evaluation metrics/harness/regression floors, **real-data architecture** (source cards + licence/terms gate, canonical schema, mapping layer, adapters, Socrata/figshare clients via mock transport, pairs, splits, hybrid guards, output-path/git hygiene, CLI, evaluation tracks and claim policy — all on invented *format fixtures*, no real data), notebooks (structure + **end-to-end execution of all four** — notebook 02 with a CI-only fake encoder, notebook 04 on format fixtures) | ✅ |
 | **Require Kaggle (GPU / Internet / sentence-transformers)** | `training/tests/test_b1_logic.py::test_b1_with_a_real_sentence_encoder` (`-m requires_kaggle`, `RUN_B1_TESTS=1`) and the real B1 notebook run | ⏭ skipped here |
 | **Require provider credentials** | `inference/tests/test_live_provider.py` (`-m requires_provider`): live embeddings + live structured intake; plus `run_eval --system provider/hybrid` and fusion `--semantic-mode provider` | ⏭ skipped here — OpenAI path **never run live** |

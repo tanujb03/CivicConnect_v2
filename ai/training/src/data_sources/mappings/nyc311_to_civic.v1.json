@@ -1,0 +1,354 @@
+{
+  "mapping_id": "nyc311_to_civic",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "nyc311",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_NOT_VERIFIED_AGAINST_DATA",
+  "provenance_note": "Rules were written from general knowledge of NYC 311 complaint types/descriptors WITHOUT access to the live dataset (egress blocked). Every rule is a hypothesis. Run `cli profile --source nyc311` on the real file, compare with these rules, and review the coverage report before using any mapped label.",
+  "match_fields": [
+    "complaint_type",
+    "descriptor"
+  ],
+  "semantics": "first matching rule wins; conditions are case-insensitive; strings = equality; dict = equals/contains/startswith/regex; unmatched = unmapped",
+  "rules": [
+    {
+      "id": "nyc-pothole",
+      "when": {
+        "complaint_type": "Street Condition",
+        "descriptor": {
+          "contains": "pothole"
+        }
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": "pothole"
+    },
+    {
+      "id": "nyc-street-cond",
+      "when": {
+        "complaint_type": "Street Condition"
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": null,
+      "note": "other street-condition descriptors: category only"
+    },
+    {
+      "id": "nyc-highway",
+      "when": {
+        "complaint_type": "Highway Condition"
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-sidewalk",
+      "when": {
+        "complaint_type": "Sidewalk Condition"
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": "damaged_footpath"
+    },
+    {
+      "id": "nyc-water-quality",
+      "when": {
+        "complaint_type": "Water Quality"
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "contaminated_water"
+    },
+    {
+      "id": "nyc-water-nowater",
+      "when": {
+        "complaint_type": "Water System",
+        "descriptor": {
+          "contains": "no water"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "no_water_supply"
+    },
+    {
+      "id": "nyc-water-pressure",
+      "when": {
+        "complaint_type": "Water System",
+        "descriptor": {
+          "contains": "pressure"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "low_water_pressure"
+    },
+    {
+      "id": "nyc-water-leak",
+      "when": {
+        "complaint_type": "Water System",
+        "descriptor": {
+          "contains": "leak"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "pipe_leakage"
+    },
+    {
+      "id": "nyc-water-system",
+      "when": {
+        "complaint_type": "Water System"
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-sewer-backup",
+      "when": {
+        "complaint_type": "Sewer",
+        "descriptor": {
+          "contains": "backup"
+        }
+      },
+      "confidence": "medium",
+      "category": "drainage_sewerage",
+      "subcategory": "sewage_overflow"
+    },
+    {
+      "id": "nyc-sewer-catchbasin",
+      "when": {
+        "complaint_type": "Sewer",
+        "descriptor": {
+          "contains": "catch basin"
+        }
+      },
+      "confidence": "medium",
+      "category": "drainage_sewerage",
+      "subcategory": "blocked_drain"
+    },
+    {
+      "id": "nyc-sewer-manhole-cover",
+      "when": {
+        "complaint_type": "Sewer",
+        "descriptor": {
+          "contains": "manhole cover"
+        }
+      },
+      "confidence": "low",
+      "category": "drainage_sewerage",
+      "subcategory": "missing_manhole_cover"
+    },
+    {
+      "id": "nyc-sewer",
+      "when": {
+        "complaint_type": "Sewer"
+      },
+      "confidence": "medium",
+      "category": "drainage_sewerage",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-light-cycling",
+      "when": {
+        "complaint_type": "Street Light Condition",
+        "descriptor": {
+          "contains": "cycling"
+        }
+      },
+      "confidence": "low",
+      "category": "street_lighting",
+      "subcategory": "flickering_light"
+    },
+    {
+      "id": "nyc-light-out",
+      "when": {
+        "complaint_type": "Street Light Condition",
+        "descriptor": {
+          "contains": "out"
+        }
+      },
+      "confidence": "medium",
+      "category": "street_lighting",
+      "subcategory": "light_not_working"
+    },
+    {
+      "id": "nyc-light",
+      "when": {
+        "complaint_type": "Street Light Condition"
+      },
+      "confidence": "medium",
+      "category": "street_lighting",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-signal",
+      "when": {
+        "complaint_type": "Traffic Signal Condition"
+      },
+      "confidence": "medium",
+      "category": "traffic_encroachment",
+      "subcategory": "signal_not_working"
+    },
+    {
+      "id": "nyc-illegal-parking",
+      "when": {
+        "complaint_type": "Illegal Parking"
+      },
+      "confidence": "high",
+      "category": "traffic_encroachment",
+      "subcategory": "illegal_parking"
+    },
+    {
+      "id": "nyc-blocked-driveway",
+      "when": {
+        "complaint_type": "Blocked Driveway"
+      },
+      "confidence": "medium",
+      "category": "traffic_encroachment",
+      "subcategory": "illegal_parking"
+    },
+    {
+      "id": "nyc-missed-collection",
+      "when": {
+        "complaint_type": {
+          "contains": "missed collection"
+        }
+      },
+      "confidence": "medium",
+      "category": "sanitation",
+      "subcategory": "missed_garbage_collection"
+    },
+    {
+      "id": "nyc-dirty",
+      "when": {
+        "complaint_type": "Dirty Conditions"
+      },
+      "confidence": "medium",
+      "category": "sanitation",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-dumpster",
+      "when": {
+        "complaint_type": "Dumpster Complaint"
+      },
+      "confidence": "low",
+      "category": "sanitation",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-tree-fallen",
+      "when": {
+        "complaint_type": {
+          "contains": "tree"
+        },
+        "descriptor": {
+          "contains": "fallen"
+        }
+      },
+      "confidence": "medium",
+      "category": "parks_trees",
+      "subcategory": "fallen_tree"
+    },
+    {
+      "id": "nyc-tree-overgrown",
+      "when": {
+        "complaint_type": "Overgrown Tree/Branches"
+      },
+      "confidence": "medium",
+      "category": "parks_trees",
+      "subcategory": "overgrown_vegetation"
+    },
+    {
+      "id": "nyc-tree",
+      "when": {
+        "complaint_type": {
+          "contains": "tree"
+        }
+      },
+      "confidence": "low",
+      "category": "parks_trees",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-standing-water",
+      "when": {
+        "complaint_type": "Standing Water"
+      },
+      "confidence": "medium",
+      "category": "public_health",
+      "subcategory": "mosquito_breeding"
+    },
+    {
+      "id": "nyc-rodent",
+      "when": {
+        "complaint_type": "Rodent"
+      },
+      "confidence": "medium",
+      "category": "public_health",
+      "subcategory": null
+    },
+    {
+      "id": "nyc-oos-noise",
+      "when": {
+        "complaint_type": {
+          "contains": "noise"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "noise is not a V1 taxonomy category"
+    },
+    {
+      "id": "nyc-oos-heat",
+      "when": {
+        "complaint_type": {
+          "contains": "heat"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "housing heat/hot water is out of V1 scope"
+    },
+    {
+      "id": "nyc-oos-plumbing",
+      "when": {
+        "complaint_type": "Plumbing"
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    },
+    {
+      "id": "nyc-oos-paint",
+      "when": {
+        "complaint_type": {
+          "contains": "paint"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    },
+    {
+      "id": "nyc-oos-elevator",
+      "when": {
+        "complaint_type": "Elevator"
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    },
+    {
+      "id": "nyc-oos-vehicle",
+      "when": {
+        "complaint_type": {
+          "contains": "vehicle"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "for-hire/derelict vehicle complaints are enforcement matters outside V1 taxonomy"
+    }
+  ]
+}

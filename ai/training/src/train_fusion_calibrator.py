@@ -118,10 +118,31 @@ def fit_constrained_logistic(X: np.ndarray, y: np.ndarray, l2: float) -> tuple[f
     return float(res.x[0]), res.x[1:]
 
 
-def run(data_dir: Path, out_root: Path, *, semantic_mode: str = "lexical", version: str | None = None,
-        l2_grid=(0.001, 0.01, 0.1, 1.0)) -> Path:
+def _trained_on(pairs: list[dict], kind: str) -> dict:
+    srcs: dict[str, dict] = {}
+    for p in pairs:
+        pv = p.get("provenance") or {}
+        sid = pv.get("source_id", "synthetic_civic" if kind == "synthetic" else "unknown")
+        d = srcs.setdefault(sid, {"n": 0, "license_verified": bool(pv.get("license_verified", kind == "synthetic")),
+                                  "kind": pv.get("kind", kind)})
+        d["n"] += 1
+    return {"kind": kind, "sources": srcs}
 
-    tr, va = read_jsonl(data_dir / "pairs_train.jsonl"), read_jsonl(data_dir / "pairs_val.jsonl")
+
+def run(data_dir: Path | None, out_root: Path, *, semantic_mode: str = "lexical", version: str | None = None,
+        l2_grid=(0.001, 0.01, 0.1, 1.0), train_pairs: Path | None = None, val_pairs: Path | None = None,
+        data_kind: str = "synthetic") -> Path:
+    """``data_kind='real'`` fits on REAL agency-linked pairs (``train_pairs``/``val_pairs`` from
+    ``data_sources.cli pairs``); the weights are then labelled ``calibrated_real`` with their provenance."""
+
+    if data_kind == "real":
+        if not (train_pairs and val_pairs):
+            raise SystemExit("--kind real needs --pairs-train and --pairs-val (real pairs, split by holdout)")
+        tr, va = read_jsonl(train_pairs), read_jsonl(val_pairs)
+        if any((p.get("provenance") or {}).get("kind") != "real_public" for p in tr + va):
+            raise SystemExit("--kind real requires every pair to carry real_public provenance")
+    else:
+        tr, va = read_jsonl(data_dir / "pairs_train.jsonl"), read_jsonl(data_dir / "pairs_val.jsonl")
     emb = None
     if semantic_mode == "provider":
         emb = provider_embeddings([p[s]["text"] for p in tr + va for s in ("a", "b")])
@@ -134,8 +155,9 @@ def run(data_dir: Path, out_root: Path, *, semantic_mode: str = "lexical", versi
         if best is None or ll < best[0] - 1e-9:
             best = (ll, l2, b, w_)
     val_ll, l2, b, w = best
+    status = "calibrated_real" if data_kind == "real" else "calibrated_synthetic"
     weights = FusionWeights(bias=float(b), semantic=float(w[0]), geospatial=float(w[1]),
-                            temporal=float(w[2]), category=float(w[3]), status="calibrated_synthetic",
+                            temporal=float(w[2]), category=float(w[3]), status=status,
                             semantic_trained_on="embedding" if semantic_mode == "provider" else "lexical")
     sc_va = np.array([weights.score(*x) for x in X_va])
     policy = load_fusion_policy()
@@ -152,28 +174,34 @@ def run(data_dir: Path, out_root: Path, *, semantic_mode: str = "lexical", versi
                                  "(duplicates use different phrasings). Fit with --semantic-mode provider for embeddings."
                                  if semantic_mode == "lexical" and w[0] < 0.05 else None),
     }
-    ds = data_dir / "DATASET_MANIFEST.json"
-    version = version or f"0.1.0+{(sha256_file(ds) if ds.exists() else 'unknown')[:8]}"
+    ref = (data_dir / "DATASET_MANIFEST.json") if data_dir else (train_pairs if train_pairs else None)
+    version = version or f"0.1.0+{(sha256_file(ref) if ref and ref.exists() else 'unknown')[:8]}"
     out = out_root / version
     out.mkdir(parents=True, exist_ok=True)
     doc = {
-        "schema": WEIGHTS_SCHEMA, "version": version, "status": "calibrated_synthetic",
-        "semantic_trained_on": weights.semantic_trained_on, "synthetic_data": True,
+        "schema": WEIGHTS_SCHEMA, "version": version, "status": status,
+        "semantic_trained_on": weights.semantic_trained_on, "synthetic_data": data_kind != "real",
+        "trained_on": _trained_on(tr, data_kind),
         "bias": round(weights.bias, 6), "semantic": round(weights.semantic, 6), "geospatial": round(weights.geospatial, 6),
         "temporal": round(weights.temporal, 6), "category": round(weights.category, 6),
         "features": ["semantic", "geospatial", "temporal", "category"],
         "fusion_policy_version": policy["policy_version"], "metrics": metrics,
-        "limitations": [
+        "limitations": ([
+            "Fitted on REAL agency-linked duplicate pairs from a single city; labels are agency-assigned, negatives are sampled (possible label noise).",
+            "No narrative text exists in the source, so the semantic weight is not informative; fusion in production still needs embeddings.",
+            "Do not publish or redistribute outputs unless the source licence is verified (see trained_on.sources[*].license_verified).",
+        ] if data_kind == "real" else [
             "Fitted on SYNTHETIC pairs whose duplicate/non-duplicate construction encodes our own assumptions.",
+        ]) + [
             "Weights are constrained non-negative (each signal is monotone); L2 strength chosen by validation log-loss.",
             "Lexical semantic signal is mono-lingual: cross-language duplicates need embeddings (re-fit with --semantic-mode provider).",
-            "Thresholds in fusion_policy.v1.json are not tuned on real data; treat scores as ranking aids requiring human confirmation.",
+            "Thresholds in fusion_policy.v1.json are not tuned on real data unless status is calibrated_real; treat scores as ranking aids requiring human confirmation.",
         ],
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "git_sha": git_sha(), "runtime": runtime_info(),
     }
     (out / "fusion_weights.json").write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
     (out / "MODEL_CARD.md").write_text(
-        f"# Fusion calibrator {version}\n\n> SYNTHETIC-DATA calibration; not a real-world accuracy claim.\n\n"
+        f"# Fusion calibrator {version}\n\n> " + ("REAL-DATA calibration (single source; see trained_on)." if data_kind == "real" else "SYNTHETIC-DATA calibration; not a real-world accuracy claim.") + "\n\n"
         f"- Weights: bias {doc['bias']}, semantic {doc['semantic']}, geospatial {doc['geospatial']}, temporal {doc['temporal']}, category {doc['category']}\n"
         f"- Semantic signal fitted on: **{doc['semantic_trained_on']}**\n- Validation metrics: `{json.dumps(metrics)}`\n\n"
         "## Limitations\n" + "\n".join(f"- {x}" for x in doc["limitations"]) + "\n", encoding="utf-8")
@@ -184,12 +212,16 @@ def run(data_dir: Path, out_root: Path, *, semantic_mode: str = "lexical", versi
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument("--data", type=Path, default=None, help="synthetic dataset dir (not needed with --kind real)")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--kind", choices=["synthetic", "real"], default="synthetic")
+    ap.add_argument("--pairs-train", type=Path); ap.add_argument("--pairs-val", type=Path)
     ap.add_argument("--semantic-mode", choices=["lexical", "provider"], default="lexical")
     ap.add_argument("--version", default=None)
     a = ap.parse_args(argv)
-    run(a.data, a.out, semantic_mode=a.semantic_mode, version=a.version)
+    if a.kind == "synthetic" and a.data is None:
+        raise SystemExit("--data is required for --kind synthetic")
+    run(a.data, a.out, semantic_mode=a.semantic_mode, version=a.version, train_pairs=a.pairs_train, val_pairs=a.pairs_val, data_kind=a.kind)
     return 0
 
 

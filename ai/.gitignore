@@ -46,3 +46,6 @@ artifacts/civic_text_b0/0.1.0+e0795fc3/
 artifacts/civic_text_b0/0.1.0+f1adbd3f/
 artifacts/fusion_calibrator/0.1.0+e0795fc3/
 artifacts/fusion_calibrator/0.1.0+f1adbd3f/
+
+# real/external datasets and anything derived from them: NEVER committed (see training/src/data_sources cards)
+artifacts/real_data/**

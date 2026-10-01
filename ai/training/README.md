@@ -6,6 +6,7 @@ Everything here is **synthetic-data** work (see `../evaluation/datasets/DATASET_
 |---|---|---|---|---|---|
 | `01_b0_text_classifier_kaggle.ipynb` | **B0**: build dataset → train TF-IDF char n-gram + LogReg → evaluate → 5-fold CV → package | none (CPU) | **Off** | ≈2–3 min | **Yes — the main deliverable** |
 | `03_fusion_calibration_kaggle.ipynb` | AI-2 combined-score calibration (lexical; optional provider-embedding mode) | none | Off (On + secret for embedding mode) | <1 min | Needed for calibrated fusion |
+| `04_real_data_prepare_evaluate_kaggle.ipynb` | Real public data: profile → prepare → pairs → real-data evaluation (terms-gated; aggregates-only bundle) | none | On (Socrata) or attached dataset | minutes | No — run after datasets are chosen |
 | `02_b1_encoder_experiment_kaggle.ipynb` | **B1** (optional): frozen multilingual encoder + LogReg vs B0 | GPU T4/P100 | **On** (downloads encoder) | ≈5–10 min | **No** |
 
 ## 1 · Get the code onto Kaggle (pick one)
@@ -67,6 +68,9 @@ Without credentials these exit with code 2 and `SKIPPED` — no numbers are fabr
 * Run the 5-fold CV cell for a variance estimate; one held-out family per class gives wide intervals.
 * Fusion scores are dominated by distance on synthetic pairs (duplicates have small GPS jitter by construction).
 
+## 6b · Real public data
+See `src/data_sources/README.md` and notebook 04. Real data never enters the repo; outputs of that notebook are aggregate statistics only.
+
 ## 7 · Training code layout
 ```
 src/synthetic/    lexicon_*.py (hand-written phrases) · frames.py · noise.py · generator.py
@@ -75,6 +79,7 @@ src/train_text_classifier.py    B0 (+ parity check numpy vs sklearn)
 src/train_encoder_head.py       B1 (needs sentence-transformers)
 src/train_fusion_calibrator.py  AI-2 weights (non-negative, L2 by val log-loss)
 src/artifact_writer.py          writes civic-text-classifier/1 artifacts
+src/data_sources/               real-data cards, adapters, mappings, downloaders, pairs, hybrid assembly (see its README)
 src/make_fixture_artifact.py    tiny committed fixture for tests
 notebooks/                      thin Kaggle notebooks
 tests/                          generator, trainer, calibrator, notebooks (incl. slow end-to-end execution)

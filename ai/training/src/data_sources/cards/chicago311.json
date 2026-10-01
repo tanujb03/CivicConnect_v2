@@ -1,0 +1,114 @@
+{
+  "id": "chicago311",
+  "name": "Chicago 311 Service Requests",
+  "kind": "real_public",
+  "publisher": "City of Chicago (Chicago Data Portal)",
+  "landing_url": "https://data.cityofchicago.org/Service-Requests/311-Service-Requests/v6vf-nfxy",
+  "official_source_url": "https://data.cityofchicago.org/resource/v6vf-nfxy",
+  "version_note": "Rolling dataset (Socrata id v6vf-nfxy). Per a web-search summary it covers requests created after the new 311 system launch on 2018-12-18 plus some legacy-system records (a LEGACY_RECORD column). Pin pulls via RETRIEVAL.json.",
+  "data_access": {
+    "method": "Socrata SODA API (JSON/CSV) or bulk export",
+    "endpoint": "https://data.cityofchicago.org/resource/v6vf-nfxy.json",
+    "app_token": "optional; env SOCRATA_APP_TOKEN"
+  },
+  "license": {
+    "name": "City of Chicago Terms of Use (Data Portal)",
+    "url": "https://www.chicago.gov/city/en/narr/foia/data_disclaimer.html",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary",
+        "reliability": "secondary",
+        "note": "A snippet referred to 'City of Chicago Terms of Service' as the licence and said the dataset has 39 columns including duplicate and parent-request fields (names given as isDuplicate / parentServiceRequestNumber in the snippet; actual column names UNCONFIRMED).",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://data.cityofchicago.org/...v6vf-nfxy",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Source: City of Chicago Data Portal — 311 Service Requests (v6vf-nfxy). Exact attribution/terms wording must be taken from the portal's terms.",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "The terms URL above is the commonly referenced data disclaimer page and was NOT verified; confirm the applicable terms on the dataset page."
+    ]
+  },
+  "subset_used": "To be selected (suggest: a bounded date window; include rows with duplicate/parent fields populated for the fusion evaluation).",
+  "intended_use": [
+    "evaluation",
+    "calibration",
+    "analytics_validation",
+    "demo"
+  ],
+  "restrictions": [
+    "Terms not yet read at the primary source.",
+    "Do not commit raw or prepared rows.",
+    "Duplicate flags are agency-assigned and may be noisy; do not describe them as human-verified ground truth."
+  ],
+  "supports": [
+    {
+      "capability": "AI-2",
+      "how": "If the file carries agency-assigned duplicate/parent-request links, they give REAL duplicate pairs to evaluate the geospatial + temporal + category signals and to re-fit the combined-score weights on real spatio-temporal behaviour.",
+      "caveats": [
+        "No citizen narrative text: the semantic signal cannot be evaluated here.",
+        "Negatives are sampled (nearby same-type unlinked requests) and may include undetected duplicates, so precision is a conservative lower bound.",
+        "Single city."
+      ]
+    },
+    {
+      "capability": "AI-5",
+      "how": "Real spatio-temporal data for hotspot/recurrence/baseline validation.",
+      "caveats": [
+        "Mapped subset only."
+      ]
+    },
+    {
+      "capability": "AI-3",
+      "how": "Resolution-time distributions per service type for SLA/age sanity checks.",
+      "caveats": [
+        "No severity/priority ground truth."
+      ]
+    },
+    {
+      "capability": "AI-6",
+      "how": "Realistic seed data for copilot demos.",
+      "caveats": [
+        "Demo realism only."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-1 text intake classification",
+      "why": "Service-type fields, not narrative text (confirm with `cli profile`)."
+    },
+    {
+      "capability": "Multilingual",
+      "why": "English/structured only."
+    },
+    {
+      "capability": "AI-4",
+      "why": "No before/after media in the tabular data."
+    }
+  ],
+  "known_limitations": [
+    "Chicago-specific service types.",
+    "Schema may evolve; column names must be confirmed against the live file.",
+    "Timestamps are source-local."
+  ],
+  "privacy_notes": [
+    "Street addresses may be present; the adapter does not read address columns."
+  ],
+  "expected_schema_notes": [
+    "Expected (not verified) columns: sr_number, sr_type, owner_department, status, created_date, closed_date, latitude, longitude, plus duplicate/parent/legacy fields under UNCONFIRMED names. The adapter resolves by alias and fails loudly."
+  ],
+  "adapter": "chicago311",
+  "mapping_id": "chicago311_to_civic",
+  "citation": null,
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

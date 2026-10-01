@@ -1,0 +1,112 @@
+{
+  "id": "rdd2022",
+  "name": "RDD2022 — multi-national Road Damage Dataset (CRDDC'2022)",
+  "kind": "real_public",
+  "publisher": "Arya et al. / sekilab (University of Tokyo) — released via figshare",
+  "landing_url": "https://figshare.com/articles/dataset/RDD2022_-_The_multi-national_Road_Damage_Dataset_released_through_CRDDC_2022/21431547",
+  "official_source_url": "https://github.com/sekilab/RoadDamageDetector",
+  "version_note": "figshare article 21431547 (DOI 10.6084/m9.figshare.21431547.v1 per a search summary). 47,420 images, >55,000 annotations (secondary source). Test-set images are released WITHOUT annotations.",
+  "data_access": {
+    "method": "figshare download (large; Norway alone ≈ 9.9 GB per the project README)",
+    "endpoint": "https://api.figshare.com/v2/articles/21431547",
+    "note": "On Kaggle prefer attaching an existing copy as a Dataset input rather than re-downloading; verify its licence/provenance too."
+  },
+  "license": {
+    "name": "UNRESOLVED: CC BY-SA 4.0 (project README) vs CC BY 4.0 (search summaries of figshare/journal record)",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "https://github.com/sekilab/RoadDamageDetector (README)",
+        "reliability": "primary",
+        "note": "Fetched via web fetch: images are available under 'Creative Commons Attribution-ShareAlike 4.0 International License' (CC BY-SA 4.0); several citations are required (dataset article, CRDDC'2022 summary, review); faces and licence plates are blurred.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "web search summary of the figshare record / Geoscience Data Journal article",
+        "reliability": "secondary",
+        "note": "States the dataset is licensed under CC BY 4.0.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://figshare.com/articles/dataset/RDD2022_.../21431547",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [
+      "The GitHub README says CC BY-SA 4.0 but secondary summaries of the figshare record say CC BY 4.0. Resolve at the figshare record before any use. Until then, treat as the STRICTER CC BY-SA 4.0 (share-alike): any redistributed derivative would have to carry the same licence."
+    ],
+    "attribution": "Cite Arya et al. (RDD2022, Geoscience Data Journal, 2024), the CRDDC'2022 challenge summary (Arya et al., 2022) and, where relevant, the review in Advanced Engineering Informatics (Arya et al., 2024), as required by the project README. Provide licence name, link and note of changes.",
+    "share_alike": true,
+    "commercial_use": "unverified (CC BY / BY-SA generally permit it with attribution — confirm)",
+    "notes": [
+      "This repository never redistributes the images or derived annotation files."
+    ]
+  },
+  "subset_used": "To be selected (suggest: India subset first, plus one other country for cross-country evaluation). Classes D00, D10, D20, D40. Training split only (test images have no annotations).",
+  "intended_use": [
+    "evaluation",
+    "training"
+  ],
+  "restrictions": [
+    "Licence unresolved (BY vs BY-SA): treat as BY-SA until verified.",
+    "Required citations (see attribution).",
+    "Do not commit images or annotation derivatives.",
+    "Faces/plates are blurred in the source; do not attempt to unblur or re-identify."
+  ],
+  "supports": [
+    {
+      "capability": "AI-1",
+      "how": "Image modality for road issues: evaluate the provider's vision path (zero-shot) on roads/pothole (D40) and road-surface damage (cracks → category-level only), by country; optionally fine-tune a small road-damage detector (outside the V1 minimum).",
+      "caveats": [
+        "Road-damage images only; says nothing about other categories.",
+        "Crack classes have no subcategory in taxonomy v1 (mapped to category 'roads' only).",
+        "Images are dashcam/phone-mounted road-survey frames, not citizen close-ups of a pothole near a school.",
+        "Same-road-sequence leakage between random image splits: hold out by country or source group."
+      ]
+    },
+    {
+      "capability": "AI-2",
+      "how": "(Optional, weak) visual-similarity signal experiments.",
+      "caveats": [
+        "No duplicate pairs exist in the dataset."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-4 before/after resolution evidence",
+      "why": "No before/after pairs, no repair state."
+    },
+    {
+      "capability": "Text intake / multilingual",
+      "why": "Images only."
+    },
+    {
+      "capability": "Triage severity",
+      "why": "No severity labels (class + box only)."
+    },
+    {
+      "capability": "Other civic categories (garbage, lighting, water, …)",
+      "why": "Only four road-damage classes."
+    }
+  ],
+  "known_limitations": [
+    "Six countries (Japan, India, Czech Republic, Norway, United States, China: MotorBike and Drone sources).",
+    "Annotation protocol and class balance differ by country.",
+    "Test annotations withheld."
+  ],
+  "privacy_notes": [
+    "Faces and licence plates are blurred by the dataset authors."
+  ],
+  "expected_schema_notes": [
+    "PASCAL VOC XML annotations; classes D00 longitudinal crack, D10 transverse crack, D20 alligator crack, D40 pothole (README). Directory layout is described in supplementary files; the adapter discovers `annotations/xmls/*.xml` and sibling `images/` and infers country from path components."
+  ],
+  "adapter": "rdd2022",
+  "mapping_id": "rdd2022_to_civic",
+  "citation": "Arya, D., et al. (2024). RDD2022: A multi-national image dataset for automatic road damage detection. Geoscience Data Journal. https://doi.org/10.1002/gdj3.260 (DOI taken from a search result; verify).",
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

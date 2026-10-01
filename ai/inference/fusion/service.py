@@ -101,7 +101,7 @@ class FusionService:
 
         used = {m.semantic_source for m in matches} or {"lexical"}
         uncal = [n for n, w in (("lexical", self.weights), ("embedding", self.embedding_weights))
-                 if n in used and w.status != "calibrated_synthetic"]
+                 if n in used and w.status not in ("calibrated_synthetic", "calibrated_real")]
         if uncal:
             warnings.append(W.make(W.FUSION_UNCALIBRATED_PRIOR,
                                    f"combined score uses uncalibrated prior weights for the {'/'.join(uncal)} semantic signal"))
