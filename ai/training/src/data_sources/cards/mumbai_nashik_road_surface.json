@@ -1,21 +1,21 @@
 {
   "id": "mumbai_nashik_road_surface",
-  "name": "Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg)",
+  "name": "Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg, version 2)",
   "kind": "real_public",
   "publisher": "Authors of the Data in Brief article (names not captured); hosted on Mendeley Data",
-  "landing_url": "https://data.mendeley.com/datasets/tj2m7zz4rg",
+  "landing_url": "https://data.mendeley.com/datasets/tj2m7zz4rg/2",
   "official_source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8933537/",
   "reference": "doi:10.17632/tj2m7zz4rg.2",
   "identity_status": "CONFIRMED_BY_USER",
   "priority": "secondary",
   "role_summary": "PRIORITY real Maharashtra/Indian visual grounding: AI-1 image evaluation at category level (potholes where explicitly labelled), infrastructure-scene coverage and demo realism. Claims limited to what the actual labels support.",
-  "version_note": "Identified by the repository owner as Mendeley Data dataset tj2m7zz4rg (earlier search results pointed at version 2, doi 10.17632/tj2m7zz4rg.2, with the Data in Brief article PMC8933537: record the version you actually attach). Reported contents (owner-relayed, not read from the record by this tooling): 8,484 RGB images and 13 videos from Mumbai and Nashik under different road and weather conditions, showing potholes, speed breakers, roadside barriers and paved/unpaved roads. Whether the images carry per-image labels, folder labels or bounding boxes is NOT established: profile the files (`profile-images`) before any evaluation. A different Kaggle dataset ('Indian Roads Dataset') is explicitly NOT added.",
+  "version_note": "Version 2 of Mendeley Data dataset tj2m7zz4rg (https://data.mendeley.com/datasets/tj2m7zz4rg/2, doi 10.17632/tj2m7zz4rg.2; Data in Brief article PMC8933537). The repository owner confirms this is the exact dataset intended. Reported contents (owner-relayed, not read from the record by this tooling): 8,484 RGB images and 13 videos from Mumbai and Nashik under different road and weather conditions, showing potholes, speed breakers, roadside barriers and paved/unpaved roads. Whether the images carry per-image labels, folder labels or bounding boxes is NOT established: profile the files before any evaluation. A different Kaggle dataset ('Indian Roads Dataset') is explicitly NOT added.",
   "data_access": {
     "method": "Not hosted on Kaggle by its authors: download the Mendeley files yourself and upload them as a private Kaggle Dataset (so they are read in place from /kaggle/input), keeping the attribution/licence text. This repository never downloads or copies the data.",
     "video": "Videos must be converted to frames outside the repository, keeping the video id in the file/dir name, so holdouts keep whole videos together."
   },
   "license": {
-    "name": "CC BY 4.0 — REPORTED by the repository owner from the primary Mendeley record; not read by this tooling, so UNVERIFIED here",
+    "name": "CC BY 4.0 — the source is REPORTED (by the repository owner) to currently state this; not read by this tooling, so UNVERIFIED here",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "status": "UNVERIFIED",
     "evidence": [

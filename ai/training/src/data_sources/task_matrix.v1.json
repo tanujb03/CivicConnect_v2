@@ -545,7 +545,7 @@
       "group id (used only to build splits)"
     ],
     "labels": "D00, D10, D20, D40",
-    "taxonomy_mapping": "`rdd2020_to_civic@0.1.0-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
+    "taxonomy_mapping": "`rdd2020_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
     "track": "real_holdout",
     "implemented_in_eval_harness": true,
     "notes": "India subset; NonCommercial licence reported.",
@@ -568,7 +568,7 @@
       "group id (used only to build splits)"
     ],
     "labels": "D00, D10, D20, D40",
-    "taxonomy_mapping": "`rdd2022_to_civic@0.1.0-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
+    "taxonomy_mapping": "`rdd2022_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README)",
     "track": "real_holdout",
     "implemented_in_eval_harness": true,
     "notes": "India subset first; hold out index blocks/countries; provider needed.",

@@ -43,39 +43,42 @@ class DatasetSpec:
     title: str
     kind: str                            # "tabular" | "images"
     name_hints: tuple[str, ...]          # matched against normalised directory names (alphanumerics only)
+    urls: tuple[str, ...]                # the exact sources this notebook was written for
     attach: str                          # how to attach it in Kaggle
-    layout: str                          # what the notebook expects to see under the mount
-    needs_xml_annotations: bool = False  # RDD-style: <...>/annotations/*.xml must exist
-    default_format: str | None = None    # annotation format known from the dataset's own documentation (still verified by profiling)
-    default_country: str | None = None
+    layout: str                          # what the notebook expects to see under the mount (stated as a hint, NOT enforced beyond "images exist")
 
 
 SPECS: dict[str, DatasetSpec] = {s.id: s for s in (
     DatasetSpec(
         "bmc_mumbai", "BMC Mumbai civic complaints (Kaggle competition; SYNTHETIC)", "tabular",
         ("mumbainagarsevabmccivic", "mumbainagarseva", "bmccivic", "bmccomplaint"),
+        ("https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data",
+         "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules"),
         "Notebook → Add Input → Competition data → 'Mumbai Nagar Seva / BMC Civic Complaint Resolution 2018-2024' (accept the competition rules first).",
-        "/kaggle/input/<competition-or-dataset>/…/*train*.csv (one training CSV; the test CSV has no target and is not used) and the data-dictionary CSV."),
+        "…/bmc_train.csv (the only file read for data), bmc_data_dictionary.csv (read for column descriptions), bmc_test.csv (target withheld: NEVER opened)."),
     DatasetSpec(
-        "mumbai_nashik_road_surface", "Mumbai/Nashik road-surface images (Mendeley tj2m7zz4rg)", "images",
+        "mumbai_nashik_road_surface", "Mumbai/Nashik road-surface dataset v2 (Mendeley tj2m7zz4rg)", "images",
         ("mumbainashik", "nashikmumbai", "roadsurface", "tj2m7zz4rg", "roadsurfaceimages", "nashik"),
-        "Download the Mendeley files on a machine that can, upload them as a PRIVATE Kaggle Dataset (keep the attribution/licence text), then Add Input → Your Datasets. "
+        ("https://data.mendeley.com/datasets/tj2m7zz4rg/2",),
+        "Download the Mendeley files (version 2) on a machine that can, upload them as a PRIVATE Kaggle Dataset (keep the attribution/licence text), then Add Input → Your Datasets. "
         "(The authors do not host it on Kaggle; this repository never downloads or copies it.)",
-        "/kaggle/input/<your-dataset>/… images (+ any annotation files/folders + the videos). Layout is unknown until profiled: run the profile stage first."),
+        "/kaggle/input/<your-dataset>/… images, videos and any annotation files. The layout is NOT assumed: the profile reports what exists."),
     DatasetSpec(
-        "rdd2022", "RDD2022 — India subset", "images", ("rdd2022india", "rdd2022", "roaddamage2022"),
-        "Upload the RDD2022 INDIA subset (from the project distribution) as a private Kaggle Dataset, or attach an existing Kaggle copy you trust; record who published that copy.",
-        "/kaggle/input/<name containing 'rdd2022'>/…/India/train/{images/*.jpg, annotations/xmls/*.xml} (PASCAL VOC). If the mount IS the India folder, set default_country='India'.",
-        needs_xml_annotations=True, default_format="voc", default_country="India"),
+        "rdd2022", "RDD2022 — Kaggle copy aliabdelmenam/rdd-2022", "images", ("rdd2022",),
+        ("https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022",),
+        "Notebook → Add Input → Datasets → 'aliabdelmenam/rdd-2022' (a THIRD-PARTY re-upload of the upstream RDD2022 project; its provenance and licence must be re-checked).",
+        "/kaggle/input/rdd-2022/… (or /kaggle/input/datasets/aliabdelmenam/rdd-2022/…). Its layout, annotation format, class list, countries and splits are NOT assumed: "
+        "the profile reports what exists and you then set IMAGE['rdd2022'] (e.g. a countries filter for the India subset)."),
     DatasetSpec(
-        "rdd2020", "RDD2020 — India subset", "images", ("rdd2020india", "rdd2020", "roaddamage2020"),
-        "Upload the RDD2020 INDIA subset (Mendeley Data 5ty2wb6gvg) as a private Kaggle Dataset, or attach an existing copy you trust; record who published it.",
-        "/kaggle/input/<name containing 'rdd2020'>/…/India/train/{images/*.jpg, annotations/xmls/*.xml} (PASCAL VOC). If the mount IS the India folder, set default_country='India'.",
-        needs_xml_annotations=True, default_format="voc", default_country="India"),
+        "rdd2020", "RDD2020 (Mendeley 5ty2wb6gvg v1) — India subset where applicable", "images", ("rdd2020",),
+        ("https://data.mendeley.com/datasets/5ty2wb6gvg/1",),
+        "Download the Mendeley files on a machine that can, upload them (or just the India subset) as a private Kaggle Dataset whose name contains 'rdd2020', then Add Input.",
+        "/kaggle/input/<name containing rdd2020>/… The layout is NOT assumed: the profile reports what exists; use a countries filter if several countries are present."),
     DatasetSpec(
         "bharatpothole", "BharatPotHole (iWatchRoad)", "images", ("bharatpothole", "iwatchroad"),
-        "Notebook → Add Input → Datasets → search 'bharatpothole' (Kaggle: surbhisaswatimohanty/bharatpothole).",
-        "/kaggle/input/bharatpothole/… dashcam frames + annotations (format reported as YOLO by a secondary source — NOT assumed: profile first; YOLO needs the dataset's own class-names file)."),
+        ("https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole",),
+        "Notebook → Add Input → Datasets → 'surbhisaswatimohanty/bharatpothole'.",
+        "/kaggle/input/bharatpothole/… frames + annotations. Format, class-names file and grouping are NOT assumed: the profile reports what exists."),
 )}
 
 
@@ -122,6 +125,7 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
     ext: dict[str, int] = {}
     n = 0
     xml_in_annotations = 0
+    archives = 0
     tabular: list[dict] = []
     capped = False
     for p in Path(path).rglob("*"):
@@ -133,12 +137,14 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
             break
         e = p.suffix.lower()
         ext[e or "(none)"] = ext.get(e or "(none)", 0) + 1
+        archives += e in (".zip", ".tar", ".tgz", ".7z", ".rar")
         if e == ".xml" and "annotations" in {x.lower() for x in p.parts}:
             xml_in_annotations += 1
         if e in TABULAR_EXTS and len(tabular) < 50:
             tabular.append({"relpath": str(p.relative_to(path)), "bytes": p.stat().st_size})
     return {"files": n, "capped": capped, "extensions": dict(sorted(ext.items(), key=lambda kv: -kv[1])[:12]),
-            "images": sum(v for k, v in ext.items() if k in IMAGE_EXTS), "xml_annotation_files": xml_in_annotations, "tabular_files": tabular}
+            "images": sum(v for k, v in ext.items() if k in IMAGE_EXTS), "xml_annotation_files": xml_in_annotations, "archives": archives,
+            "tabular_files": tabular}
 
 
 def describe_inputs(root: Path | None = None) -> list[dict]:
@@ -153,16 +159,17 @@ def describe_inputs(root: Path | None = None) -> list[dict]:
 
 
 def _structure_problem(spec: DatasetSpec, st: dict) -> str | None:
+    """Minimal usability check only. Format/layout questions are answered by the profile, never assumed here."""
+    if st["files"] == 0:
+        return "the mount is empty"
     if spec.kind == "tabular":
         if not st["tabular_files"]:
             return "no CSV/JSON(L) data file found under the mount"
         return None
-    if spec.needs_xml_annotations and st["xml_annotation_files"] == 0:
-        return "no PASCAL VOC annotation files (…/annotations/*.xml) found: this does not look like an RDD copy (or the annotations were not uploaded)"
-    if st["images"] == 0 and st["files"] and not st["xml_annotation_files"]:
-        return "no image files found under the mount (videos only? frames must be extracted first)"
-    if st["images"] == 0 and st["files"] == 0:
-        return "the mount is empty"
+    if st["images"] == 0:
+        arch = st.get("archives", 0)
+        return ("no image files found under the mount" + (f" ({arch} archive file(s) present: Kaggle did not extract them — attach an extracted copy)" if arch else
+                                                          " (videos only? frames must be extracted first)"))
     return None
 
 
@@ -201,17 +208,32 @@ def locate(spec: DatasetSpec, root: Path | None = None, override: str | Path | N
     return Location(spec.id, False, None, "", candidates_rejected=rejected, attached=attached, message=msg)
 
 
+def _is_test_file(name: str) -> bool:
+    return "test" in name.lower()
+
+
 def pick_tabular_file(location: Location, explicit: str | Path | None = None) -> tuple[Path | None, str]:
-    """The ONE data file to profile. Never chosen silently when ambiguous. Returns (path, explanation)."""
+    """The ONE data file to profile. Never chosen silently when ambiguous, and a file that looks like the withheld-target TEST file is
+    refused outright (even when named explicitly). Returns (path, explanation)."""
     if explicit:
         p = Path(explicit)
+        if _is_test_file(p.name):
+            return None, f"refused: {p.name} looks like the TEST file (its target is withheld; it is never used for target-bearing training or evaluation)."
         return (p, "explicit path") if p.is_file() else (None, f"explicit file not found: {p}")
     if location.path is None:
         return None, "dataset not located"
-    files = location.structure.get("tabular_files", [])
-    train = [f for f in files if "train" in Path(f["relpath"]).name.lower()]
+    files = [f for f in location.structure.get("tabular_files", []) if "dictionary" not in Path(f["relpath"]).name.lower()]
+    train = [f for f in files if "train" in Path(f["relpath"]).name.lower() and not _is_test_file(Path(f["relpath"]).name)]
     if len(train) == 1:
-        return location.path / train[0]["relpath"], "the only file whose name contains 'train'"
-    cands = [f["relpath"] for f in (train or files)]
+        return location.path / train[0]["relpath"], "the only non-dictionary file whose name contains 'train' (test files are never opened)"
+    cands = [f["relpath"] for f in (train or [f for f in files if not _is_test_file(Path(f["relpath"]).name)])]
     return None, (f"cannot choose the data file: {len(cands)} candidates {cands[:10]}. Set FILES['{location.dataset_id}'] to the training file "
                   "(the test file's target is withheld and must not be used).")
+
+
+def find_data_dictionary(location: Location) -> Path | None:
+    """The competition's data dictionary (a description of columns, not data rows), only if exactly one file looks like it."""
+    if location.path is None:
+        return None
+    hits = [f for f in location.structure.get("tabular_files", []) if "dictionary" in Path(f["relpath"]).name.lower()]
+    return location.path / hits[0]["relpath"] if len(hits) == 1 else None

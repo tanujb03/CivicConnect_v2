@@ -48,7 +48,7 @@
   },
   "origin_status": "SYNTHETIC_PER_COMPETITION",
   "origin_notes": [
-    "The Kaggle competition information states that this dataset is synthetically generated, not a collection of actual BMC complaint records. It must never be presented as real-world BMC validation, official BMC data, or evidence of real citizen behaviour.",
+    "The competition RULES are reported (by the repository owner) to state explicitly that this dataset is synthetically generated, not a collection of actual BMC complaint records. It must never be presented as real-world BMC validation, official BMC data, or evidence of real citizen behaviour.",
     "What is NOT yet recorded from the primary pages: the exact wording of the origin statement, the generation method, the host/organisation and the exact licence/rules text. Record them from the competition Overview / Data / Rules pages (see the manual checklist).",
     "Because the data is synthetic its free-text columns (if any) are not citizen-written, so they can never be confirmed as citizen narratives, and nothing here supports a real Hindi/Marathi/Hinglish claim."
   ],
@@ -138,9 +138,9 @@
   "review_status": "DRAFT_NEEDS_HUMAN_REVIEW",
   "origin_evidence": [
     {
-      "source": "Kaggle competition information — https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024 (reported by the repository owner)",
+      "source": "Kaggle competition RULES — https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules (statement relayed by the repository owner; also the competition information/data pages)",
       "reliability": "secondary",
-      "note": "The repository owner reports having verified from the competition information that the dataset is synthetically generated. This tooling could not fetch Kaggle (sandbox egress block), so the statement is recorded as relayed, not as a primary read; re-record it with the exact quoted wording and mark primary once read from the page.",
+      "note": "The repository owner reports that the competition rules explicitly state the dataset is synthetically generated. This tooling could not fetch Kaggle (sandbox egress block), so the statement is recorded as relayed, not as a primary read; re-record it with the exact quoted wording and the rules' data-use/licence terms, and mark primary once read from the page.",
       "retrieved_on": "2026-10-01"
     }
   ]

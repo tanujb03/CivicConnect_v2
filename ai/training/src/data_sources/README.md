@@ -154,32 +154,43 @@ Every report carries `track`, a `provenance` table (source, kind, n, licence + v
 
 ## Kaggle workflow (datasets stay in `/kaggle/input`; nothing is downloaded locally)
 
-Notebook: [`ai/training/notebooks/05_kaggle_real_data_profile_evaluate.ipynb`](../../notebooks/05_kaggle_real_data_profile_evaluate.ipynb) — a thin wrapper over `kaggle_run.py` (`python -m ai.training.src.data_sources.kaggle_run --help`). CPU only, Internet Off is fine, no GPU, **no model/provider call by default**.
+Notebook: [`ai/training/notebooks/05_kaggle_real_data_profile_evaluate.ipynb`](../../notebooks/05_kaggle_real_data_profile_evaluate.ipynb) — a thin wrapper over `kaggle_run.py` (`python -m ai.training.src.data_sources.kaggle_run --help`). CPU only, no GPU/TPU, **no API credentials, no model/provider call by default**, Internet only needed if the repo code must be fetched with `git`.
+
+**Exact sources** (also in the notebook and the cards):
+
+| id | exact source | evidence class |
+|---|---|---|
+| `bmc_mumbai` | Kaggle competition [data](https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data) · [rules](https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules): `bmc_train.csv` (read), `bmc_data_dictionary.csv` (column descriptions), `bmc_test.csv` (**never opened**: target withheld) | third-party **synthetic** (rules state it) |
+| `mumbai_nashik_road_surface` | Mendeley [tj2m7zz4rg **v2**](https://data.mendeley.com/datasets/tj2m7zz4rg/2), 8,484 images + 13 videos (private Kaggle Dataset you upload) | real; CC BY 4.0 reported, unverified here |
+| `rdd2022` | Kaggle [`aliabdelmenam/rdd-2022`](https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022) — **third-party re-upload; layout NOT assumed** to match the official distribution | real; licence unresolved |
+| `rdd2020` | Mendeley [5ty2wb6gvg v1](https://data.mendeley.com/datasets/5ty2wb6gvg/1), India subset where applicable (private Kaggle Dataset you upload) | real; NonCommercial reported, unverified |
+| `bharatpothole` | Kaggle [`surbhisaswatimohanty/bharatpothole`](https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole) | real; licence pending |
 
 ```
-BMC synthetic civic ──▶ profile → column roles → mapping → leakage audit → synthetic-track evaluation
-Mumbai/Nashik       ──▶ profile-images → format/class names → group-safe holdout → annotation+duplicate audits → real_holdout readiness
-RDD2022 India       ──▶ (same; VOC is the documented format, confirmed by the profile)
-RDD2020 India       ──▶ (same, optional)
-BharatPotHole       ──▶ profile → licence gate → (format/class names/group rule from you) → readiness; publishing disabled while licence unknown
+BMC synthetic civic ──▶ profile → data dictionary → column roles → mapping → leakage audit → synthetic-track evaluation
+every image dataset ──▶ discover → profile-images (what is actually there) → YOU set format/class names/countries/group rule → prepare → audits → real_holdout readiness
 ```
 
-* **Dataset by dataset.** Attach any subset; each runs independently and returns `OK`, `PARTIAL`, `NOT_ATTACHED` (with the exact name hints, what *is* attached, how to attach, expected layout), `NEEDS_CONFIG` (a role/format/class-names/group rule/data file you must state — never guessed), `NEEDS_TERMS` (you have not accepted terms), `BLOCKED` or `FAILED` (unexpected error, reported verbatim, other datasets continue).
-* **Read in place.** `kaggle_inputs.py` finds mounts under `/kaggle/input/<slug>`, `/kaggle/input/datasets/<owner>/<slug>` and `/kaggle/input/competitions/<slug>` by name **and** structure, never modifies them, and never copies them. Outputs go to `/kaggle/working/civic_real/<dataset>/` (outside the repo; the output guard still applies). Only reports/manifests are bundled; `records.jsonl` and images are excluded by construction.
-* **Image audits** (`image_audit.py`, aggregates only): formats by magic bytes vs extension, dimensions, missing/unreadable files, class distribution (raw and mapped), unannotated images vs images with no boxes, box-size distribution, group (video/sequence/block) sizes, **exact duplicates (sha1)** and **near duplicates (64-bit difference hash, needs Pillow, capped & stated)** — including how many duplicate pairs/clusters span groups or the train/holdout split. Any cross-split duplicate **blocks** the `real_holdout` readiness.
-* **Holdouts.** RDD uses seeded hashing of index-block groups; other image datasets only get a holdout when you give an explicit group rule (`dir`/`regex`/`block`); without one the run still profiles/prepares but builds **no** split and says so.
-* **`real_holdout` readiness** is a verdict, not a result: `can_run_real_holdout` (annotated holdout exists, no straddling groups, no cross-split duplicates) vs `publishable_evaluation_enabled` (also needs a verified licence, ≥ 200 annotated holdout images, and negatives for precision). Today the second is always false.
-* **Provider evaluation** (`RUN_PROVIDER_EVAL`) is opt-in and only attempted when readiness allows; a missing provider is a skipped stage, never a failure.
+* **Profile first, never assume.** For every image dataset (including the exact RDD2022 Kaggle copy) the first run reports the real directory outline, extensions, image counts, annotation artefacts with content sniffing (VOC / YOLO / COCO), class-name files *with their contents*, split-like folders, country markers, archives, videos, same-stem annotation coverage and duplicate stems — plus a **suggested** `IMAGE[...]` configuration that is printed, never applied. The run stops for that dataset with `NEEDS_CONFIG` until you set `format` (and `class_names_file` for YOLO). Annotation files are paired to images by stem with a path-similarity tie-break; an unresolved tie is **counted and left unannotated**, never guessed.
+* **Dataset by dataset.** Attach any subset; each runs independently and returns `OK`, `PARTIAL`, `NOT_ATTACHED` (exact name hints, what *is* attached, how to attach, expected layout), `NEEDS_CONFIG`, `NEEDS_TERMS`, `BLOCKED` (e.g. a countries filter matching nothing, or a configured format that matches no annotation) or `FAILED` (unexpected error reported verbatim; the other datasets continue).
+* **Read in place, write only to `/kaggle/working`.** `kaggle_inputs.py` finds mounts under `/kaggle/input/<slug>`, `/kaggle/input/datasets/<owner>/<slug>` and `/kaggle/input/competitions/<slug>` by name and a minimal usability check (images present / a data file present) and never modifies them (tested: the input tree is byte-identical after a full run). The BMC training file is chosen only if exactly one non-dictionary, non-test file contains `train`; the `test` file is refused even if named explicitly.
+* **Image audits** (`image_audit.py`, aggregates only): formats by magic bytes vs extension, dimensions, class distribution (raw and mapped), unannotated images vs images with no boxes, box sizes, group sizes, **exact duplicates (sha1)** and **near duplicates (difference hash, needs Pillow — if absent the report says it did NOT run)**, including pairs/clusters spanning groups or train/holdout. A cross-split duplicate **blocks** the `real_holdout` readiness.
+* **Holdouts.** A holdout is built only from an explicit rule: `group_by` (`dir`/`regex`/`block`) + `holdout_fraction`, or `split_from_path` (the source's own train/val/test folders, still audited and never the default). Without a rule the run profiles/prepares but builds **no** split and says so.
+* **`real_holdout` readiness** is a verdict, not a result: `can_run_real_holdout` vs `publishable_evaluation_enabled` (also needs a verified licence, ≥ 200 annotated holdout images, negatives for precision). Today the latter is always false.
+* **Outputs.** `/kaggle/working/civic_real/…`; the bundle is an **allowlist** of aggregate reports/manifests/profiles with a per-file size cap — prepared records, CSVs, images, videos and annotations can never enter it.
+
+### Repository bootstrap (which code runs?)
+The notebook's first cell prefers, in order: `CIVIC_REPO` → the repo it sits in → an attached Kaggle Dataset containing `ai/` → `git` checkout of `CIVIC_GIT_URL` (default `https://github.com/tanujb03/CivicConnect_v2`) at `CIVIC_GIT_REF` (branch, tag or commit SHA; **default `claude/epic-fermat-3qlw5c`, never an implicit `main`**). A checkout lacking the notebook/framework is rejected as stale. The resolved URL/ref/commit are printed and stored in `SUMMARY.json`/`SUMMARY.md`. To pin exactly: set `CIVIC_GIT_REF` to the commit SHA given at hand-off (after the PR merges, `main` is also valid).
 
 | dataset | attach in Kaggle | expected under `/kaggle/input/` |
 |---|---|---|
-| `bmc_mumbai` | Add Input → Competition data (accept the rules first) | `competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/` containing one `*train*.csv` (+ data dictionary; the test CSV's target is withheld and unused) |
-| `mumbai_nashik_road_surface` | upload the Mendeley files as a **private** Kaggle Dataset (keep attribution/licence text), then Add Input | `<your-dataset>/…` (name containing `nashik`/`mumbai`/`roadsurface`/`tj2m7zz4rg`, or pass `PATHS`) with images (+ annotations/folders/videos) |
-| `rdd2022` | private/trusted Kaggle Dataset of the **India** subset | `<name containing rdd2022>/…/India/train/{images,annotations/xmls}` (or the mount *is* the India folder) |
-| `rdd2020` | Kaggle Dataset of the RDD2020 **India** subset | `<name containing rdd2020>/…/India/train/{images,annotations/xmls}` |
-| `bharatpothole` | Add Input → Datasets → `surbhisaswatimohanty/bharatpothole` | `bharatpothole/…` frames + annotations (format *not assumed*: profile first; YOLO needs the dataset's class-names file) |
+| `bmc_mumbai` | Add Input → Competition data (accept the rules first) | `competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/` with `bmc_train.csv`, `bmc_data_dictionary.csv`, `bmc_test.csv` |
+| `mumbai_nashik_road_surface` | upload the Mendeley v2 files as a **private** Kaggle Dataset (keep attribution/licence text), then Add Input | a mount whose name contains `nashik`/`mumbai`/`roadsurface`/`tj2m7zz4rg` (or pass `PATHS`) containing images; layout unknown until profiled |
+| `rdd2022` | Add Input → Datasets → `aliabdelmenam/rdd-2022` | `rdd-2022/…` (or `datasets/aliabdelmenam/rdd-2022/…`); layout/format/classes/countries unknown until profiled |
+| `rdd2020` | private Kaggle Dataset (India subset where applicable) | a mount whose name contains `rdd2020`; layout unknown until profiled |
+| `bharatpothole` | Add Input → Datasets → `surbhisaswatimohanty/bharatpothole` | `bharatpothole/…`; format/class file/grouping unknown until profiled |
 
-Copies of RDD/Mumbai-Nashik uploaded by third parties have **their own provenance**: record who published the copy before trusting it, and re-check the licence at the primary record.
+Third-party re-uploads have **their own provenance**: record who published the copy and re-check the licence at the primary record. The RDD2022 mapping accepts class codes `D00/D10/D20/D40` and the descriptive names `pothole` / `(longitudinal|transverse|alligator) crack`; any other class name stays unmapped and is reported (extend the table deliberately).
 
 ## Not verified / blocked in the authoring environment
 * Official pages for NYC 311, Chicago 311 and figshare were **unreachable** (egress proxy). Their licence/column/format details above come from web-search summaries or are expectations, tagged as such in the cards.

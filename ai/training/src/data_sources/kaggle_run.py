@@ -31,14 +31,23 @@ from ai.evaluation.provenance import MIN_REAL_N, build_provenance, claims_for
 from ai.training.src.io_utils import read_jsonl
 
 from . import prepare as prep
-from .adapters.detection import load_class_names
+from .adapters.detection import FORMATS, load_class_names
 from .canonical import ImageRecord
 from .card_schema import SourceCard, check_terms, load_card
 from .column_roles import TaskPolicy
 from .errors import DataSourceError, TermsNotAccepted
 from .image_audit import annotation_audit, group_audit, image_files_audit, video_frame_relationships
 from .image_profile import profile_image_dataset
-from .kaggle_inputs import SPECS, DatasetSpec, Location, describe_inputs, input_root, locate, pick_tabular_file
+from .kaggle_inputs import (
+    SPECS,
+    DatasetSpec,
+    Location,
+    describe_inputs,
+    find_data_dictionary,
+    input_root,
+    locate,
+    pick_tabular_file,
+)
 from .mapping import DepartmentMapping, MappingTable
 from .paths import ensure_safe_output
 from .profile import profile_bmc
@@ -71,6 +80,7 @@ class RunConfig:
     audit_max_near_dup_images: int = 6000
     run_provider_eval: bool = False
     retrieved_at: str | None = None
+    meta: dict = field(default_factory=dict)                     # e.g. {"repo_url":..., "repo_ref":..., "repo_commit":...}: recorded in SUMMARY.json
 
     @property
     def out(self) -> Path:
@@ -160,6 +170,12 @@ def run_bmc(cfg: RunConfig) -> dict:
         res["next_steps"].append(why)
         return res
     _stage(res, "select_data_file", "ok", f"{f.name} ({why})")
+    dd = find_data_dictionary(loc)
+    if dd is not None:
+        res["data_dictionary"] = _dictionary_summary(dd, f)
+        _stage(res, "data_dictionary", "ok", res["data_dictionary"])
+    else:
+        _stage(res, "data_dictionary", "warning", "no single data-dictionary file found: assign roles from the Kaggle data page instead")
     policy, mapping, dept = TaskPolicy.load("bmc_mumbai"), MappingTable.load(card.mapping_id), DepartmentMapping.load("bmc_mumbai_departments")
     try:
         prof = profile_bmc(f, policy, cfg.role_map or None, mapping, dept, max_rows=cfg.bmc_max_rows or 300_000)
@@ -183,6 +199,10 @@ def run_bmc(cfg: RunConfig) -> dict:
         res["next_steps"].append(f"Required roles not resolvable from the headers: {required}. Read the data dictionary and set ROLE_MAP = {{column: role}} "
                                  f"(roles: {sorted(policy.roles)}). Headers: {prof['headers']}")
         return res
+    if "resolution_duration" in prof["resolved_roles"] and not cfg.resolution_unit:
+        col = prof["resolved_roles"]["resolution_duration"]
+        res["next_steps"].append(f"Column '{col}' was recognised as a post-resolution duration but its unit is not stated by the notebook: if the data dictionary says it is in days/hours, "
+                                 "set RESOLUTION_UNIT = 'days' or 'hours' (it is only ever a TARGET of the resolution-time prior, never an input to intake/triage).")
     cov = prof["draft_category_mapping_coverage"]
     _stage(res, "mapping_validation", "ok" if not cov.get("counts", {}).get("unmapped") else "warning",
            {"coverage_share": cov.get("share"), "top_unmapped_source_labels": cov.get("top_unmapped_source_labels"), "top_out_of_scope": cov.get("top_out_of_scope_source_labels"),
@@ -241,10 +261,38 @@ def run_bmc(cfg: RunConfig) -> dict:
 
 # ------------------------------------------------------------------------------------------------ image datasets
 def _image_cfg(cfg: RunConfig, spec: DatasetSpec) -> dict:
-    c = {"format": spec.default_format, "class_names_file": None, "group_by": None, "group_regex": None, "block_size": 100, "label_from": "parent",
-         "holdout_fraction": 0.25 if spec.needs_xml_annotations else 0.0, "holdout_seed": 0, "default_country": spec.default_country}
+    """Operator decisions only. NOTHING is defaulted from an assumed layout: no format, no class-names file, no group rule, no holdout."""
+    c = {"format": None, "class_names_file": None, "group_by": None, "group_regex": None, "block_size": 100, "label_from": "parent", "holdout_fraction": 0.0,
+         "holdout_seed": 0, "countries": None, "default_country": None, "split_from_path": False, "holdout_splits": ["val", "test"]}
     c.update({k: v for k, v in cfg.image.get(spec.id, {}).items() if v is not None})
     return c
+
+
+def _suggestion(dataset_id: str, prof: dict) -> str:
+    sug = dict(prof.get("suggested_config_NOT_APPLIED") or {})
+    sug.setdefault("format", "voc|yolo|coco|folder")
+    if prof.get("country_markers_images"):
+        sug["countries"] = "[...]  # country markers seen: " + ", ".join(prof["country_markers_images"])
+    sug["group_by"] = "'dir' | 'regex' (+group_regex) | 'block'   # needed for ANY holdout"
+    sug["holdout_fraction"] = "0.3"
+    return f"IMAGE['{dataset_id}'] = {sug}"
+
+
+def _dictionary_summary(dd: Path, train_file: Path) -> dict:
+    """The data dictionary describes COLUMNS (not rows): report its headers/entries and compare names with the training file's header."""
+    import csv
+
+    from .columns import sniff_headers
+    with open(dd, newline="", encoding="utf-8", errors="ignore") as fh:
+        rows = list(csv.reader(fh))
+    head, body = (rows[0], rows[1:]) if rows else ([], [])
+    train_headers = sniff_headers(train_file)
+    listed = {r[0].strip() for r in body if r}
+    out = {"file": dd.name, "headers": head, "entries": len(body), "first_entries": [[c[:140] for c in r] for r in body[:60]]}
+    if listed:
+        out["listed_names_missing_from_training_file"] = sorted(listed - set(train_headers))[:40]
+        out["training_columns_not_listed_in_dictionary"] = sorted(set(train_headers) - listed)[:40]
+    return out
 
 
 def _readiness(card: SourceCard, recs: list[ImageRecord], extra: dict) -> dict:
@@ -281,7 +329,7 @@ def run_image_dataset(cfg: RunConfig, dataset_id: str) -> dict:
     res = _new(card, spec)
     d = cfg.out / dataset_id
     _stage(res, "card_provenance", "ok", {"licence": f"{card.license.status}: {card.license.name}", "conflicts": card.license.conflicts, "identity": card.identity_status,
-                                          "priority": card.priority, "restrictions": card.restrictions})
+                                          "priority": card.priority, "execution_source": list(spec.urls), "restrictions": card.restrictions})
     loc = locate(spec, cfg.input_root, cfg.paths.get(dataset_id))
     res["location"] = loc.to_dict()
     if not loc.found:
@@ -291,34 +339,37 @@ def run_image_dataset(cfg: RunConfig, dataset_id: str) -> dict:
         return res
     root = loc.path
     assert root is not None
-    _stage(res, "locate", "ok", {"path": str(root), "how": loc.how, "files": loc.structure["files"], "images": loc.structure["images"],
-                                 "xml_annotation_files": loc.structure["xml_annotation_files"]})
+    _stage(res, "locate", "ok", {"path": str(root), "how": loc.how, "files": loc.structure["files"], "images": loc.structure["images"], "archives": loc.structure["archives"]})
+    # ---- 1. discover + inspect: facts only; nothing below this line depends on an assumed layout
     prof = profile_image_dataset(root)
     _write_json(d / "image_profile.json", prof)
     res["artifacts"].append(f"{dataset_id}/image_profile.json")
-    _stage(res, "profile_images", "ok", {"n_images": prof["n_images"], "extensions": prof["extensions"], "annotation_artifacts": prof["annotation_artifacts"],
-                                         "format_candidates_NOT_DECISIONS": prof["format_candidates"], "class_name_files": prof["class_name_files"], "coco_style_json": prof["coco_style_json"],
-                                         "n_image_directories": prof["n_image_directories"], "largest_image_directories": prof["largest_image_directories"],
-                                         "numbered_filename_share": prof["numbered_filename_share"], "sample_relative_paths": prof["sample_relative_paths"][:6], "warnings": prof["warnings"]})
+    _stage(res, "profile_images", "ok", {k: prof[k] for k in (
+        "n_images", "extensions", "directory_outline", "annotation_artifacts", "annotation_content_sniffed", "format_candidates", "class_name_files", "class_name_previews",
+        "coco_style_json", "split_directories_images", "country_markers_images", "archives", "n_videos", "n_image_directories", "largest_image_directories",
+        "numbered_filename_share", "images_with_same_stem_annotation", "images_without_same_stem_annotation", "duplicate_image_stems", "sample_relative_paths",
+        "suggested_config_NOT_APPLIED", "warnings")})
     _stage(res, "video_frame_relationships", "ok", video_frame_relationships(prof))
+    # ---- 2. explicit configuration is required (format / class names): a suggestion is printed, never applied
     ic = _image_cfg(cfg, spec)
     fmt = ic["format"]
-    cand = prof["format_candidates"]
+    need = _suggestion(dataset_id, prof)
     if not fmt:
         res["status"] = "NEEDS_CONFIG"
-        _stage(res, "annotation_format", "blocked", f"annotation format not set. The profile suggests candidates {cand} but the notebook never guesses: set IMAGE['{dataset_id}']['format'] after looking at the samples.")
-        res["next_steps"].append(f"Inspect image_profile.json (candidates {cand}, class-name files {prof['class_name_files']}), then set IMAGE['{dataset_id}'] = {{'format': 'voc'|'yolo'|'coco'|'folder', ...}}.")
+        _stage(res, "annotation_format", "blocked", f"annotation format not set; candidates from the profile (NOT decisions): {prof['format_candidates']}. The notebook never guesses a format.")
+        res["next_steps"].append(f"Read image_profile.json / the profile stage above, then set e.g.  {need}")
         return res
-    if spec.default_format and spec.default_format not in cand:
-        res["status"] = "BLOCKED"
-        _stage(res, "annotation_format", "blocked", f"{dataset_id} is documented as {spec.default_format.upper()} but the profile shows candidates {cand}: this attached copy does not look like the documented layout. Nothing was prepared.")
-        res["next_steps"].append("Check that the attached copy contains the annotation files (…/annotations/xmls/*.xml), or override the path/format after inspecting the profile.")
+    if fmt not in FORMATS:
+        res["status"] = "NEEDS_CONFIG"
+        _stage(res, "annotation_format", "blocked", f"unsupported annotation format {fmt!r}: supported formats are {list(FORMATS)}. Profile candidates: {prof['format_candidates']}.")
+        res["next_steps"].append(f"Use one of {list(FORMATS)}; formats such as TFRecord/CSV/Parquet/LabelMe are not supported by this framework. Suggestion:  {need}")
         return res
     names_file = ic["class_names_file"]
     if fmt == "yolo":
         if not names_file:
             res["status"] = "NEEDS_CONFIG"
-            _stage(res, "class_names", "blocked", f"YOLO labels hold numeric class ids; the dataset's own class-names file is required (never guessed). Candidates found: {prof['class_name_files']}")
+            _stage(res, "class_names", "blocked", f"YOLO labels hold numeric class ids; the dataset's own class-names file is required (never guessed). Class-name files found: {prof['class_name_files']} "
+                                                  f"(previews: {prof['class_name_previews']})")
             res["next_steps"].append(f"Set IMAGE['{dataset_id}']['class_names_file'] to the dataset's class list (found: {prof['class_name_files'] or 'none — obtain it from the dataset documentation'}).")
             return res
         names_file = str(Path(names_file) if Path(names_file).is_absolute() else root / names_file)
@@ -329,40 +380,60 @@ def run_image_dataset(cfg: RunConfig, dataset_id: str) -> dict:
             _stage(res, "class_names", "blocked", str(e))
             res["next_steps"].append(str(e))
             return res
-    _stage(res, "annotation_format", "ok", {"format": fmt, "source": "operator setting" if cfg.image.get(dataset_id, {}).get("format") else f"the dataset's documented format ({spec.default_format}), confirmed by the profile"})
+    note = "operator setting" + ("" if fmt in prof["format_candidates"] else f" — NOTE: the profile did not recognise {fmt!r} content (candidates {prof['format_candidates']}); expect few annotations")
+    _stage(res, "annotation_format", "ok" if fmt in prof["format_candidates"] else "warning", {"format": fmt, "source": note})
     if not _terms(res, card, cfg):
         return res
-    # holdout only with an explicit group rule: otherwise prepare for profiling/mapping/audit but build NO split
-    explicit_group = bool(cfg.image.get(dataset_id, {}).get("group_by")) or dataset_id in ("rdd2022", "rdd2020")
-    frac = float(ic["holdout_fraction"] or 0.0)
+    # ---- 3. holdout only from an explicit, leak-aware rule
+    explicit_group = bool(cfg.image.get(dataset_id, {}).get("group_by"))
+    frac, use_src = float(ic["holdout_fraction"] or 0.0), bool(ic["split_from_path"])
+    if use_src and frac:
+        res["status"] = "NEEDS_CONFIG"
+        _stage(res, "holdout_rule", "blocked", "split_from_path and holdout_fraction are both set: choose one.")
+        res["next_steps"].append("Choose either the source's own split directories (split_from_path) or a group-hash holdout (group_by + holdout_fraction).")
+        return res
     if frac and not explicit_group:
         frac = 0.0
         _stage(res, "holdout_rule", "warning", "holdout_fraction was set but no group_by rule: random frame splits leak near-identical frames, so NO holdout was generated.")
         res["next_steps"].append(f"Set IMAGE['{dataset_id}']['group_by'] ('dir' | 'regex' + group_regex | 'block') after reading the profile, then re-run to build a group-safe holdout.")
     try:
-        if spec.needs_xml_annotations:
-            man = prep.prepare_rdd(card, root, d / "prepared", default_country=ic["default_country"], holdout_fraction=frac, holdout_seed=int(ic["holdout_seed"]),
-                                   block_size=int(ic["block_size"]), retrieved_at=cfg.retrieved_at)
-            cov = man["box_mapping_coverage"]
-            labels = man["boxes_per_class"]
-        else:
-            man = prep.prepare_images(card, root, d / "prepared", fmt=fmt, class_names_file=Path(names_file) if names_file else None, group_by=ic["group_by"] or "dir",
-                                      group_regex=ic["group_regex"], block_size=int(ic["block_size"]), label_from=ic["label_from"], holdout_fraction=frac,
-                                      holdout_seed=int(ic["holdout_seed"]), retrieved_at=cfg.retrieved_at)
-            cov = man["box_or_label_mapping_coverage"]
-            labels = man["source_label_counts"]
+        man = prep.prepare_images(card, root, d / "prepared", fmt=fmt, class_names_file=Path(names_file) if names_file else None, group_by=ic["group_by"] or "dir",
+                                  group_regex=ic["group_regex"], block_size=int(ic["block_size"]), label_from=ic["label_from"], holdout_fraction=frac,
+                                  holdout_seed=int(ic["holdout_seed"]), retrieved_at=cfg.retrieved_at, countries=set(ic["countries"]) if ic["countries"] else None,
+                                  default_country=ic["default_country"], split_from_path=use_src, holdout_splits=tuple(ic["holdout_splits"]))
     except DataSourceError as e:
         res["status"] = "NEEDS_CONFIG"
         _stage(res, "prepare", "blocked", str(e))
         res["next_steps"].append(str(e))
         return res
     res["artifacts"].append(f"{dataset_id}/prepared/PREPARE_MANIFEST.json")
-    _stage(res, "prepare", "ok", {"records": man["records"], "split_counts": man["split_counts"], "adapter_stats": man["adapter_stats"], "options": man["options"],
-                                  "group_rule": ("index-block heuristic (RDD)" if spec.needs_xml_annotations else (ic["group_by"] or "dir (descriptive only, no holdout)"))})
-    unm = [k for k in (cov.get("top_unmapped_source_labels") or [])]
-    _stage(res, "mapping_validation", "warning" if unm else "ok", {"coverage_share": cov.get("share"), "source_labels_seen": labels, "top_unmapped": unm,
+    st = man["adapter_stats"]
+    _stage(res, "prepare", "ok", {"records": man["records"], "split_counts": man["split_counts"], "adapter_stats": st, "options": man["options"],
+                                  "group_rule": ic["group_by"] or "dir (descriptive only; no holdout unless you set group_by)"})
+    if man["records"] == 0:
+        res["status"] = "BLOCKED"
+        why = (f"the countries filter {ic['countries']} matched nothing (country markers in the paths: {prof['country_markers_images'] or 'none'}; images filtered out: {st['filtered_out_by_country']})"
+               if ic["countries"] else "no image records were produced")
+        _stage(res, "prepare_result", "blocked", why)
+        res["next_steps"].append(why)
+        return res
+    if st["annotated"] == 0:
+        res["status"] = "BLOCKED"
+        why = (f"format {fmt!r} was configured but NO image matched an annotation file ({st['unannotated_no_label_file']} images unannotated, {st['ambiguous_annotation_match']} ambiguous matches, "
+               f"{st['annotation_files_indexed']} annotation files indexed). Wrong format, annotations missing from the attached copy, or file names that do not pair with images.")
+        _stage(res, "prepare_result", "blocked", why)
+        res["next_steps"].append(why + f" Profile candidates: {prof['format_candidates']}; images with a same-stem annotation: {prof['images_with_same_stem_annotation']}.")
+        return res
+    if st["ambiguous_annotation_match"]:
+        _stage(res, "annotation_matching", "warning", f"{st['ambiguous_annotation_match']} image(s) share a file name stem with several annotation files and could not be paired unambiguously: left UNANNOTATED (never guessed).")
+        res["next_steps"].append("Some images share stems across folders (e.g. several countries): use a countries filter or an explicit path to the intended subset.")
+    cov = man["box_or_label_mapping_coverage"]
+    unm = list(cov.get("top_unmapped_source_labels") or [])
+    _stage(res, "mapping_validation", "warning" if unm else "ok", {"coverage_share": cov.get("share"), "source_labels_seen": man["source_label_counts"], "top_unmapped": unm,
                                                                       "out_of_scope": cov.get("top_out_of_scope_source_labels"), "mapping_status": man["mapping"]["status"],
                                                                       "note": "labels are mapped by an explicit DRAFT table; anything unmapped is reported, never forced into the taxonomy"})
+    if unm:
+        res["next_steps"].append(f"Class names with no taxonomy mapping: {unm[:10]}. Extend mappings/{card.mapping_id}.v1.json deliberately (bump its version) — never force them into the taxonomy.")
     recs = [ImageRecord.model_validate(r) for r in read_jsonl(d / "prepared" / "records.jsonl")]
     ann, grp = annotation_audit(recs), group_audit(recs)
     group_of, split_of = {r.image_relpath: r.group_id for r in recs}, {r.image_relpath: r.split_hint for r in recs}
@@ -373,6 +444,8 @@ def run_image_dataset(cfg: RunConfig, dataset_id: str) -> dict:
     _stage(res, "annotation_audit", "ok", ann)
     _stage(res, "group_audit", "ok", grp)
     _stage(res, "image_file_and_duplicate_audit", "ok" if files["near_duplicates"]["status"] == "ok" else "warning", files)
+    if files["near_duplicates"]["status"] != "ok":
+        res["next_steps"].append(files["near_duplicates"]["reason"] + " (Kaggle images ship Pillow; locally: pip install pillow).")
     extra = {"n_groups": grp["n_groups"], "straddling_groups": grp["groups_straddling_train_and_holdout"],
              "cross_split_near_duplicate_pairs": files["near_duplicates"].get("pairs_spanning_train_and_holdout", 0),
              "cross_split_exact_duplicate_clusters": files["exact_duplicates"].get("clusters_spanning_train_and_holdout", 0)}
@@ -456,13 +529,16 @@ def run_all(cfg: RunConfig, ids: tuple[str, ...] = ORDER) -> dict:
     if unknown:
         raise DataSourceError(f"unknown dataset ids {unknown}; known: {sorted(SPECS)}")
     results = {i: run_dataset(cfg, i) for i in ids}
-    summary = {"created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "input_root": str(input_root(cfg.input_root)), "attached_inputs": describe_inputs(cfg.input_root),
+    summary = {"created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "input_root": str(input_root(cfg.input_root)), "repo": cfg.meta, "attached_inputs": describe_inputs(cfg.input_root),
                "datasets": {i: {"status": r["status"], "priority": r["card"]["priority"], "evidence_class": r["evidence_class"], "licence_status": r["card"]["licence_status"],
                                 "real_world_claim_allowed": r["real_world_claim_allowed"], "next_steps": r["next_steps"],
                                 "can_run_real_holdout": (r.get("real_holdout_readiness") or {}).get("can_run_real_holdout")} for i, r in results.items()},
                "reminder": "BMC is third-party SYNTHETIC data (never real-world evidence); image datasets are real but every licence is UNVERIFIED here: no publishable claim."}
     _write_json(cfg.out / "SUMMARY.json", summary)
-    L = ["# CivicConnect Kaggle real-data run — summary", "", "| dataset | priority | status | evidence | licence | can run real_holdout |", "|---|---|---|---|---|---|"]
+    repo = cfg.meta or {}
+    L = ["# CivicConnect Kaggle real-data run — summary", "",
+         f"Executed repo: `{repo.get('requested_url', 'unknown')}` @ `{repo.get('requested_ref', 'unknown')}` · commit `{repo.get('commit', 'unknown')}` · source: {repo.get('source', 'unknown')}", "",
+         "| dataset | priority | status | evidence | licence | can run real_holdout |", "|---|---|---|---|---|---|"]
     for i, v in summary["datasets"].items():
         L.append(f"| `{i}` | {v['priority']} | **{v['status']}** | {v['evidence_class']} | {v['licence_status']} | {v['can_run_real_holdout']} |")
     L += ["", summary["reminder"], ""]
@@ -473,15 +549,27 @@ def run_all(cfg: RunConfig, ids: tuple[str, ...] = ORDER) -> dict:
     return summary
 
 
+BUNDLE_ALLOWED_NAMES = {"SUMMARY.json", "SUMMARY.md", "report.json", "report.md", "profile.json", "image_profile.json", "image_audit.json", "PREPARE_MANIFEST.json"}
+BUNDLE_MAX_FILE_BYTES = 5_000_000
+
+
 def bundle(cfg: RunConfig) -> Path:
-    """Zip of reports/manifests/profiles only: prepared records, raw data and images are never included."""
+    """Zip of aggregate reports/manifests/profiles ONLY, by allowlist of file names (plus ``results/*.json|md`` written by the evaluation harness).
+    Prepared records, raw CSVs, images, videos, annotations and anything large are excluded by construction."""
     out = cfg.out
     z_path = Path(cfg.work_dir) / "civic_real_aggregates.zip"
     with zipfile.ZipFile(z_path, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(out.rglob("*")):
-            if p.is_file() and p.suffix in (".json", ".md") and not p.name.endswith(NEVER_BUNDLED):
-                z.write(p, p.relative_to(out).as_posix())
-        assert not any(n.endswith(NEVER_BUNDLED + (".jpg", ".jpeg", ".png", ".csv")) for n in z.namelist())
+            if not p.is_file():
+                continue
+            rel = p.relative_to(out)
+            allowed = p.name in BUNDLE_ALLOWED_NAMES or (len(rel.parts) >= 3 and rel.parts[1] == "results" and p.suffix in (".json", ".md"))
+            if allowed and p.stat().st_size <= BUNDLE_MAX_FILE_BYTES:
+                z.write(p, rel.as_posix())
+            elif allowed:
+                raise DataSourceError(f"refusing to bundle {rel}: {p.stat().st_size} bytes exceeds {BUNDLE_MAX_FILE_BYTES} (reports must stay small aggregates)")
+        bad = [n for n in z.namelist() if n.endswith(NEVER_BUNDLED + (".jpg", ".jpeg", ".png", ".csv", ".mp4", ".xml", ".txt", ".parquet"))]
+        assert not bad, f"raw/prepared data in the bundle: {bad}"
     return z_path
 
 

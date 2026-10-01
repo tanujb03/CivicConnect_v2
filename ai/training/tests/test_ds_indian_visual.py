@@ -225,9 +225,11 @@ def test_positive_only_datasets_carry_a_precision_warning(tmp_path):
     assert prep.prepare_images(load_card("mumbai_nashik_road_surface"), root2, tmp_path / "o2", fmt="folder")["positive_only_warning"] is None
 
 
-def test_non_detection_cards_cannot_use_the_generic_image_adapter(tmp_path):
-    with pytest.raises(DataSourceError, match="generic image adapter"):
-        prep.prepare_images(load_card("rdd2022"), tmp_path, tmp_path / "o", fmt="voc")
+def test_only_image_cards_can_use_the_image_adapter_and_rdd_cards_can_use_it_for_non_official_layouts(tmp_path):
+    with pytest.raises(DataSourceError, match="image-detection adapter"):
+        prep.prepare_images(load_card("nyc311"), tmp_path, tmp_path / "o", fmt="voc")
+    img(tmp_path / "copy", "a/x.jpg")
+    assert prep.prepare_images(load_card("rdd2022"), tmp_path / "copy", tmp_path / "o2", fmt="folder")["records"] == 1
 
 
 # ------------------------------------------------------------------ profile-images (facts and candidates, no decisions)

@@ -5,11 +5,11 @@
   "publisher": "Arya et al. / sekilab (University of Tokyo) — released via figshare",
   "landing_url": "https://figshare.com/articles/dataset/RDD2022_-_The_multi-national_Road_Damage_Dataset_released_through_CRDDC_2022/21431547",
   "official_source_url": "https://github.com/sekilab/RoadDamageDetector",
-  "version_note": "figshare article 21431547 (DOI 10.6084/m9.figshare.21431547.v1 per a search summary). 47,420 images, >55,000 annotations (secondary source). Test-set images are released WITHOUT annotations. RDD2020 (an earlier release, reported under a different licence) has its own card: do not assume the two share a licence.",
+  "version_note": "figshare article 21431547 (DOI 10.6084/m9.figshare.21431547.v1 per a search summary). 47,420 images, >55,000 annotations (secondary source). Test-set images are released WITHOUT annotations. RDD2020 (an earlier release, reported under a different licence) has its own card: do not assume the two share a licence. | Execution copy: Kaggle aliabdelmenam/rdd-2022 (third-party re-upload; provenance and licence of the COPY unverified; layout not assumed).",
   "data_access": {
     "method": "figshare download (large; Norway alone ≈ 9.9 GB per the project README)",
     "endpoint": "https://api.figshare.com/v2/articles/21431547",
-    "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2022 INDIA subset (the project distribution provides it separately). Whoever uploaded that copy is a third party: record the copy's provenance and re-check the licence at the primary record. Nothing is downloaded or copied by this repository."
+    "kaggle": "EXECUTION SOURCE: https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022 — a THIRD-PARTY Kaggle re-upload, attached read-only under /kaggle/input and processed in place. Its directory layout, annotation format, class list, countries and splits are NOT assumed to match the official RDD2022 distribution: Notebook 05 profiles the attached copy first and requires explicit configuration. The upstream project is recorded separately as RDD2022; the uploader's own licence statement (if any) is a separate, unverified record. Nothing is downloaded or copied by this repository."
   },
   "license": {
     "name": "UNRESOLVED: CC BY-SA 4.0 (project README) vs CC BY 4.0 (search summaries of figshare/journal record)",

@@ -69,21 +69,57 @@ def make_real_jpeg(path: Path, seed: int, size=(64, 48)) -> None:
     im.save(path, "JPEG")
 
 
-def make_fake_kaggle_input(root: Path, *, bmc=True, rdd2022=True, rdd2020=False, bharat=False, nashik=False) -> Path:
-    """Creates a tiny INVENTED /kaggle/input-shaped tree. Nothing here is real data."""
+def make_rdd_copy(r: Path, layout: str, n: int = 40, countries=("India",)) -> Path:
+    """INVENTED stand-ins for the different shapes a third-party Kaggle copy of an RDD-like dataset might have. The real layout is unknown."""
+    r.mkdir(parents=True, exist_ok=True)
+    codes = ["D00", "D10", "D20", "D40"]
+    for c_i, country in enumerate(countries):
+        for i in range(n):
+            stem = f"{country}_{i:06d}"
+            code = codes[(i + c_i) % 4]
+            if layout == "voc_official":
+                write_voc(r, country, "train", stem, [(code, 5, 5, 40, 30)], with_image=False)
+                make_real_jpeg(r / country / "train" / "images" / f"{stem}.jpg", i + 11 * c_i)
+            elif layout == "voc_pascal":                       # PASCAL-VOC style capitalised folders, no country folder
+                (r / "Annotations").mkdir(exist_ok=True)
+                (r / "Annotations" / f"{stem}.xml").write_text(XML.format(name=stem, objs=OBJ.format(cls=code, x0=5, y0=5, x1=40, y1=30)), encoding="utf-8")
+                make_real_jpeg(r / "JPEGImages" / f"{stem}.jpg", i + 11 * c_i)
+            elif layout in ("yolo_split", "yolo_named"):
+                split = "train" if i % 4 else ("valid" if i % 8 == 0 else "test")
+                make_real_jpeg(r / split / "images" / f"{stem}.jpg", i + 11 * c_i)
+                (r / split / "labels").mkdir(parents=True, exist_ok=True)
+                (r / split / "labels" / f"{stem}.txt").write_text(f"{codes.index(code)} 0.5 0.5 0.2 0.2\n", encoding="utf-8")
+            elif layout == "images_only":
+                make_real_jpeg(r / "images" / f"{stem}.jpg", i + 11 * c_i)
+            elif layout == "archives_only":
+                pass
+            else:
+                raise ValueError(layout)
+    if layout == "yolo_split":
+        (r / "data.yaml").write_text("train: train/images\nval: valid/images\nnc: 4\nnames: ['D00', 'D10', 'D20', 'D40']\n", encoding="utf-8")
+    if layout == "yolo_named":
+        (r / "data.yaml").write_text("nc: 4\nnames:\n  0: longitudinal crack\n  1: transverse crack\n  2: alligator crack\n  3: pothole\n", encoding="utf-8")
+    if layout == "archives_only":
+        (r / "RDD2022.zip").write_bytes(b"PK\x03\x04")
+    return r
+
+
+def make_fake_kaggle_input(root: Path, *, bmc=True, rdd2022=True, rdd2020=False, bharat=False, nashik=False, rdd2022_layout="voc_official",
+                           rdd2022_countries=("India",), bmc_test_file=True) -> Path:
+    """Creates a tiny INVENTED /kaggle/input-shaped tree. Nothing here is real data; layouts are guesses used to test the profile-first logic."""
     import shutil
     root.mkdir(parents=True, exist_ok=True)
     if bmc:
         comp = root / "competitions" / "mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024"
         comp.mkdir(parents=True)
         shutil.copy(FIXTURES / "bmc_mumbai_format_sample.csv", comp / "bmc_train.csv")
-        (comp / "bmc_data_dictionary.csv").write_text("column,description\nINVENTED,INVENTED\n", encoding="utf-8")
-    for flag, name in ((rdd2022, "rdd2022-india"), (rdd2020, "rdd2020-india")):
-        if flag:
-            r = root / name
-            for i in range(40):
-                write_voc(r, "India", "train", f"India_{i:06d}", [("D40", 5, 5, 40, 30)] if i % 2 == 0 else [("D00", 5, 5, 40, 30)], with_image=False)
-                make_real_jpeg(r / "India" / "train" / "images" / f"India_{i:06d}.jpg", i)
+        (comp / "bmc_data_dictionary.csv").write_text("column,description\ncomplaint_id,INVENTED id\ncomplaint_date,INVENTED date\nNOT_IN_TRAIN,INVENTED\n", encoding="utf-8")
+        if bmc_test_file:                                       # target-less test file: must NEVER be opened by the pipeline
+            (comp / "bmc_test.csv").write_text("complaint_id,complaint_date,complaint_category\nTEST-1,2024-01-01,Pothole/Road Damage\n", encoding="utf-8")
+    if rdd2022:
+        make_rdd_copy(root / "rdd-2022", rdd2022_layout, countries=rdd2022_countries)
+    if rdd2020:
+        make_rdd_copy(root / "rdd2020-india", "voc_official")
     if bharat:
         r = root / "bharatpothole"
         for v in range(6):

@@ -53,7 +53,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 
 - `visual_pothole_eval`: Positive-only expected; hold out whole videos/sequences.
 
-## Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg)
+## Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg, version 2)
 `mumbai_nashik_road_surface` · priority **secondary** · licence **UNVERIFIED** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_BY_USER**
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
@@ -67,7 +67,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|
-| `visual_pothole_eval` | AI-1 (image) | conditional | `image bytes` | `mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)` | `bounding boxes / annotation files`, `file or directory names that encode the class`, `group id (used only to build splits)` | D00, D10, D20, D40 | `rdd2020_to_civic@0.1.0-draft` (DRAFT_CLASSES_FROM_PROJECT_README) | real_holdout | yes |
+| `visual_pothole_eval` | AI-1 (image) | conditional | `image bytes` | `mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)` | `bounding boxes / annotation files`, `file or directory names that encode the class`, `group id (used only to build splits)` | D00, D10, D20, D40 | `rdd2020_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README) | real_holdout | yes |
 
 - `visual_pothole_eval`: India subset; NonCommercial licence reported.
 
@@ -76,7 +76,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|
-| `visual_pothole_eval` | AI-1 (image) | conditional | `image bytes` | `mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)` | `bounding boxes / annotation files`, `file or directory names that encode the class`, `group id (used only to build splits)` | D00, D10, D20, D40 | `rdd2022_to_civic@0.1.0-draft` (DRAFT_CLASSES_FROM_PROJECT_README) | real_holdout | yes |
+| `visual_pothole_eval` | AI-1 (image) | conditional | `image bytes` | `mapped image labels (D40 → roads/pothole; D00/D10/D20 → roads)` | `bounding boxes / annotation files`, `file or directory names that encode the class`, `group id (used only to build splits)` | D00, D10, D20, D40 | `rdd2022_to_civic@0.1.1-draft` (DRAFT_CLASSES_FROM_PROJECT_README) | real_holdout | yes |
 
 - `visual_pothole_eval`: India subset first; hold out index blocks/countries; provider needed.
 

@@ -97,7 +97,7 @@ def test_rdd2020_is_a_separate_card_with_its_own_noncommercial_licence_report():
 
 def test_mumbai_nashik_is_the_confirmed_dataset_with_a_reported_but_unverified_cc_by_licence():
     c = load_card("mumbai_nashik_road_surface")
-    assert c.identity_status == "CONFIRMED_BY_USER" and c.landing_url == "https://data.mendeley.com/datasets/tj2m7zz4rg"
+    assert c.identity_status == "CONFIRMED_BY_USER" and c.landing_url == "https://data.mendeley.com/datasets/tj2m7zz4rg/2" and "Version 2" in c.version_note
     assert "8,484" in c.version_note and "13 videos" in c.version_note and "NOT established" in c.version_note
     assert "CC BY 4.0" in c.license.name and "UNVERIFIED" in c.license.name
     assert c.license.status == "UNVERIFIED" and not c.license_verified

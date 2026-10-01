@@ -159,13 +159,19 @@ def prepare_bmc(card: SourceCard, input_path: Path, out_dir: Path, *, role_map: 
 
 def prepare_images(card: SourceCard, root: Path, out_dir: Path, *, fmt: str, class_names_file: Path | None = None, group_by: str = "dir",
                    group_regex: str | None = None, block_size: int = 100, label_from: str = "parent", holdout_fraction: float = 0.0,
-                   holdout_seed: int = 0, max_images: int | None = None, retrieved_at: str | None = None) -> dict:
-    if card.adapter != "detection":
-        raise DataSourceError(f"{card.id} does not use the generic image adapter")
+                   holdout_seed: int = 0, max_images: int | None = None, retrieved_at: str | None = None, countries: set[str] | None = None,
+                   default_country: str | None = None, split_from_path: bool = False, holdout_splits: tuple[str, ...] = ("val", "test")) -> dict:
+    """Layout-agnostic image preparation (VOC / YOLO / COCO / folder labels). Also used for RDD2020/RDD2022 copies whose directory layout or
+    annotation format differs from the official distribution (the RDD-specific adapter assumes the official layout)."""
+    if card.adapter not in ("detection", "rdd2022"):
+        raise DataSourceError(f"{card.id} does not use an image-detection adapter")
+    if split_from_path and holdout_fraction:
+        raise DataSourceError("choose either split_from_path (source splits) or holdout_fraction (group hash), not both")
     mapping = MappingTable.load(card.mapping_id)
     names = load_class_names(class_names_file) if class_names_file else None
     ad = DetectionDatasetAdapter(card, mapping, fmt=fmt, class_names=names, group_by=group_by, group_regex=group_regex, block_size=block_size,
-                                 label_from=label_from, retrieved_at=retrieved_at)
+                                 label_from=label_from, retrieved_at=retrieved_at, countries=countries, default_country=default_country,
+                                 split_from_path=split_from_path, holdout_splits=holdout_splits)
     recs = list(ad.iter_records(root, max_images=max_images))
     if holdout_fraction:
         if group_by == "none":
@@ -181,7 +187,9 @@ def prepare_images(card: SourceCard, root: Path, out_dir: Path, *, fmt: str, cla
         "identity_status": card.identity_status, "mapping": {"id": mapping.mapping_id, "version": mapping.version, "fingerprint": mapping.fingerprint(), "status": mapping.raw["status"]},
         "taxonomy_version": load_taxonomy().version,
         "options": {"group_by": group_by, "group_regex": group_regex, "block_size": block_size, "label_from": label_from, "holdout_fraction": holdout_fraction,
-                    "holdout_seed": holdout_seed, "class_names_file": Path(class_names_file).name if class_names_file else None, "max_images": max_images},
+                    "holdout_seed": holdout_seed, "class_names_file": Path(class_names_file).name if class_names_file else None, "max_images": max_images,
+                    "countries": sorted(countries or []), "default_country": default_country, "split_from_path": split_from_path,
+                    "holdout_splits": list(holdout_splits) if split_from_path else None},
         "adapter_stats": ad.stats, "box_or_label_mapping_coverage": ad.coverage.to_dict(),
         "n_groups": len(groups), "largest_groups": groups.most_common(5), "images_without_group": sum(1 for r in recs if r.group_id is None),
         "split_counts": dict(Counter(r.split_hint or "none" for r in recs)), "split_straddle": split_straddle(recs, lambda r: r.group_id),
