@@ -1,0 +1,8 @@
+{
+  "name": "@civicconnect/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared UI primitives and badges for CivicConnect v2",
+  "main": "./index.ts",
+  "types": "./index.ts"
+}

@@ -14,10 +14,16 @@
     "kaggle": "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole"
   },
   "license": {
-    "name": "NOT STATED in the iWatchRoad README; dataset-page terms NOT READ",
+    "name": "NOT STATED in the iWatchRoad README; dataset-page terms NOT READ — UNCLEAR, and explicitly NOT CC BY-NC-SA 4.0 (that is the code repository's licence)",
     "url": null,
     "status": "UNVERIFIED",
     "evidence": [
+      {
+        "source": "owner's research notes (relayed; not read from the Kaggle page by this tooling)",
+        "reliability": "secondary",
+        "note": "Research conclusion relayed by the repository owner: the dataset licence is unclear. Do NOT represent it as CC BY-NC-SA 4.0. Track as UNVERIFIED and preserve the dataset attribution/citation. Do not redistribute the raw dataset or claim commercial redistribution rights unless the dataset authors/Kaggle provide an explicit licence permitting that use.",
+        "retrieved_on": "2026-10-01"
+      },
       {
         "source": "https://github.com/smlab-niser/iwatchroad (README, fetched)",
         "reliability": "primary",
@@ -40,9 +46,12 @@
     "conflicts": [],
     "attribution": "Cite: iWatchRoad: Scalable Detection and Geospatial Visualization of Potholes for Smart Cities (CODS '25 per the README; arXiv 2508.10945 per search results).",
     "share_alike": null,
-    "commercial_use": "unverified",
+    "commercial_use": "NOT permitted to be assumed: no explicit licence found; do not claim commercial redistribution rights",
     "notes": [
-      "Check the Kaggle dataset page's licence field. The repository's NonCommercial code licence is a reason to be cautious about commercial use, not evidence of the dataset's terms."
+      "Never describe this dataset as CC BY-NC-SA 4.0, and never carry the code repository's licence over to the data.",
+      "Preserve the attribution/citation in every report that uses it.",
+      "Do not redistribute the raw dataset (not from git, not from a bundle, not from a derived release).",
+      "Upgrade to VERIFIED_PRIMARY only when the authors or the Kaggle dataset page state an explicit licence: quote the line and date as primary evidence."
     ]
   },
   "subset_used": "To be chosen. Hold out whole videos/sequences (or directory/index blocks), never random frames.",
@@ -50,8 +59,8 @@
     "evaluation"
   ],
   "restrictions": [
-    "Dataset licence unknown (the repository's software licence is NOT assumed to cover the data): profiling and descriptive runs are allowed; a publishable evaluation is DISABLED until the dataset's own licence/terms are verified at the primary page and recorded on this card.",
-    "Do not commit images or annotations."
+    "Licence UNVERIFIED (unclear): processing in place on Kaggle for profiling/audits is allowed; a publishable evaluation is DISABLED and no commercial or redistribution rights may be claimed until an explicit dataset licence is recorded on this card.",
+    "Do not represent it as CC BY-NC-SA 4.0. Preserve the attribution/citation. Do not commit or redistribute images or annotations."
   ],
   "supports": [
     {
