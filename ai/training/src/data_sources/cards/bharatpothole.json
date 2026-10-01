@@ -10,7 +10,8 @@
   "role_summary": "Additional Indian visual pothole evaluation/validation from forward-facing dashcam frames.",
   "version_note": "The iWatchRoad repository README (read directly) states the dataset is hosted at the Kaggle URL above and contains 7,000+ annotated frames of forward-facing dashcam footage under diverse lighting, weather and road conditions, and asks users to cite the iWatchRoad paper. Secondary sources: collected over May–July, bounding boxes annotated in Roboflow and exported in YOLO format; a 'BharatPotHole-3K' subset is also mentioned — confirm which release you hold.",
   "data_access": {
-    "method": "Kaggle dataset download (not automated here); attach as a notebook input or use the Kaggle CLI with your credentials"
+    "method": "Kaggle dataset surbhisaswatimohanty/bharatpothole: attach it as a notebook input and process in place from /kaggle/input (never download it locally).",
+    "kaggle": "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole"
   },
   "license": {
     "name": "NOT STATED in the iWatchRoad README; dataset-page terms NOT READ",
@@ -49,7 +50,7 @@
     "evaluation"
   ],
   "restrictions": [
-    "Dataset licence unknown: no publication or redistribution of results/data until verified.",
+    "Dataset licence unknown (the repository's software licence is NOT assumed to cover the data): profiling and descriptive runs are allowed; a publishable evaluation is DISABLED until the dataset's own licence/terms are verified at the primary page and recorded on this card.",
     "Do not commit images or annotations."
   ],
   "supports": [

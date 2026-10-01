@@ -71,12 +71,20 @@ def prepare_tabular(card: SourceCard, input_path: Path, out_dir: Path, *, max_ro
 
 
 def prepare_rdd(card: SourceCard, root: Path, out_dir: Path, *, countries: set[str] | None = None, holdout_countries: set[str] | None = None,
-                check_images: bool = False, include_unannotated: bool = False, max_images: int | None = None, retrieved_at: str | None = None) -> dict:
+                check_images: bool = False, include_unannotated: bool = False, max_images: int | None = None, retrieved_at: str | None = None,
+                default_country: str | None = None, holdout_fraction: float = 0.0, holdout_seed: int = 0, block_size: int = 100) -> dict:
+    """``holdout_countries`` holds out whole countries; ``holdout_fraction`` (single-country copies, e.g. India only) holds out whole
+    index-block groups chosen by a seeded hash — never single frames. Block ids are a HEURISTIC (frame numbering is not verified to follow drive order)."""
+    if holdout_countries and holdout_fraction:
+        raise DataSourceError("choose either holdout_countries or holdout_fraction, not both")
     mapping = MappingTable.load(card.mapping_id)
-    ad = RDD2022Adapter(card, mapping, retrieved_at=retrieved_at)
+    ad = RDD2022Adapter(card, mapping, retrieved_at=retrieved_at, default_country=default_country, block_size=block_size)
     recs = list(ad.iter_records(root, countries=countries, check_images=check_images, include_unannotated=include_unannotated, max_images=max_images))
     if holdout_countries:
         recs = group_holdout(recs, lambda r: r.country, holdout_countries)
+    if holdout_fraction:
+        recs = [r if (r.group_id is None or r.split_hint in ("test", "val"))
+                else r.model_copy(update={"split_hint": "holdout" if hash_fraction(r.group_id, holdout_seed) < holdout_fraction else "train"}) for r in recs]
     out_dir.mkdir(parents=True, exist_ok=True)
     n = _write_jsonl(out_dir / "records.jsonl", recs)
     per_country = Counter(r.country or "unknown" for r in recs)
@@ -87,15 +95,18 @@ def prepare_rdd(card: SourceCard, root: Path, out_dir: Path, *, countries: set[s
         "license_conflicts": card.license.conflicts,
         "mapping": {"id": mapping.mapping_id, "version": mapping.version, "fingerprint": mapping.fingerprint(), "status": mapping.raw["status"]},
         "taxonomy_version": load_taxonomy().version,
+        "origin_verified": card.origin_verified, "identity_status": card.identity_status,
         "options": {"countries": sorted(countries or []), "holdout_countries": sorted(holdout_countries or []), "check_images": check_images,
-                    "include_unannotated": include_unannotated, "max_images": max_images},
+                    "include_unannotated": include_unannotated, "max_images": max_images, "default_country": default_country,
+                    "holdout_fraction": holdout_fraction, "holdout_seed": holdout_seed, "block_size": block_size},
+        "split_straddle": split_straddle(recs, lambda r: r.group_id), "n_groups": len({r.group_id for r in recs if r.group_id}),
         "adapter_stats": ad.stats, "images_per_country": dict(per_country), "boxes_per_class": dict(cls),
         "images_with_no_boxes": sum(1 for r in recs if r.has_annotation and not r.boxes),
         "image_label_counts": dict(Counter(lab for r in recs for lab in r.image_labels)),
         "split_counts": dict(Counter(r.split_hint or "none" for r in recs)),
         "box_mapping_coverage": ad.coverage.to_dict(),
         "prepared_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "git_sha": git_sha(),
-        "redistribution": "NOT permitted from this repository (see source card; licence unresolved BY vs BY-SA); keep outside git.",
+        "redistribution": f"NOT permitted from this repository (licence {card.license.status}: {card.license.name}); keep outside git.",
         "required_citations": card.citation,
     }
     (out_dir / "PREPARE_MANIFEST.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -125,7 +136,7 @@ def prepare_bmc(card: SourceCard, input_path: Path, out_dir: Path, *, role_map: 
         "schema": "canonical-data/1", "source_id": card.id, "kind": "case_records", "records": n,
         "input_file": Path(input_path).name, "input_sha256": sha256_file(Path(input_path)), "card_fingerprint": card.fingerprint(),
         "license_verified": card.license_verified, "license_status": card.license.status, "origin_verified": card.origin_verified,
-        "origin_notes": card.origin_notes, "identity_status": card.identity_status,
+        "source_kind": card.kind, "origin_status": card.origin_status, "origin_notes": card.origin_notes, "identity_status": card.identity_status,
         "mapping": {"id": mapping.mapping_id, "version": mapping.version, "fingerprint": mapping.fingerprint(), "status": mapping.raw["status"]},
         "department_mapping": {"id": dept.mapping_id, "version": dept.version, "status": dept.raw["status"]},
         "column_policy": {"version": policy.spec.policy_version, "status": policy.spec.status},

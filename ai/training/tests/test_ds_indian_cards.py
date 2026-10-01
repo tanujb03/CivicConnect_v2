@@ -31,27 +31,42 @@ def test_no_indian_card_claims_a_verified_licence_or_a_reviewed_status(sid):
     assert "NOT be committed" in c.terms_summary()
 
 
-def test_bmc_card_is_primary_but_origin_is_unverified_and_never_called_official():
+def test_bmc_card_records_that_the_dataset_is_synthetic_third_party_and_never_official_or_real():
     c = load_card("bmc_mumbai")
-    assert c.origin_status == "UNVERIFIED_ORIGIN" and not c.origin_verified and c.origin_notes
+    assert c.kind == "synthetic_third_party" and c.is_synthetic and c.origin_status == "SYNTHETIC_PER_COMPETITION" and c.origin_verified
+    assert c.origin_notes and c.origin_evidence
+    # the origin statement was relayed by the repository owner, not read by this tooling: it must NOT be tagged primary
+    assert all(e.reliability != "primary" for e in c.origin_evidence)
+    assert any("reports" in e.note and "not as a primary read" in e.note for e in c.origin_evidence)
     text = json.dumps(c.model_dump()).lower()
-    assert "not official bmc" in text or "official bmc data" in text         # the card states what it is NOT
+    assert "synthetically generated" in text and "not official bmc" in text
+    assert "real-world validation" in text
     assert c.reference == "mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024"
     assert c.landing_url.endswith("/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data")
-    assert c.identity_status == "CONFIRMED_BY_USER"
-    assert "ORIGIN UNVERIFIED" in c.terms_summary()
-    assert "NOT READ" in c.license.name
+    assert c.identity_status == "CONFIRMED_BY_USER" and c.priority == "primary"
+    assert "SYNTHETIC DATA (third-party generated)" in c.terms_summary() and "ORIGIN UNVERIFIED" not in c.terms_summary()
+    assert "NOT READ" in c.license.name and c.license.status == "UNVERIFIED" and "NOT READ" in c.license.name
 
 
 def test_bmc_card_declares_supported_and_unsupported_tasks_honestly():
     c = load_card("bmc_mumbai")
-    assert {s.capability for s in c.supports} == {"AI-3", "AI-5", "AI-6"}
+    assert {s.capability for s in c.supports} == {"AI-3", "AI-5", "AI-6"} and c.intended_use == ["training", "evaluation", "demo"]
     gaps = " ".join(g.capability + " " + g.why for g in c.does_not_support).lower()
-    for must in ("hindi", "marathi", "hinglish", "before", "satisfaction", "severity ground truth"):
-        assert must in gaps or must in json.dumps(c.model_dump()).lower(), must
+    for must in ("real-world validation", "hindi", "marathi", "hinglish", "before", "satisfaction", "severity ground truth"):
+        assert must in gaps, must
     assert any("AI-1" in g.capability for g in c.does_not_support)
     notes = " ".join(c.known_limitations + c.restrictions).lower()
-    assert "test" in notes and "target" in notes and "sensitive" in notes
+    assert "never report results as real-world" in notes and "sensitive" in notes and "source agency" in notes
+
+
+def test_synthetic_origin_cards_must_carry_evidence_and_the_right_kind():
+    d = load_card("bmc_mumbai").model_dump()
+    for change in ({"origin_evidence": []}, {"origin_notes": []}, {"kind": "real_public"}, {"origin_status": "PUBLISHER_IDENTIFIED"}):
+        with pytest.raises(ValidationError):
+            SourceCard.model_validate({**d, **change})
+    d2 = load_card("rdd2022").model_dump()
+    with pytest.raises(ValidationError):
+        SourceCard.model_validate({**d2, "origin_status": "SYNTHETIC_PER_COMPETITION"})
 
 
 def test_a_card_with_unverified_origin_must_explain_why():
@@ -80,13 +95,16 @@ def test_rdd2020_is_a_separate_card_with_its_own_noncommercial_licence_report():
     assert "India" in b.subset_used
 
 
-def test_mumbai_nashik_identity_is_a_candidate_until_the_user_confirms_it():
+def test_mumbai_nashik_is_the_confirmed_dataset_with_a_reported_but_unverified_cc_by_licence():
     c = load_card("mumbai_nashik_road_surface")
-    assert c.identity_status == "CANDIDATE_NEEDS_CONFIRMATION"
-    assert c.reference == "doi:10.17632/tj2m7zz4rg.2"
-    text = json.dumps(c.model_dump())
-    assert "Indian Roads Dataset" in text and "not added" in text.lower()
-    assert "CANDIDATE" in c.terms_summary().upper()
+    assert c.identity_status == "CONFIRMED_BY_USER" and c.landing_url == "https://data.mendeley.com/datasets/tj2m7zz4rg"
+    assert "8,484" in c.version_note and "13 videos" in c.version_note and "NOT established" in c.version_note
+    assert "CC BY 4.0" in c.license.name and "UNVERIFIED" in c.license.name
+    assert c.license.status == "UNVERIFIED" and not c.license_verified
+    assert not any(e.reliability == "primary" for e in c.license.evidence)            # relayed, not read by this tooling
+    assert any("relayed" in e.note.lower() or "reports" in e.note.lower() for e in c.license.evidence)
+    assert "not added" in json.dumps(c.model_dump()).lower() and "Indian Roads Dataset" in json.dumps(c.model_dump())
+    assert "private Kaggle Dataset" in c.data_access["method"]
 
 
 def test_idd_is_optional_future_with_no_adapter_and_no_v1_capability():
@@ -115,8 +133,8 @@ def test_terms_gate_applies_to_every_indian_dataset():
 def test_cli_card_prints_the_origin_warning_and_idd_prepare_is_refused(capsys, tmp_path):
     assert cli.main(["card", "bmc_mumbai"]) == 0
     out = capsys.readouterr().out
-    assert "ORIGIN UNVERIFIED" in out and "UNVERIFIED" in out
-    assert cli.main(["card", "mumbai_nashik_road_surface"]) == 0 and "CANDIDATE" in capsys.readouterr().out.upper()
+    assert "SYNTHETIC DATA (third-party generated)" in out and "UNVERIFIED" in out
+    assert cli.main(["card", "mumbai_nashik_road_surface"]) == 0 and "CC BY 4.0" in capsys.readouterr().out
     assert cli.main(["cards"]) == 0
     listing = capsys.readouterr().out
     assert all(i in listing for i in INDIAN)

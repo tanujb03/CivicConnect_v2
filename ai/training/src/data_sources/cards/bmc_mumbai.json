@@ -1,17 +1,17 @@
 {
   "id": "bmc_mumbai",
-  "name": "Mumbai Nagar Seva — BMC Civic Complaint Resolution 2018–2024 (Kaggle competition data)",
-  "kind": "real_public",
-  "publisher": "As listed on Kaggle (competition host not verified). NOT verified as an official BMC / Government of Maharashtra open-data source or API.",
+  "name": "Mumbai Nagar Seva — BMC Civic Complaint Resolution 2018–2024 (Kaggle competition data; SYNTHETICALLY GENERATED)",
+  "kind": "synthetic_third_party",
+  "publisher": "Kaggle competition host (not verified from the primary page by this tooling). The dataset is described as synthetically generated. It is NOT official BMC complaint data and NOT a BMC / Government of Maharashtra open-data release or API.",
   "landing_url": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data",
   "official_source_url": null,
   "reference": "mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024",
   "identity_status": "CONFIRMED_BY_USER",
   "priority": "primary",
-  "role_summary": "Primary Indian structured civic source: analytics, recurrence/hotspots, taxonomy coverage, department/category mapping, SLA/triage priors, realistic demos — pending provenance and licence verification.",
-  "version_note": "Per a web-search summary of the Kaggle data page (secondary): ~1.2M complaints, Jan 2018–Dec 2024, all 24 BMC wards; files bmc_train.csv (960,000 rows, 35 features + target `citizen_satisfied`), bmc_test.csv (240,000 rows, 34 features, target WITHHELD) and bmc_data_dictionary.csv. Feature groups reported: geography, complaint type, filing channel, severity, complainant profile, resolution process, contractor details, infrastructure context. Competition task: predict citizen satisfaction with the resolution. Only the train file can be used for local supervised evaluation; the exact column names are NOT known to us.",
+  "role_summary": "Large-scale Mumbai/BMC-STRUCTURED SYNTHETIC civic dataset: synthetic training/stress-testing of structured pipelines, taxonomy coverage, routing/triage pipeline testing, analytics demonstrations and leakage testing. NOT real-world validation; kept separate from genuinely real Indian datasets in every report.",
+  "version_note": "Per the Kaggle competition information (reported by the repository owner, 2026-10-01): the dataset is SYNTHETICALLY GENERATED rather than a collection of actual BMC complaint records. Per a web-search summary of the Kaggle data page (secondary): ~1.2M complaints, Jan 2018–Dec 2024, all 24 BMC wards; files bmc_train.csv (960,000 rows, 35 features + target `citizen_satisfied`), bmc_test.csv (240,000 rows, 34 features, target WITHHELD) and bmc_data_dictionary.csv. Competition task: predict citizen satisfaction with the resolution. Exact column names are NOT known to us until the file is profiled; the exact generation method is NOT established by anything recorded here.",
   "data_access": {
-    "method": "Kaggle competition data: accept the competition rules on Kaggle, then attach it as a notebook input or use the Kaggle CLI with YOUR credentials. This repository never downloads it.",
+    "method": "Kaggle competition data: attach the competition as a notebook input (accept the competition rules on Kaggle first); it is read in place from /kaggle/input and is never downloaded or copied by this repository.",
     "data_dictionary": "bmc_data_dictionary.csv ships with the data: read it, then assign every column to a role explicitly (see mappings/bmc_mumbai_columns.v1.json and `cli profile bmc_mumbai`)."
   },
   "license": {
@@ -46,45 +46,47 @@
       "Read the competition Rules ('Data Access and Use') before ANY use outside the competition; if the rules restrict use to the competition, this source may not be usable for CivicConnect at all."
     ]
   },
-  "origin_status": "UNVERIFIED_ORIGIN",
+  "origin_status": "SYNTHETIC_PER_COMPETITION",
   "origin_notes": [
-    "Fixed 35-feature schema, 1.2M rows, 24 wards, a binary target and a train/test split indicate a competition-curated dataset. Nothing verified states whether the rows are real BMC complaint records, a simulation, or a modelled/derived dataset.",
-    "Do not describe this as official BMC data, a BMC API, or a government open-data release until its provenance is independently verified (read the competition description and data dictionary; check the host).",
-    "If it turns out to be synthetic/simulated, re-label it kind=synthetic: it then supports plumbing/analytics demos only and NO real-world claim."
+    "The Kaggle competition information states that this dataset is synthetically generated, not a collection of actual BMC complaint records. It must never be presented as real-world BMC validation, official BMC data, or evidence of real citizen behaviour.",
+    "What is NOT yet recorded from the primary pages: the exact wording of the origin statement, the generation method, the host/organisation and the exact licence/rules text. Record them from the competition Overview / Data / Rules pages (see the manual checklist).",
+    "Because the data is synthetic its free-text columns (if any) are not citizen-written, so they can never be confirmed as citizen narratives, and nothing here supports a real Hindi/Marathi/Hinglish claim."
   ],
-  "subset_used": "Train file only. For development a bounded deterministic sample (prepare --max-rows N --sample-seed S); full 960k rows only if resources and rules permit. Time-based holdout (most recent months).",
+  "subset_used": "Train file only (the test file's target is withheld). For development a bounded deterministic sample (prepare --max-rows N --sample-seed S); time-based holdout (most recent months).",
   "intended_use": [
-    "analytics_validation",
-    "calibration",
+    "training",
     "evaluation",
     "demo"
   ],
   "restrictions": [
+    "SYNTHETIC: never report results as real-world accuracy, real-world validation or BMC performance; keep it on the synthetic/descriptive-of-synthetic tracks, separate from real Indian datasets and from this project's own synthetic data.",
     "Competition rules not read; assume NO redistribution and possibly competition-only use until verified.",
-    "Complainant-profile columns are sensitive attributes: they must never be features or targets for any task (system design §13). The adapter never stores them.",
-    "Contractor/officer/address/contact columns can identify people or firms: the adapter never reads them (PII roles).",
+    "Complainant-profile columns are sensitive attributes: never features or targets for any task (system design §13). The adapter never stores them.",
+    "Contractor/officer/address/contact columns are never read (PII roles).",
     "Post-resolution fields (status, closing time, resolution remarks, reassignment, escalation, satisfaction/rating) must never be inputs for intake or triage — see the per-task column policy.",
+    "The source agency/department is a target-side value: it is never converted into an input for department prediction.",
     "Do not commit raw or prepared rows."
   ],
   "supports": [
     {
       "capability": "AI-5",
-      "how": "Validate deterministic recurrence/hotspot/baseline analytics on a large Indian ward-level spatio-temporal complaint set; seed realistic demo data.",
+      "how": "Stress-test recurrence/hotspot/baseline analytics logic and seed demos on a large Mumbai ward-level synthetic spatio-temporal complaint set.",
       "caveats": [
-        "Provenance (real vs simulated) unverified: no real-world claim until verified."
+        "Synthetic: demonstrates the pipeline, says nothing about real BMC data."
       ]
     },
     {
       "capability": "AI-3",
-      "how": "Routing/department-mapping agreement against our taxonomy, and resolution-time / triage-time priors (descriptive) to sanity-check SLA hours and priority score ranges.",
+      "how": "Exercise routing/department-mapping and priority/resolution-time pipelines against our taxonomy (pipeline testing + leakage testing).",
       "caveats": [
-        "Severity/priority labels may be derived from category or process: a determinism check is mandatory before any use as a target.",
-        "Resolution times are right-censored for unresolved complaints."
+        "Severity/priority/department may be generated deterministically from category: the determinism audit decides whether a target is usable.",
+        "Resolution times are right-censored for unresolved complaints.",
+        "Numbers describe the generator, not real municipal behaviour."
       ]
     },
     {
       "capability": "AI-6",
-      "how": "Realistically distributed rows to seed a copilot demo database (labelled as unverified-origin data).",
+      "how": "Realistically-shaped rows to seed a copilot demo database (labelled synthetic).",
       "caveats": [
         "Demo realism only; not a model evaluation."
       ]
@@ -92,8 +94,12 @@
   ],
   "does_not_support": [
     {
+      "capability": "Real-world validation of any CivicConnect capability",
+      "why": "The data is synthetically generated: agreement with it is agreement with a generator."
+    },
+    {
       "capability": "AI-1 text intake classification",
-      "why": "No verified citizen-written free text is known to exist in the columns; if a description column exists it must be inspected and explicitly confirmed as citizen text, and must not echo the label."
+      "why": "Any free text is synthetic, so it cannot be confirmed as citizen-written (and would risk echoing the label); the adapter refuses --confirm-citizen-text for this source."
     },
     {
       "capability": "AI-1 image intake / AI-4 resolution evidence",
@@ -101,25 +107,25 @@
     },
     {
       "capability": "Hindi / Marathi / Hinglish citizen narratives",
-      "why": "Not verified to contain any."
+      "why": "None: the data is synthetic and not verified to contain such text at all."
     },
     {
       "capability": "Severity ground truth",
-      "why": "Severity is a competition feature of unknown provenance, not an independently validated label."
+      "why": "Severity is a generated field, not an independently validated label."
     },
     {
       "capability": "Citizen-satisfaction prediction",
-      "why": "Post-resolution outcome; not part of CivicConnect V1 (no reputation/satisfaction scoring); its test labels are withheld."
+      "why": "Post-resolution outcome; not part of CivicConnect V1; its test labels are withheld."
     }
   ],
   "known_limitations": [
-    "Mumbai/BMC-specific categories and wards.",
-    "Competition curation may differ from raw operational data (sampling, cleaning, simulation).",
+    "Synthetic generation may encode simplistic category→severity/department/SLA rules (determinism audit).",
+    "Mumbai/BMC-specific categories and wards (as generated).",
     "Timestamp semantics (filing vs registration vs closure) must be read from the data dictionary.",
     "Test file has no target."
   ],
   "privacy_notes": [
-    "Complainant profile, contractor and any address/contact/officer columns are excluded by policy (never stored)."
+    "Complainant profile, contractor and any address/contact/officer columns are excluded by policy (never stored), even though the data is synthetic: the exclusion rules stay identical so the same code is safe on any future real municipal data."
   ],
   "expected_schema_notes": [
     "User-reported complaint categories (not verified against the file): Pothole/Road Damage; Water Supply Disruption; Solid Waste/Garbage; Drainage Overflow/Flooding; Street Light Failure; Illegal Construction; Encroachment; Tree Fallen/Dangerous Tree; Public Toilet Condition; Water Leakage/Pipe Burst; Noise/Air Pollution; Stray Animal Menace; Health/Epidemic.",
@@ -129,5 +135,13 @@
   "mapping_id": "bmc_mumbai_to_civic",
   "citation": null,
   "last_reviewed": "2026-10-01",
-  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW",
+  "origin_evidence": [
+    {
+      "source": "Kaggle competition information — https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024 (reported by the repository owner)",
+      "reliability": "secondary",
+      "note": "The repository owner reports having verified from the competition information that the dataset is synthetically generated. This tooling could not fetch Kaggle (sandbox egress block), so the statement is recorded as relayed, not as a primary read; re-record it with the exact quoted wording and mark primary once read from the page.",
+      "retrieved_on": "2026-10-01"
+    }
+  ]
 }

@@ -7,6 +7,7 @@ Everything here is **synthetic-data** work (see `../evaluation/datasets/DATASET_
 | `01_b0_text_classifier_kaggle.ipynb` | **B0**: build dataset → train TF-IDF char n-gram + LogReg → evaluate → 5-fold CV → package | none (CPU) | **Off** | ≈2–3 min | **Yes — the main deliverable** |
 | `03_fusion_calibration_kaggle.ipynb` | AI-2 combined-score calibration (lexical; optional provider-embedding mode) | none | Off (On + secret for embedding mode) | <1 min | Needed for calibrated fusion |
 | `04_real_data_prepare_evaluate_kaggle.ipynb` | Real public data: profile → prepare → pairs → real-data evaluation (terms-gated; aggregates-only bundle) | none | On (Socrata) or attached dataset | minutes | No — run after datasets are chosen |
+| `05_kaggle_real_data_profile_evaluate.ipynb` | Indian datasets read **in place** from `/kaggle/input`: BMC (synthetic) + Mumbai/Nashik, RDD2022/2020 India, BharatPotHole — profile → audits → readiness; aggregates-only bundle | none | Off is fine | minutes | Run per attached dataset |
 | `02_b1_encoder_experiment_kaggle.ipynb` | **B1** (optional): frozen multilingual encoder + LogReg vs B0 | GPU T4/P100 | **On** (downloads encoder) | ≈5–10 min | **No** |
 
 ## 1 · Get the code onto Kaggle (pick one)
@@ -69,7 +70,7 @@ Without credentials these exit with code 2 and `SKIPPED` — no numbers are fabr
 * Fusion scores are dominated by distance on synthetic pairs (duplicates have small GPS jitter by construction).
 
 ## 6b · Real public data
-See `src/data_sources/README.md` and notebook 04. Real data never enters the repo; outputs of that notebook are aggregate statistics only. The Indian-dataset layer (BMC Mumbai, RDD2020/2022 India, BharatPotHole, Mumbai/Nashik) is driven by the CLI described in that README (`profile bmc_mumbai`, `profile-images`, `prepare …`, `leakage-audit`); notebook 04 does not yet wrap it.
+See `src/data_sources/README.md` and notebook 04. Real data never enters the repo; outputs of that notebook are aggregate statistics only. The Indian-dataset layer (BMC Mumbai, RDD2020/2022 India, BharatPotHole, Mumbai/Nashik) is driven by the CLI described in that README (`profile bmc_mumbai`, `profile-images`, `prepare …`, `leakage-audit`); use notebook `05_kaggle_real_data_profile_evaluate.ipynb` to run it on Kaggle against datasets attached under `/kaggle/input` (nothing is downloaded; aggregates-only bundle).
 
 ## 7 · Training code layout
 ```

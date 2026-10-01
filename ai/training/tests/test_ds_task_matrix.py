@@ -42,10 +42,10 @@ def test_manifest_makes_no_real_text_or_before_after_claims():
     assert real_text == []                                       # no real source is declared as supporting text intake outright
 
 
-def test_only_synthetic_tasks_live_on_the_synthetic_track_and_no_real_row_is_pooled():
+def test_only_synthetic_sources_live_on_the_synthetic_track_and_no_real_row_is_pooled():
     for r in tm.build_matrix():
         if r["track"] == "synthetic":
-            assert r["source_id"] == "synthetic_civic"
+            assert r["source_id"] in ("synthetic_civic", "bmc_mumbai")
         if r["source_id"] != "synthetic_civic":
             assert r["track"] != "hybrid"
 
@@ -58,3 +58,14 @@ def test_cli_matrix_prints_the_generated_markdown(capsys):
     from ai.training.src.data_sources import cli
     assert cli.main(["matrix"]) == 0
     assert capsys.readouterr().out.strip() == tm.render_markdown().strip()
+
+
+def test_bmc_rows_reflect_the_synthetic_origin_no_real_track_no_intake():
+    rows = {r["task"]: r for r in tm.build_matrix() if r["source_id"] == "bmc_mumbai"}
+    assert all(r["track"] in ("synthetic", "descriptive", "none") for r in rows.values())
+    assert rows["intake_text"]["track"] == "none" and "synthetic" in rows["intake_text"]["notes"].lower()
+    for t in ("routing_agreement", "triage_priority_prior", "resolution_time_prior", "recurrence_hotspot"):
+        assert rows[t]["track"] == "synthetic"
+    assert rows["taxonomy_coverage"]["track"] == "descriptive"
+    text = (tm.HERE / "TASK_MATRIX.md").read_text(encoding="utf-8")
+    assert "SYNTHETIC_PER_COMPETITION" in text

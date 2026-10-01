@@ -269,13 +269,14 @@ def test_cli_profile_images_then_prepare_requires_explicit_format_and_terms(tmp_
     assert m["records"] == 4 and m["license_verified"] is False
 
 
-def test_cli_prepare_mumbai_nashik_reports_unconfirmed_identity_and_idd_is_refused(tmp_path, capsys):
+def test_cli_prepare_mumbai_nashik_keeps_licence_unverified_and_idd_is_refused(tmp_path, capsys):
     root = tmp_path / "mn"
     img(root, "Paved Road/a.jpg")
     args = ["prepare", "mumbai_nashik_road_surface", "--input", str(root), "--out", str(tmp_path / "o"), "--accept-terms", "mumbai_nashik_road_surface",
             "--acknowledge-unverified-license", "--format", "folder"]
     assert cli.main(args) == 0
-    assert json.loads((tmp_path / "o" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))["identity_status"] == "CANDIDATE_NEEDS_CONFIRMATION"
+    man = json.loads((tmp_path / "o" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))
+    assert man["identity_status"] == "CONFIRMED_BY_USER" and man["license_verified"] is False and man["license_status"] == "UNVERIFIED"
     capsys.readouterr()
     rc = cli.main(["prepare", "idd", "--input", str(root), "--out", str(tmp_path / "i"), "--accept-terms", "idd", "--acknowledge-unverified-license"])
     assert rc == 2 and "not part of V1" in capsys.readouterr().err
@@ -319,3 +320,42 @@ def test_vision_eval_on_a_dataset_without_countries_groups_by_source_id_and_flag
     assert r["n"] == 6 and list(r["by_country"]) == ["bharatpothole"]
     assert r["overall"]["gold_pothole_rate"] == 1.0 and r["overall"]["pothole_precision_valid"] is False and r["overall"]["pothole_recall"] == 1.0
     assert "negatives" in r["precision_note"]
+
+
+# ------------------------------------------------------------------ RDD single-country copies and group-safe holdouts (Kaggle India subset)
+def test_prepare_rdd_default_country_and_block_group_holdout_keeps_blocks_whole(tmp_path):
+    root = tmp_path / "RDD_India_only"                  # the root IS the India folder: "India" appears in no path component
+    for i in range(60):
+        write_voc(root, "", "train", f"Img_{i:06d}", [("D40", 1, 1, 20, 20)] if i % 3 == 0 else [("D00", 1, 1, 20, 20)], with_image=False)
+    plain = prep.prepare_rdd(load_card("rdd2022"), root, tmp_path / "o1")
+    assert plain["images_per_country"] == {"unknown": 60}
+    m = prep.prepare_rdd(load_card("rdd2022"), root, tmp_path / "o2", default_country="India", holdout_fraction=0.4, holdout_seed=2, block_size=10)
+    assert m["images_per_country"] == {"India": 60} and m["options"]["default_country"] == "India" and m["n_groups"] == 6
+    assert m["split_counts"].get("holdout", 0) > 0 and m["split_counts"].get("train", 0) > 0 and m["split_straddle"]["straddling_groups"] == 0
+    recs = [ImageRecord.model_validate(r) for r in read_jsonl(tmp_path / "o2" / "records.jsonl")]
+    side = {}
+    for r in recs:
+        side.setdefault(r.group_id, set()).add(r.split_hint)
+    assert all(len(v) == 1 for v in side.values())
+    again = prep.prepare_rdd(load_card("rdd2022"), root, tmp_path / "o3", default_country="India", holdout_fraction=0.4, holdout_seed=2, block_size=10)
+    assert again["split_counts"] == m["split_counts"]                                         # deterministic
+
+
+def test_prepare_rdd_rejects_two_holdout_rules_and_manifest_carries_the_licence_not_a_hardcoded_claim(tmp_path):
+    root = make_rdd_tree(tmp_path / "RDD")
+    with pytest.raises(DataSourceError, match="either"):
+        prep.prepare_rdd(load_card("rdd2022"), root, tmp_path / "o", holdout_countries={"India"}, holdout_fraction=0.3)
+    m20 = prep.prepare_rdd(load_card("rdd2020"), root, tmp_path / "o20", countries={"India"})
+    m22 = prep.prepare_rdd(load_card("rdd2022"), root, tmp_path / "o22", countries={"India"})
+    assert "NonCommercial" in m20["redistribution"] and "BY-SA" in m22["redistribution"] and "NonCommercial" not in m22["redistribution"]
+
+
+def test_cli_prepare_rdd_accepts_default_country_and_holdout_fraction(tmp_path):
+    root = tmp_path / "RDD_India_only"
+    for i in range(30):
+        write_voc(root, "", "train", f"Img_{i:06d}", [("D40", 1, 1, 20, 20)], with_image=False)
+    rc = cli.main(["prepare", "rdd2022", "--input", str(root), "--out", str(tmp_path / "o"), "--default-country", "India", "--holdout-fraction", "0.4",
+                   "--block-size", "5", "--accept-terms", "rdd2022", "--acknowledge-unverified-license"])
+    assert rc == 0
+    man = json.loads((tmp_path / "o" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))
+    assert man["images_per_country"] == {"India": 30} and man["split_counts"].get("holdout", 0) > 0

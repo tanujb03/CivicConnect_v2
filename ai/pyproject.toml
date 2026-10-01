@@ -11,7 +11,7 @@ dependencies = ["pydantic>=2.5", "numpy>=1.26", "httpx>=0.27"]
 
 [project.optional-dependencies]
 # Offline tooling: dataset generation, B0/B1 training, evaluation, notebooks, tests.
-training = ["scikit-learn>=1.4", "scipy>=1.11"]
+training = ["scikit-learn>=1.4", "scipy>=1.11", "pillow>=10"]   # pillow: optional near-duplicate image audit (Kaggle images ship it)
 b1 = ["sentence-transformers>=3.0"]
 dev = ["pytest>=8", "ruff>=0.5", "nbformat>=5.9", "nbclient>=0.10", "ipykernel>=6.29"]
 

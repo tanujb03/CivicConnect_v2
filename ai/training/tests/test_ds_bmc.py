@@ -50,6 +50,11 @@ def card():
     return load_card("bmc_mumbai")
 
 
+def hypothetical_real_card(card):
+    """The real BMC card describes SYNTHETIC data, so confirmed-citizen-text machinery can only be exercised on a hypothetical real-origin copy."""
+    return card.model_copy(update={"kind": "real_public", "origin_status": "PUBLISHER_IDENTIFIED", "origin_evidence": []})
+
+
 def make_adapter(card, policy, **kw):
     return BMCMumbaiAdapter(card, MappingTable.load(card.mapping_id), DepartmentMapping.load("bmc_mumbai_departments"), policy, retrieved_at="2026-10-01", **kw)
 
@@ -213,9 +218,16 @@ def test_citizen_satisfaction_values_are_not_copied_into_records(records):
     assert all("citizen_satisfied" not in r.attributes and "citizen_rating" not in r.attributes for r in records)
 
 
-def test_description_is_not_stored_as_text_unless_the_operator_confirms_it_is_citizen_written(card, policy):
+def test_description_is_never_stored_as_text_for_the_synthetic_bmc_source_and_confirmation_is_refused(card, policy):
     assert all(r.text is None and r.text_origin == "none" for r in make_adapter(card, policy).iter_records(BMC_CSV))
-    with_text = list(make_adapter(card, policy, confirm_citizen_text=True).iter_records(BMC_CSV))
+    with pytest.raises(SchemaMismatch, match="synthetic"):
+        make_adapter(card, policy, confirm_citizen_text=True)
+
+
+def test_citizen_text_machinery_still_requires_explicit_confirmation_on_a_hypothetical_real_source(card, policy):
+    real = hypothetical_real_card(card)
+    assert all(r.text is None for r in make_adapter(real, policy).iter_records(BMC_CSV))
+    with_text = list(make_adapter(real, policy, confirm_citizen_text=True).iter_records(BMC_CSV))
     assert all(r.text and r.text_origin == "citizen_narrative" for r in with_text)
     assert all("Resolved:" not in r.text for r in with_text)               # remarks are a different, never-stored column
 
@@ -225,10 +237,10 @@ def test_department_on_the_canonical_record_is_never_filled_from_the_taxonomy(re
     assert {r.source_agency for r in records} >= {"Roads Department", "Hydraulic Engineer"}      # the SOURCE value is kept, as source_agency only
 
 
-def test_provenance_marks_origin_and_licence_unverified_and_the_language_unknown(records):
+def test_provenance_marks_the_data_as_third_party_synthetic_with_unverified_licence_and_unknown_language(records):
     for r in records:
         p = r.provenance
-        assert p.kind == "real_public" and p.license_verified is False and p.origin_verified is False
+        assert p.kind == "synthetic_third_party" and p.license_verified is False and p.origin_verified is True
         assert r.language is None
     assert all(r.record_id.startswith("bmc_mumbai:FMT-B") for r in records)
 
@@ -314,10 +326,12 @@ def test_conditional_tasks_report_why_they_cannot_run(policy):
     assert not policy.runnable("citizen_satisfaction", set())[0]
 
 
-def test_prepare_marks_intake_unrunnable_without_confirmation_and_runnable_with_it(card, tmp_path):
+def test_prepare_marks_intake_unrunnable_for_synthetic_bmc_and_confirmable_only_on_a_hypothetical_real_source(card, tmp_path):
     m0 = prep.prepare_bmc(card, BMC_CSV, tmp_path / "a")
     assert m0["task_status"]["intake_text"]["runnable"] is False and m0["citizen_narrative_text_available"] is False
-    m1 = prep.prepare_bmc(card, BMC_CSV, tmp_path / "b", confirm_citizen_text=True)
+    with pytest.raises(SchemaMismatch):
+        prep.prepare_bmc(card, BMC_CSV, tmp_path / "x", confirm_citizen_text=True)
+    m1 = prep.prepare_bmc(hypothetical_real_card(card), BMC_CSV, tmp_path / "b", confirm_citizen_text=True)
     assert m1["citizen_narrative_text_available"] is True and m1["task_status"]["intake_text"]["runnable"] is True
     # ... and its audit then BLOCKS it: the fixture's descriptions echo the category on purpose
     assert m1["task_status"]["intake_text"]["audit"]["passed"] is False and any("echoes the label" in b for b in m1["task_status"]["intake_text"]["audit"]["blocking"])
@@ -379,9 +393,9 @@ def test_recurrence_audit_declares_split_straddle(policy):
 
 
 # ------------------------------------------------------------------ prepared manifest honesty
-def test_manifest_is_honest_about_origin_licence_identity_and_text(prepared):
+def test_manifest_is_honest_about_synthetic_origin_licence_identity_and_text(prepared):
     out, m = prepared
-    assert m["license_verified"] is False and m["origin_verified"] is False and m["origin_notes"]
+    assert m["license_verified"] is False and m["origin_status"] == "SYNTHETIC_PER_COMPETITION" and m["source_kind"] == "synthetic_third_party" and m["origin_notes"]
     assert m["citizen_narrative_text_available"] is False and m["text_origin_counts"] == {"none": 120}
     assert m["views_clean"]["violations"] == [] and m["split_counts"] == {"train": 56, "holdout": 64}
     assert "NOT permitted" in m["redistribution"] and m["column_policy"]["status"].startswith("DRAFT")
@@ -431,14 +445,40 @@ def test_recurrence_hotspot_runs_and_reports_only_descriptives(prepared):
     assert "inputs_used" in r and "status" not in r["inputs_used"] and "department" not in r["inputs_used"]
 
 
-def test_run_eval_cli_tags_origin_unverified_and_never_allows_a_real_world_claim(prepared, tmp_path, capsys):
+def test_run_eval_cli_puts_bmc_on_the_synthetic_track_and_never_allows_a_real_world_claim(prepared, tmp_path, capsys):
     out = tmp_path / "rep"
     rc = run_eval.main(["--task", "resolution_time_prior", "--real-data", str(prepared[0] / "records.jsonl"), "--out", str(out), "--name", "bmc"])
     assert rc == 0
     rep = json.loads((out / "bmc.json").read_text(encoding="utf-8"))
-    assert rep["claims"]["real_world_accuracy_claim_allowed"] is False and "ORIGIN UNVERIFIED" in rep["claims"]["banner"]
-    assert rep["provenance"]["sources"]["bmc_mumbai"]["origin_verified"] is False
-    assert "origin" in (out / "bmc.md").read_text(encoding="utf-8").lower()
+    assert rep["track"] == "synthetic" and rep["claims"]["real_world_accuracy_claim_allowed"] is False
+    assert "THIRD-PARTY SYNTHETIC" in rep["claims"]["banner"] and "not real-world" in rep["claims"]["banner"]
+    assert rep["provenance"]["kinds"] == {"synthetic_third_party": 120}
+    assert "synthetic_third_party" in (out / "bmc.md").read_text(encoding="utf-8")
+    assert run_eval.main(["--task", "resolution_time_prior", "--track", "real_holdout", "--real-data", str(prepared[0] / "records.jsonl"), "--out", str(out)]) == 2
+    assert run_eval.main(["--task", "taxonomy_coverage", "--real-data", str(prepared[0] / "records.jsonl"), "--out", str(out), "--name", "cov"]) == 0
+    cov = json.loads((out / "cov.json").read_text(encoding="utf-8"))
+    assert cov["track"] == "descriptive" and "THIRD-PARTY SYNTHETIC" in cov["claims"]["banner"]
+
+
+def test_third_party_synthetic_is_never_mixed_with_project_synthetic_real_or_hybrid_reports():
+    from ai.evaluation.provenance import TrackError, validate_track
+    tp = {"kinds": {"synthetic_third_party": 5}}
+    validate_track("synthetic", tp)
+    validate_track("descriptive", tp)
+    for track, kinds in [("synthetic", {"synthetic_third_party": 5, "synthetic": 5}), ("synthetic", {"synthetic_third_party": 5, "real_public": 5}),
+                         ("real_holdout", {"synthetic_third_party": 5}), ("hybrid", {"synthetic_third_party": 5, "real_public": 5}),
+                         ("hybrid", {"synthetic_third_party": 5, "synthetic": 5}), ("descriptive", {"synthetic_third_party": 5, "real_public": 5})]:
+        with pytest.raises(TrackError):
+            validate_track(track, {"kinds": kinds}, rows=[])
+
+
+def test_project_synthetic_still_cannot_be_evaluated_as_third_party_and_banners_differ():
+    from ai.evaluation.provenance import claims_for
+    ours = {"n": 3, "kinds": {"synthetic": 3}, "sources": {"synthetic_civic": {"kind": "synthetic", "n": 3, "license_verified": True}}}
+    theirs = {"n": 3, "kinds": {"synthetic_third_party": 3}, "sources": {"bmc_mumbai": {"kind": "synthetic_third_party", "n": 3, "license_verified": False}}}
+    assert claims_for("synthetic", ours)["banner"].startswith("SYNTHETIC DATA ONLY")
+    c = claims_for("synthetic", theirs)
+    assert c["banner"].startswith("THIRD-PARTY SYNTHETIC DATA") and any("licence not verified" in r for r in c["reasons"]) and c["real_world_accuracy_claim_allowed"] is False
 
 
 def test_unverified_origin_blocks_a_real_claim_even_with_verified_licence_and_enough_rows():
@@ -471,9 +511,10 @@ def test_cli_profile_and_prepare_and_leakage_audit_and_matrix(tmp_path, capsys):
     args = ["prepare", "bmc_mumbai", "--input", str(BMC_CSV), "--out", str(tmp_path / "prep")]
     assert cli.main(args) == 2 and "--accept-terms bmc_mumbai" in capsys.readouterr().err        # terms gate
     assert cli.main([*args, "--accept-terms", "bmc_mumbai"]) == 2 and "UNVERIFIED" in capsys.readouterr().err
+    assert cli.main([*args, *ACCEPT, "--holdout-after", "2024-03-01", "--confirm-citizen-text"]) == 2 and "synthetic" in capsys.readouterr().err
     assert cli.main([*args, *ACCEPT, "--holdout-after", "2024-03-01"]) == 0
     m = json.loads((tmp_path / "prep" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))
-    assert m["origin_verified"] is False and m["records"] == 120
+    assert m["source_kind"] == "synthetic_third_party" and m["records"] == 120
     assert cli.main(["matrix"]) == 0 and "bmc_mumbai" in capsys.readouterr().out
 
 

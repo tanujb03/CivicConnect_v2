@@ -70,9 +70,11 @@ def parse_voc(xml_path: Path) -> dict:
 class RDD2022Adapter:
     source_id = "rdd2022"
 
-    def __init__(self, card: SourceCard, mapping: MappingTable, *, retrieved_at: str | None = None, block_size: int = 100):
+    def __init__(self, card: SourceCard, mapping: MappingTable, *, retrieved_at: str | None = None, block_size: int = 100,
+                 default_country: str | None = None):
         self.card, self.mapping, self.retrieved_at = card, mapping, retrieved_at
         self.block_size = block_size
+        self.default_country = default_country      # for single-country copies whose root IS the country folder (country is then not in any path component)
         self.coverage = CoverageReport()          # over boxes
         self.stats = {"xml_files": 0, "images_missing": 0, "degenerate_boxes": 0, "unknown_classes": 0, "invalid_xml": 0}
 
@@ -101,6 +103,7 @@ class RDD2022Adapter:
             self.stats["xml_files"] += 1
             rel = xml_path.relative_to(root)
             country, context = infer_country(rel.parts)
+            country = country or self.default_country
             if countries and country not in countries:
                 continue
             try:
@@ -147,6 +150,7 @@ class RDD2022Adapter:
                 rel = img.relative_to(root)
                 xml = img.parents[1] / "annotations" / "xmls" / f"{img.stem}.xml"
                 country, context = infer_country(rel.parts)
+                country = country or self.default_country
                 if xml.exists() or (countries and country not in countries) or seen.get(rel) is not None:
                     continue
                 yield ImageRecord(record_id=f"{self.card.id}:{country or 'unknown'}:{context or '-'}:{img.stem}", provenance=self.provenance(img.stem),

@@ -13,7 +13,7 @@ SECRET_PATTERNS = [re.compile(p) for p in (r"sk-[A-Za-z0-9]{10,}", r"api[_-]?key
 
 def test_all_notebooks_exist():
     assert [p.name for p in NOTEBOOKS] == ["01_b0_text_classifier_kaggle.ipynb", "02_b1_encoder_experiment_kaggle.ipynb", "03_fusion_calibration_kaggle.ipynb",
-                                           "04_real_data_prepare_evaluate_kaggle.ipynb"]
+                                           "04_real_data_prepare_evaluate_kaggle.ipynb", "05_kaggle_real_data_profile_evaluate.ipynb"]
 
 
 @pytest.mark.parametrize("path", NOTEBOOKS, ids=lambda p: p.name)
@@ -43,6 +43,21 @@ def test_real_data_notebook_has_an_explicit_terms_gate_and_never_bundles_records
     assert "endswith((\"records.jsonl\"" in code and "Internet On" in nb.cells[0].source and "aggregate statistics only" in nb.cells[0].source
 
 
+def test_kaggle_in_place_notebook_never_downloads_copies_or_calls_a_provider_by_default():
+    nb = nbformat.read(NB_DIR / "05_kaggle_real_data_profile_evaluate.ipynb", as_version=4)
+    code = "\n".join(c.source for c in nb.cells if c.cell_type == "code")
+    head = nb.cells[0].source
+    assert "REAL PUBLIC DATA" in head and "SYNTHETIC third-party" in head and "in place" in head and "aggregate reports only" in head
+    assert "RUN_PROVIDER_EVAL = False" in code and "ACCEPT_TERMS = []" in code and "ACK_UNVERIFIED_LICENSE = False" in code
+    assert "kr.run_all(" in code and "kr.plan(" in code and "kr.bundle(" in code
+    for forbidden in ("kaggle datasets download", "kaggle competitions download", "figshare", "socrata", "urlretrieve", "requests.get", "wget", "curl"):
+        assert forbidden not in code.lower(), forbidden
+    assert code.count("copytree") == 1 and "/kaggle/input" in code         # only the (small) repo code is copied, never a dataset
+    for ds in ("bmc_mumbai", "mumbai_nashik_road_surface", "rdd2022", "rdd2020", "bharatpothole"):
+        assert ds in code and ds in head
+    assert "CIVIC_KAGGLE_FIXTURE" in code                                       # CI-only hook on an invented tree
+
+
 def test_notebooks_keep_logic_out_of_notebooks():
     """Thin notebooks: every notebook delegates to ai.training / ai.evaluation instead of re-implementing them."""
     for path in NOTEBOOKS:
@@ -63,10 +78,13 @@ def test_production_code_does_not_import_notebooks_or_training():
     ("03_fusion_calibration_kaggle.ipynb", {}),
     ("02_b1_encoder_experiment_kaggle.ipynb", {"CIVIC_B1_FAKE": "1"}),
     ("04_real_data_prepare_evaluate_kaggle.ipynb", {"CIVIC_REAL_FIXTURE": "1"}),
+    ("05_kaggle_real_data_profile_evaluate.ipynb", {"CIVIC_KAGGLE_FIXTURE": "1"}),
 ])
 def test_notebook_executes_end_to_end_locally(name, env, tmp_path, monkeypatch):
     """Runs the notebook top to bottom (no Kaggle, no GPU, no network). Notebook 02 uses the CI-only fake encoder."""
     from nbclient import NotebookClient
+    if name.startswith("05"):
+        pytest.importorskip("PIL", reason="the invented Kaggle tree uses real tiny JPEGs")
     for k, v in {**env, "CIVIC_WORKDIR": str(tmp_path / "work")}.items():
         monkeypatch.setenv(k, v)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -88,3 +106,13 @@ def test_notebook_executes_end_to_end_locally(name, env, tmp_path, monkeypatch):
         assert "aggregates only" in out and any(n.endswith("PREPARE_MANIFEST.json") for n in names) and any("fusion_real_holdout.json" in n for n in names)
         assert not any(n.endswith(("records.jsonl", "pairs.jsonl", "raw.jsonl")) for n in names)       # records are never bundled
         assert "licence verified: False" in out.replace("license", "licence")
+    if name.startswith("05"):
+        import json
+        import zipfile
+        out_dir = work / "civic_real"
+        summary = json.loads((out_dir / "SUMMARY.json").read_text(encoding="utf-8"))
+        assert {k: v["status"] for k, v in summary["datasets"].items()} == {"bmc_mumbai": "OK", "mumbai_nashik_road_surface": "OK", "rdd2022": "OK", "rdd2020": "OK", "bharatpothole": "OK"}
+        assert all(v["real_world_claim_allowed"] is False for v in summary["datasets"].values())
+        names = zipfile.ZipFile(work / "civic_real_aggregates.zip").namelist()
+        assert "SUMMARY.md" in names and not any(n.endswith(("records.jsonl", ".jpg", ".csv")) for n in names)
+        assert "bundle (aggregates only)" in out and "FOUND    bmc_mumbai" in out and "third_party_synthetic" in out

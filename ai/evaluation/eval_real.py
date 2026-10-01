@@ -165,8 +165,8 @@ def evaluate_resolution_time_prior(rows: Sequence[dict], policy: TaskPolicy | No
             "by_category": {k: block(v) for k, v in sorted(by_cat.items(), key=lambda kv: -len(kv[1])) if len(v) >= 5},
             "by_ward_top10": {k: block(v) for k, v in sorted(by_ward.items(), key=lambda kv: -len(kv[1]))[:10] if len(v) >= 5},
             "censoring": censoring_report(recs), "sla_reference_hours": sla, "leakage": audit_task(recs, policy, task),
-            "interpretation": ("Distribution of resolution durations among RESOLVED complaints only (the rest are censored) in a dataset whose origin is unverified. "
-                               "A sanity reference for SLA hours, not a prediction model and not a real-world claim.")}
+            "interpretation": ("Distribution of resolution durations among RESOLVED complaints only (the rest are censored) in a SYNTHETIC third-party dataset (so the numbers describe its generator). "
+                               "A pipeline sanity reference against SLA hours, not a prediction model and not a real-world claim.")}
 
 
 def evaluate_recurrence_hotspot(rows: Sequence[dict], policy: TaskPolicy | None = None, *, cell_deg: float = 0.00135, min_cases: int = 4, window_days: float = 240.0) -> dict:
@@ -201,7 +201,7 @@ def evaluate_recurrence_hotspot(rows: Sequence[dict], policy: TaskPolicy | None 
             "share_of_located_complaints_in_recurrent_cells": round(sum(len(v) for v in recurrent.values()) / max(n_loc, 1), 4),
             "recurrent_cells_by_category": dict(Counter(k[0] for k in recurrent)), "top_wards_by_recurrent_complaints": wards.most_common(10),
             "top_recurrent_cells": [{"category": k[0], "cell": k[1], "complaints": len(v)} for k, v in top], "leakage": audit_task(recs, policy, task),
-            "interpretation": "Validates that the deterministic recurrence/hotspot definition produces sensible, non-degenerate output on a large ward-level complaint set. Descriptive; origin unverified."}
+            "interpretation": "Validates that the deterministic recurrence/hotspot definition produces sensible, non-degenerate output on a large ward-level complaint set. Descriptive of a SYNTHETIC third-party dataset; not a real-world finding."}
 
 
 def evaluate_routing_agreement(rows: Sequence[dict], policy: TaskPolicy | None = None, dept_mapping: DepartmentMapping | None = None) -> dict:
@@ -236,7 +236,7 @@ def evaluate_routing_agreement(rows: Sequence[dict], policy: TaskPolicy | None =
             "inputs_used": policy.allowed_roles(task)[0], "targets_used": policy.allowed_roles(task)[1], "roles_never_read": sorted(policy.effective_forbidden(task)),
             "leakage": audit,
             "interpretation": ("Agreement between the source's recorded department (mapped to ours by a DRAFT keyword mapping) and our category->department routing. It is a consistency "
-                               "check of two label systems, NOT model accuracy; if the source department is a deterministic function of its category (see leakage.purity) the comparison is vacuous.")}
+                               "check of two label systems (one of them a synthetic generator's), NOT model accuracy; if the source department is a deterministic function of its category (see leakage.purity) the comparison is vacuous.")}
 
 
 def evaluate_triage_priority_prior(rows: Sequence[dict], policy: TaskPolicy | None = None) -> dict:
@@ -257,5 +257,5 @@ def evaluate_triage_priority_prior(rows: Sequence[dict], policy: TaskPolicy | No
     return {"task": task, "n": len(recs), "rows_with_target": n, "inputs_used": policy.allowed_roles(task)[0], "targets_used": policy.allowed_roles(task)[1],
             "roles_never_read": sorted(policy.effective_forbidden(task)),
             "distribution_by_category": {k: {c: dict(v) for c, v in sorted(d.items())} for k, d in dist.items() if d}, "leakage": audit_task(recs, policy, task),
-            "interpretation": ("Recorded severity/priority distributions by category: descriptive priors to sanity-check our priority-score ranges. The provenance of these labels is "
-                               "unknown; they are never ground truth, and no triage model is trained on them.")}
+            "interpretation": ("Recorded severity/priority distributions by category: descriptive priors to sanity-check our priority-score ranges. The labels are generated "
+                               "(synthetic dataset); they are never ground truth, and no triage model is trained on them.")}

@@ -3,6 +3,7 @@
   "policy_version": "0.1.0-draft",
   "status": "DRAFT_COLUMN_NAMES_NOT_VERIFIED_AGAINST_FILE",
   "notes": [
+    "The BMC competition dataset is SYNTHETICALLY GENERATED (see the card). The policy is deliberately unchanged from the real-data design so the same code stays safe on any future real municipal data.",
     "Aliases are expectations (the Kaggle page and data dictionary were unreachable). Every column the aliases do not claim is 'unclassified' and default-denied for every task.",
     "Assign columns explicitly with --role-map after reading bmc_data_dictionary.csv; the adapter fails on ambiguous matches instead of choosing.",
     "Phases: identifier/at_submission < post_triage < post_resolution. Sensitive/PII roles are never read, stored or used."
@@ -547,7 +548,7 @@
         "phase:post_resolution"
       ],
       "track": "descriptive",
-      "notes": "How the real complaint label space lands in taxonomy v1 (and which taxonomy labels have no real examples)."
+      "notes": "How the dataset's (synthetic) complaint label space lands in taxonomy v1, and which taxonomy labels have no examples."
     },
     {
       "task": "routing_agreement",
@@ -572,7 +573,7 @@
         "assigned_contractor",
         "phase:post_resolution"
       ],
-      "track": "descriptive",
+      "track": "synthetic",
       "requires": [
         "department",
         "source_category"
@@ -583,7 +584,7 @@
       "conditions": [
         "report the purity of department given source_category; if >= 0.99 the agreement is vacuous"
       ],
-      "notes": "Agreement between BMC's recorded department (mapped to ours) and our category->department routing. NOT model accuracy."
+      "notes": "Agreement between the dataset's recorded (synthetic) department, mapped to ours, and our category->department routing. Pipeline test, NOT model accuracy."
     },
     {
       "task": "triage_priority_prior",
@@ -610,7 +611,7 @@
         "sla_target_hours",
         "phase:post_resolution"
       ],
-      "track": "descriptive",
+      "track": "synthetic",
       "requires_any": [
         "severity",
         "priority"
@@ -619,10 +620,10 @@
         "target_determinism"
       ],
       "conditions": [
-        "severity/priority provenance unknown: a determinism check against category is mandatory",
+        "severity/priority are generated: a determinism check against category is mandatory",
         "descriptive priors only: no learned triage model is trained on this data"
       ],
-      "notes": "Distribution of recorded severity/priority by category/ward/time; informs priority-score sanity checks, never ground truth."
+      "notes": "Distribution of generated severity/priority by category/ward/time; exercises the priority-prior pipeline, never ground truth."
     },
     {
       "task": "resolution_time_prior",
@@ -658,7 +659,7 @@
         "citizen_rating",
         "citizen_satisfied"
       ],
-      "track": "descriptive",
+      "track": "synthetic",
       "requires_any": [
         "closed_at",
         "resolution_duration"
@@ -670,7 +671,7 @@
         "triage-time information (severity, priority, department, SLA) is legitimately known before resolution",
         "unresolved complaints are right-censored: report the censored share, never silently drop them"
       ],
-      "notes": "Resolution-duration distributions per category/ward to sanity-check SLA hours."
+      "notes": "Resolution-duration distributions per category/ward (generated) to exercise the SLA-reference pipeline."
     },
     {
       "task": "recurrence_hotspot",
@@ -691,11 +692,11 @@
         "phase:post_triage",
         "phase:post_resolution"
       ],
-      "track": "descriptive",
+      "track": "synthetic",
       "leakage_checks": [
         "split_straddle"
       ],
-      "notes": "Validate deterministic recurrence/hotspot definitions (design §38-39) on realistic Indian ward-level data."
+      "notes": "Stress-test the deterministic recurrence/hotspot definitions (design §38-39) on a large synthetic Mumbai ward-level set."
     },
     {
       "task": "intake_text",
@@ -723,7 +724,7 @@
         "phase:post_triage",
         "phase:post_resolution"
       ],
-      "track": "real_holdout",
+      "track": "none",
       "requires": [
         "description",
         "source_category"
@@ -740,7 +741,7 @@
         "source_category (the label) must not be an input",
         "a description that echoes the label is refused"
       ],
-      "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does."
+      "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does. For the BMC competition data this can never run: the data is synthetic, so the description cannot be confirmed as citizen-written (the adapter refuses --confirm-citizen-text)."
     },
     {
       "task": "fusion_pairs",
@@ -763,7 +764,7 @@
         "parent_complaint_id",
         "phase:post_resolution"
       ],
-      "track": "real_holdout",
+      "track": "synthetic",
       "requires": [
         "duplicate_flag",
         "parent_complaint_id"
@@ -771,7 +772,7 @@
       "leakage_checks": [
         "split_straddle"
       ],
-      "notes": "Possible only if the file carries duplicate/parent information; none is known."
+      "notes": "Possible only if the file carries duplicate/parent information; none is known. Any pairs would be synthetic."
     },
     {
       "task": "demo_seed",
@@ -799,7 +800,7 @@
       "targets": [],
       "forbidden": [],
       "track": "none",
-      "notes": "Realistic rows for copilot/demo databases; labelled as unverified-origin data; never an evaluation; sensitive/PII roles excluded."
+      "notes": "Realistically-shaped SYNTHETIC rows for copilot/demo databases; labelled synthetic; never an evaluation; sensitive/PII roles excluded."
     },
     {
       "task": "citizen_satisfaction",

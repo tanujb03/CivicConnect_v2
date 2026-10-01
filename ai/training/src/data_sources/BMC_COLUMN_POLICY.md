@@ -1,6 +1,6 @@
 # BMC Mumbai column policy (default-deny)
 
-> GENERATED from `mappings/bmc_mumbai_columns.v1.json`. Column NAMES are expectations: the Kaggle page/data dictionary were unreachable. Roles are assigned by alias or by an explicit `--role-map`; every column no role claims is **unclassified and unavailable to every task**. Not an official BMC source; origin and licence unverified.
+> GENERATED from `mappings/bmc_mumbai_columns.v1.json`. Column NAMES are expectations until the file is profiled (the Kaggle page/data dictionary were unreachable from the authoring sandbox). Roles are assigned by alias or by an explicit `--role-map`; every column no role claims is **unclassified and unavailable to every task**. The dataset is SYNTHETICALLY GENERATED (not official BMC data); licence unverified.
 
 ## Roles and phases
 
@@ -51,9 +51,9 @@ Phases: `identifier`/`at_submission` (known when filed) < `post_triage` (assigne
 - **forbidden (explicit):** `phase:post_triage`, `phase:post_resolution` (+ all sensitive/PII roles)
 - **requires:** —
 - **leakage checks:** —
-- How the real complaint label space lands in taxonomy v1 (and which taxonomy labels have no real examples).
+- How the dataset's (synthetic) complaint label space lands in taxonomy v1, and which taxonomy labels have no examples.
 
-### `routing_agreement` — conditional (AI-3; track `descriptive`; max input phase `at_submission`)
+### `routing_agreement` — conditional (AI-3; track `synthetic`; max input phase `at_submission`)
 
 - **allowed inputs:** `source_category`, `source_subcategory`, `category`, `subcategory`, `ward`
 - **targets:** `department`
@@ -61,20 +61,20 @@ Phases: `identifier`/`at_submission` (known when filed) < `post_triage` (assigne
 - **requires:** `department`, `source_category`
 - **leakage checks:** `target_determinism`
 - condition: report the purity of department given source_category; if >= 0.99 the agreement is vacuous
-- Agreement between BMC's recorded department (mapped to ours) and our category->department routing. NOT model accuracy.
+- Agreement between the dataset's recorded (synthetic) department, mapped to ours, and our category->department routing. Pipeline test, NOT model accuracy.
 
-### `triage_priority_prior` — conditional (AI-3; track `descriptive`; max input phase `at_submission`)
+### `triage_priority_prior` — conditional (AI-3; track `synthetic`; max input phase `at_submission`)
 
 - **allowed inputs:** `category`, `subcategory`, `ward`, `latitude`, `longitude`, `created_at`, `filing_channel`
 - **targets:** `severity`, `priority`
 - **forbidden (explicit):** `department`, `assigned_contractor`, `sla_target_hours`, `phase:post_resolution` (+ all sensitive/PII roles)
 - **requires:** `severity`, `priority`
 - **leakage checks:** `target_determinism`
-- condition: severity/priority provenance unknown: a determinism check against category is mandatory
+- condition: severity/priority are generated: a determinism check against category is mandatory
 - condition: descriptive priors only: no learned triage model is trained on this data
-- Distribution of recorded severity/priority by category/ward/time; informs priority-score sanity checks, never ground truth.
+- Distribution of generated severity/priority by category/ward/time; exercises the priority-prior pipeline, never ground truth.
 
-### `resolution_time_prior` — conditional (AI-3/AI-5; track `descriptive`; max input phase `post_triage`)
+### `resolution_time_prior` — conditional (AI-3/AI-5; track `synthetic`; max input phase `post_triage`)
 
 - **allowed inputs:** `category`, `subcategory`, `ward`, `latitude`, `longitude`, `created_at`, `filing_channel`, `severity`, `priority`, `department`, `sla_target_hours`
 - **targets:** `resolution_hours`
@@ -83,18 +83,18 @@ Phases: `identifier`/`at_submission` (known when filed) < `post_triage` (assigne
 - **leakage checks:** `censoring_reported`
 - condition: triage-time information (severity, priority, department, SLA) is legitimately known before resolution
 - condition: unresolved complaints are right-censored: report the censored share, never silently drop them
-- Resolution-duration distributions per category/ward to sanity-check SLA hours.
+- Resolution-duration distributions per category/ward (generated) to exercise the SLA-reference pipeline.
 
-### `recurrence_hotspot` — supported (AI-5; track `descriptive`; max input phase `at_submission`)
+### `recurrence_hotspot` — supported (AI-5; track `synthetic`; max input phase `at_submission`)
 
 - **allowed inputs:** `created_at`, `ward`, `latitude`, `longitude`, `category`, `subcategory`
 - **targets:** —
 - **forbidden (explicit):** `phase:post_triage`, `phase:post_resolution` (+ all sensitive/PII roles)
 - **requires:** —
 - **leakage checks:** `split_straddle`
-- Validate deterministic recurrence/hotspot definitions (design §38-39) on realistic Indian ward-level data.
+- Stress-test the deterministic recurrence/hotspot definitions (design §38-39) on a large synthetic Mumbai ward-level set.
 
-### `intake_text` — conditional (AI-1; track `real_holdout`; max input phase `at_submission`)
+### `intake_text` — conditional (AI-1; track `none`; max input phase `at_submission`)
 
 - **allowed inputs:** `description`, `ward`, `latitude`, `longitude`, `filing_channel`
 - **targets:** `category`, `subcategory`
@@ -104,16 +104,16 @@ Phases: `identifier`/`at_submission` (known when filed) < `post_triage` (assigne
 - condition: the operator must inspect samples and confirm the column is citizen-written free text
 - condition: source_category (the label) must not be an input
 - condition: a description that echoes the label is refused
-- Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does.
+- Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does. For the BMC competition data this can never run: the data is synthetic, so the description cannot be confirmed as citizen-written (the adapter refuses --confirm-citizen-text).
 
-### `fusion_pairs` — conditional (AI-2; track `real_holdout`; max input phase `at_submission`)
+### `fusion_pairs` — conditional (AI-2; track `synthetic`; max input phase `at_submission`)
 
 - **allowed inputs:** `created_at`, `ward`, `latitude`, `longitude`, `category`, `subcategory`
 - **targets:** `duplicate_flag`
 - **forbidden (explicit):** `parent_complaint_id`, `phase:post_resolution` (+ all sensitive/PII roles)
 - **requires:** `duplicate_flag`, `parent_complaint_id`
 - **leakage checks:** `split_straddle`
-- Possible only if the file carries duplicate/parent information; none is known.
+- Possible only if the file carries duplicate/parent information; none is known. Any pairs would be synthetic.
 
 ### `demo_seed` — demo_only (AI-6; track `none`; max input phase `post_resolution`)
 
@@ -122,7 +122,7 @@ Phases: `identifier`/`at_submission` (known when filed) < `post_triage` (assigne
 - **forbidden (explicit):** — (+ all sensitive/PII roles)
 - **requires:** —
 - **leakage checks:** —
-- Realistic rows for copilot/demo databases; labelled as unverified-origin data; never an evaluation; sensitive/PII roles excluded.
+- Realistically-shaped SYNTHETIC rows for copilot/demo databases; labelled synthetic; never an evaluation; sensitive/PII roles excluded.
 
 ### `citizen_satisfaction` — not_pursued (—; track `none`; max input phase `at_submission`)
 

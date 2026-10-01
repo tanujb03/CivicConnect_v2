@@ -26,18 +26,21 @@ external source ──download──▶ raw file (outside repo) ──profile─
 
 ## Indian datasets (extension) — priority order
 
-> **Nothing below has been downloaded, opened or profiled.** The authoring sandbox cannot reach Kaggle, Mendeley, figshare or IIIT-H, so licences, column names and class names are *expectations tagged by evidence level* in the cards. Every licence is `UNVERIFIED`. Full machine-generated detail: [`TASK_MATRIX.md`](TASK_MATRIX.md) (dataset → task → allowed fields → labels → taxonomy mapping → track) and [`BMC_COLUMN_POLICY.md`](BMC_COLUMN_POLICY.md) (BMC column roles/phases per task).
+> **Nothing below has been downloaded, opened or profiled by this tooling**, and nothing is ever copied to a laptop or into git: the datasets are processed **in place on Kaggle** (`/kaggle/input/...`, see *Kaggle workflow* below). The authoring sandbox cannot reach Kaggle, Mendeley, figshare or IIIT-H, so licences, column names and class names are *expectations tagged by evidence level* in the cards. Every licence is `UNVERIFIED`. Machine-generated detail: [`TASK_MATRIX.md`](TASK_MATRIX.md) (dataset → task → allowed fields → labels → taxonomy mapping → track) and [`BMC_COLUMN_POLICY.md`](BMC_COLUMN_POLICY.md).
 
-| Priority | Source (`id`) | Role | Licence | Other caveats |
-|---|---|---|---|---|
-| **primary** | **BMC Mumbai** (`bmc_mumbai`; Kaggle competition `mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024`) | the real Indian *structured* civic source: AI-3 routing/priority priors (descriptive), AI-5 analytics, recurrence/hotspots, taxonomy coverage, department/category mapping, realistic demos | competition rules **not read** | **origin UNVERIFIED** (real vs simulated/derived unknown); **not** an official BMC API/open-data release unless independently verified; test target withheld; no verified citizen text |
-| secondary | **RDD2022** (`rdd2022`) India subset + **RDD2020** (`rdd2020`) | AI-1 image evaluation (pothole → `roads/pothole`; cracks → `roads` only) | RDD2022: README *CC BY-SA 4.0* vs external *CC BY 4.0* — unresolved. RDD2020: *CC BY-NC 3.0* reported (secondary) — **different** from RDD2022, NonCommercial | RDD2020 and RDD2022 are separate cards/mappings; never share licence assumptions |
-| secondary | **BharatPotHole** (`bharatpothole`; iWatchRoad, Kaggle `surbhisaswatimohanty/bharatpothole`) | AI-1 image evaluation, dashcam frames | README (primary, fetched) states **no dataset licence**; the repo *code* is CC BY-NC-SA 4.0 and is **not** assumed to apply to the data | likely positive-only (precision not meaningful); frames from videos ⇒ must hold out whole videos |
-| secondary | **Mumbai/Nashik road-surface** (`mumbai_nashik_road_surface`; Mendeley doi `10.17632/tj2m7zz4rg.2`, Data in Brief / PMC8933537) | AI-1 category-level road-surface evaluation, demo realism | not stated in any evidence seen | **identity is a CANDIDATE** — you must confirm it; the Kaggle "Indian Roads Dataset" is explicitly *not* added |
-| future | **IIIT-H IDD** (`idd`) | none in V1 | unverified (variants differ) | documented only; `prepare idd` is refused |
-| (optional) | NYC 311, Chicago 311 | non-Indian structured sources kept for plumbing/duplicate-pair work | unverified | see below |
+| Priority | Source (`id`) | Evidence class | Role | Licence | Caveats |
+|---|---|---|---|---|---|
+| **priority (real)** | **Mumbai/Nashik road surface** (`mumbai_nashik_road_surface`; Mendeley `tj2m7zz4rg`) | real | AI-1 category-level image evaluation (potholes only where explicitly labelled), Maharashtra visual grounding, demo realism | **CC BY 4.0 reported by the repo owner** from the Mendeley record — recorded as *relayed (secondary)*, **UNVERIFIED** until a primary evidence entry is added | reported contents: 8,484 RGB images, 13 videos, Mumbai + Nashik, potholes / speed breakers / barriers / paved-unpaved; **label format unknown until profiled**; not hosted on Kaggle (you upload it as a private Dataset) |
+| **priority (real)** | **RDD2022 India** (`rdd2022`) | real | AI-1 image evaluation (D40 → `roads/pothole`; cracks → `roads` only) | README *CC BY-SA 4.0* vs external *CC BY 4.0* — **unresolved**, treated as the stricter BY-SA | single-country copy: use `default_country='India'`; holdout by index-block groups (a heuristic) |
+| secondary (real) | **RDD2020 India** (`rdd2020`) | real | same, earlier release | *CC BY-NC 3.0* reported by a secondary source — **unverified**, NonCommercial | separate card/mapping/ids from RDD2022; never share licence assumptions |
+| secondary (real) | **BharatPotHole** (`bharatpothole`; iWatchRoad, Kaggle `surbhisaswatimohanty/bharatpothole`) | real | AI-1 image evaluation, dashcam frames | README (fetched, primary) states **no dataset licence**; the repo *code* licence (CC BY-NC-SA 4.0) is **not** assumed to cover the data | **publishable evaluation disabled** until the dataset's own licence is verified; likely positive-only; frames from videos ⇒ whole-video holdouts |
+| **primary (synthetic)** | **BMC Mumbai** (`bmc_mumbai`; Kaggle competition `mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024`) | **third-party SYNTHETIC** | large-scale Mumbai/BMC-*structured* synthetic civic data: pipeline/stress testing, taxonomy coverage, routing/triage pipeline tests, analytics demos, leakage testing | competition rules **not read** | **not real, not official BMC data, never real-world validation** (see below); test target withheld; exact generation method/host wording still to be recorded from the primary pages |
+| future | **IIIT-H IDD** (`idd`) | real | none in V1 | unverified (variants differ) | documented only; `prepare idd` is refused |
+| (optional) | NYC 311, Chicago 311 | real | non-Indian structured sources kept for plumbing/duplicate-pair work | unverified | see below |
 
-### BMC Mumbai: leakage design (the part that matters)
+**Correction recorded on 2026-10-01:** the Kaggle competition information (relayed by the repository owner; this tooling could not fetch Kaggle, so the card tags it *secondary*, not primary) states that the BMC dataset is **synthetically generated**, not a collection of actual BMC complaint records. The card is therefore `kind: synthetic_third_party`, `origin_status: SYNTHETIC_PER_COMPETITION`; its records carry provenance kind `synthetic_third_party`, which (a) can never satisfy a `real_holdout`/hybrid check, (b) is never mixed with this project's own synthetic data (`synthetic`) in one report, and (c) is evaluated on the `synthetic` track (pipeline tests) or `descriptive` track (taxonomy coverage), with banner "THIRD-PARTY SYNTHETIC DATA … not real-world accuracy". Its description column cannot be confirmed as citizen-written, so `--confirm-citizen-text` is refused. The column-role policy below is unchanged on purpose, so it stays safe on any future real municipal data.
+
+### BMC Mumbai (synthetic): leakage design (the part that matters)
 
 Category, department and severity are **potential targets, not automatic input features**. Mechanisms (all tested in `tests/test_ds_bmc.py`):
 
@@ -46,7 +49,7 @@ Category, department and severity are **potential targets, not automatic input f
 3. **Never stored/read:** PII (names, contacts, contractors/officers) and complainant-profile columns are never read or stored; `resolution_remarks` (post-resolution free text) is never stored; citizen-satisfaction columns are not stored (task `not_pursued`, out of V1 scope). The free-text `description` is stored **only** with `--confirm-citizen-text` after you inspect it, and the intake task then audits label echo.
 4. **`CaseRecord.department` is left empty.** Filling it from our taxonomy would make "category → department" a circular routing target. The source's department is kept only as `source_agency`.
 5. **Leakage audits** run at prepare time and via `cli leakage-audit`: target determinism (a target ≥ 99% determined by its allowed inputs ⇒ the evaluation is *blocked* as vacuous — the invented fixture's severity/department trip this on purpose), split straddle / spatiotemporal twins, text-echo rate, censoring (unresolved complaints are right-censored, never silently dropped), and `views_clean`.
-6. **Claims.** Origin-unverified data can never support a real-world claim (`claims_for` blocks `real_holdout`/hybrid real-slice claims; descriptive banners say "ORIGIN UNVERIFIED"). BMC tasks run on the `descriptive` track only.
+6. **Claims.** The data is synthetic: `claims_for` never allows a real-world claim for it, and a real-origin-unverified source (should one ever be added) is blocked the same way. BMC pipeline tasks run on the `synthetic` track, taxonomy coverage on `descriptive`; neither mixes with real or project-synthetic rows.
 
 | BMC task | status | inputs (summary) | target | phase limit |
 |---|---|---|---|---|
@@ -68,7 +71,7 @@ Category, department and severity are **potential targets, not automatic input f
 * **No invented taxonomy**: only an exact pothole class maps to `roads/pothole`; generic damage → `roads`; cracks, speed breakers, barriers, paved/unpaved/season/water scenes are `out_of_scope`/unmapped. Videos must be converted to frames externally.
 * Positive-only datasets get a manifest warning, and vision evaluation sets `pothole_precision_valid=false` when (almost) every image is a pothole.
 
-**Still not available anywhere here:** real Hindi/Marathi/Hinglish citizen narratives (BMC's text, if any, is unverified), real before/after resolution evidence (AI-4 tested with scripted fixtures only; a *synthetic* before/after set is not generated yet — listed as a GAP in the task matrix), severity ground truth.
+**Still not available anywhere here:** real Hindi/Marathi/Hinglish citizen narratives (BMC is synthetic; this project's Hindi/Marathi/Hinglish text is synthetic too), real before/after resolution evidence (AI-4 tested with scripted fixtures only; a *synthetic* before/after set is not generated yet — listed as a GAP in the task matrix), severity ground truth.
 
 ## Datasets investigated before the Indian extension (details in `cards/*.json`)
 
@@ -149,8 +152,37 @@ Every report carries `track`, a `provenance` table (source, kind, n, licence + v
 ### Indian image workflow
 `cli profile-images <root> --out …` → choose `--format` yourself → (YOLO) supply `--class-names-file` → choose a group rule → `cli prepare bharatpothole|mumbai_nashik_road_surface|rdd2020|rdd2022 …` → `run_eval --task vision --track real_holdout --real-data … --image-root <root>` (needs a configured provider).
 
+## Kaggle workflow (datasets stay in `/kaggle/input`; nothing is downloaded locally)
+
+Notebook: [`ai/training/notebooks/05_kaggle_real_data_profile_evaluate.ipynb`](../../notebooks/05_kaggle_real_data_profile_evaluate.ipynb) — a thin wrapper over `kaggle_run.py` (`python -m ai.training.src.data_sources.kaggle_run --help`). CPU only, Internet Off is fine, no GPU, **no model/provider call by default**.
+
+```
+BMC synthetic civic ──▶ profile → column roles → mapping → leakage audit → synthetic-track evaluation
+Mumbai/Nashik       ──▶ profile-images → format/class names → group-safe holdout → annotation+duplicate audits → real_holdout readiness
+RDD2022 India       ──▶ (same; VOC is the documented format, confirmed by the profile)
+RDD2020 India       ──▶ (same, optional)
+BharatPotHole       ──▶ profile → licence gate → (format/class names/group rule from you) → readiness; publishing disabled while licence unknown
+```
+
+* **Dataset by dataset.** Attach any subset; each runs independently and returns `OK`, `PARTIAL`, `NOT_ATTACHED` (with the exact name hints, what *is* attached, how to attach, expected layout), `NEEDS_CONFIG` (a role/format/class-names/group rule/data file you must state — never guessed), `NEEDS_TERMS` (you have not accepted terms), `BLOCKED` or `FAILED` (unexpected error, reported verbatim, other datasets continue).
+* **Read in place.** `kaggle_inputs.py` finds mounts under `/kaggle/input/<slug>`, `/kaggle/input/datasets/<owner>/<slug>` and `/kaggle/input/competitions/<slug>` by name **and** structure, never modifies them, and never copies them. Outputs go to `/kaggle/working/civic_real/<dataset>/` (outside the repo; the output guard still applies). Only reports/manifests are bundled; `records.jsonl` and images are excluded by construction.
+* **Image audits** (`image_audit.py`, aggregates only): formats by magic bytes vs extension, dimensions, missing/unreadable files, class distribution (raw and mapped), unannotated images vs images with no boxes, box-size distribution, group (video/sequence/block) sizes, **exact duplicates (sha1)** and **near duplicates (64-bit difference hash, needs Pillow, capped & stated)** — including how many duplicate pairs/clusters span groups or the train/holdout split. Any cross-split duplicate **blocks** the `real_holdout` readiness.
+* **Holdouts.** RDD uses seeded hashing of index-block groups; other image datasets only get a holdout when you give an explicit group rule (`dir`/`regex`/`block`); without one the run still profiles/prepares but builds **no** split and says so.
+* **`real_holdout` readiness** is a verdict, not a result: `can_run_real_holdout` (annotated holdout exists, no straddling groups, no cross-split duplicates) vs `publishable_evaluation_enabled` (also needs a verified licence, ≥ 200 annotated holdout images, and negatives for precision). Today the second is always false.
+* **Provider evaluation** (`RUN_PROVIDER_EVAL`) is opt-in and only attempted when readiness allows; a missing provider is a skipped stage, never a failure.
+
+| dataset | attach in Kaggle | expected under `/kaggle/input/` |
+|---|---|---|
+| `bmc_mumbai` | Add Input → Competition data (accept the rules first) | `competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/` containing one `*train*.csv` (+ data dictionary; the test CSV's target is withheld and unused) |
+| `mumbai_nashik_road_surface` | upload the Mendeley files as a **private** Kaggle Dataset (keep attribution/licence text), then Add Input | `<your-dataset>/…` (name containing `nashik`/`mumbai`/`roadsurface`/`tj2m7zz4rg`, or pass `PATHS`) with images (+ annotations/folders/videos) |
+| `rdd2022` | private/trusted Kaggle Dataset of the **India** subset | `<name containing rdd2022>/…/India/train/{images,annotations/xmls}` (or the mount *is* the India folder) |
+| `rdd2020` | Kaggle Dataset of the RDD2020 **India** subset | `<name containing rdd2020>/…/India/train/{images,annotations/xmls}` |
+| `bharatpothole` | Add Input → Datasets → `surbhisaswatimohanty/bharatpothole` | `bharatpothole/…` frames + annotations (format *not assumed*: profile first; YOLO needs the dataset's class-names file) |
+
+Copies of RDD/Mumbai-Nashik uploaded by third parties have **their own provenance**: record who published the copy before trusting it, and re-check the licence at the primary record.
+
 ## Not verified / blocked in the authoring environment
 * Official pages for NYC 311, Chicago 311 and figshare were **unreachable** (egress proxy). Their licence/column/format details above come from web-search summaries or are expectations, tagged as such in the cards.
 * No real data was downloaded or used; all adapter/evaluation tests run on invented format fixtures.
 * Mapping tables are hypotheses until validated with `profile` on the real files. BMC column names, class names for BharatPotHole / Mumbai-Nashik, and the BMC category list (user-reported) are **expectations**, not read from the files.
-* Kaggle, Mendeley, figshare and IIIT-H were unreachable; BharatPotHole's repository README (GitHub) was the only primary source fetched for the Indian datasets.
+* Kaggle, Mendeley, figshare and IIIT-H were unreachable; BharatPotHole's repository README (GitHub) was the only primary source fetched for the Indian datasets. The BMC *synthetic* statement and the Mumbai/Nashik *CC BY 4.0* licence are owner-relayed (secondary) until quoted from the primary pages.

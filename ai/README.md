@@ -39,12 +39,7 @@ multilingual text, code-mixing, edge cases and fixtures; real data supplies real
 and no source's licence is verified. See `training/src/data_sources/README.md` for dataset cards, the capability matrix (what each dataset can/cannot support), the
 licence status and the workflow. Reports always state their provenance and what may be claimed.
 
-**Indian sources (extension):** BMC Mumbai (`bmc_mumbai`) is the *primary* real structured civic source (analytics, routing/priority priors, recurrence, taxonomy coverage,
-demos) — under a default-deny column-role policy because category/department/severity are potential targets, post-resolution fields are not intake/triage inputs,
-sensitive/PII columns are never read, and its origin (real vs simulated) and licence are **unverified**. RDD2022/RDD2020 India, BharatPotHole and the Mumbai/Nashik
-road-surface set are *visual* evaluation sources (potholes → `roads/pothole`; no new taxonomy categories); IIIT-H IDD is future-only. Synthetic data remains the
-only source of Hindi/Marathi/Hinglish text. No Indian dataset has been downloaded; all licences are unverified. See `training/src/data_sources/README.md`,
-`TASK_MATRIX.md` and `BMC_COLUMN_POLICY.md` there.
+**Indian sources (extension):** the genuinely *real* Indian sources are visual: the Mumbai/Nashik road-surface set (Mendeley `tj2m7zz4rg`, priority), RDD2022 and RDD2020 India, and BharatPotHole (licence pending) — potholes map to `roads/pothole`, no new taxonomy categories; IIIT-H IDD is future-only. **BMC Mumbai** (`bmc_mumbai`) is a large *synthetically generated* Mumbai/BMC-structured civic dataset (per the Kaggle competition information): it is used for pipeline/stress/leakage testing under a default-deny column-role policy and is **never** real-world validation, official BMC data, or pooled with real or project-synthetic results. Synthetic data remains the only source of Hindi/Marathi/Hinglish text, and there is no real before/after resolution evidence anywhere. **Datasets are processed in place on Kaggle** (`/kaggle/input`, notebook `05_kaggle_real_data_profile_evaluate`): nothing is downloaded locally or committed, every licence is unverified, so no publishable real-world claim exists yet. See `training/src/data_sources/README.md`, `TASK_MATRIX.md` and `BMC_COLUMN_POLICY.md` there.
 
 ## Quick start
 ```bash

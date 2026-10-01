@@ -78,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     pp.add_argument("--include-category-text", action="store_true", help="emit category text as text (label leakage; flagged source_category_text)")
     pp.add_argument("--exclude-legacy", action="store_true")
     pp.add_argument("--countries", nargs="*"); pp.add_argument("--holdout-countries", nargs="*")
+    pp.add_argument("--default-country", help="rdd2020/rdd2022: country name for single-country copies whose root IS the country folder (e.g. India)")
     pp.add_argument("--check-images", action="store_true"); pp.add_argument("--include-unannotated", action="store_true")
     pp.add_argument("--max-images", type=int); terms(pp)
     pa = sub.add_parser("pairs"); pa.add_argument("--records", type=Path, required=True); pa.add_argument("--out", type=Path, required=True)
@@ -188,7 +189,8 @@ def main(argv: list[str] | None = None) -> int:
             elif card.adapter == "rdd2022":
                 m = prep.prepare_rdd(card, a.input, out, countries=set(a.countries) if a.countries else None,
                                      holdout_countries=set(a.holdout_countries) if a.holdout_countries else None,
-                                     check_images=a.check_images, include_unannotated=a.include_unannotated, max_images=a.max_images)
+                                     check_images=a.check_images, include_unannotated=a.include_unannotated, max_images=a.max_images,
+                                     default_country=a.default_country, holdout_fraction=a.holdout_fraction, holdout_seed=a.holdout_seed, block_size=a.block_size)
             else:
                 m = prep.prepare_tabular(card, a.input, out, max_rows=a.max_rows, sample_seed=a.sample_seed, since=a.since, until=a.until,
                                          holdout_after=a.holdout_after, include_category_text=a.include_category_text, exclude_legacy=a.exclude_legacy)

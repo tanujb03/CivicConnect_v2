@@ -1,6 +1,7 @@
 """Mumbai Nagar Seva BMC civic complaints (Kaggle competition data) -> CaseRecord, under a column-role policy.
 
-Not an official BMC source (see the card). Column names are NOT known: roles are resolved by alias and/or an
+The competition data is SYNTHETICALLY GENERATED (see the card): records carry kind ``synthetic_third_party`` and can never
+support a real-world claim. Not an official BMC source. Column names are NOT known: roles are resolved by alias and/or an
 explicit operator ``role_map`` read from the dataset's data dictionary; ambiguity fails loudly; every unclaimed
 column is *unclassified* and never read. PII and sensitive-attribute roles are never read or stored, post-resolution
 free text is never stored, and the free-text ``description`` is only stored when the operator has confirmed it is
@@ -32,6 +33,9 @@ class BMCMumbaiAdapter:
                  row_index_ids: bool = False, resolution_unit: str | None = None):
         if resolution_unit not in (None, "hours", "days"):
             raise SchemaMismatch("resolution_unit must be 'hours' or 'days'")
+        if confirm_citizen_text and card.is_synthetic:
+            raise SchemaMismatch(f"{card.id} is synthetic: its description column cannot be confirmed as citizen-written, so --confirm-citizen-text is refused. "
+                                 "Free text from a synthetic source is never used as citizen narrative.")
         self.card, self.mapping, self.dept_mapping, self.policy = card, mapping, dept_mapping, policy
         self.retrieved_at, self.role_map = retrieved_at, role_map or {}
         self.confirm_citizen_text, self.row_index_ids, self.resolution_unit = confirm_citizen_text, row_index_ids, resolution_unit
@@ -42,7 +46,7 @@ class BMCMumbaiAdapter:
 
     def provenance(self, rid: str | None) -> Provenance:
         c = self.card
-        return Provenance(kind="real_public", source_id=c.id, source_dataset=c.name, source_version=c.version_note[:120], source_record_id=rid,
+        return Provenance(kind=c.kind, source_id=c.id, source_dataset=c.name, source_version=c.version_note[:120], source_record_id=rid,
                           license_id=c.license.name[:120], license_verified=c.license_verified, origin_verified=c.origin_verified,
                           label_origin="mapped_from_source", mapping_id=self.mapping.mapping_id, mapping_version=self.mapping.version,
                           retrieved_at=self.retrieved_at)

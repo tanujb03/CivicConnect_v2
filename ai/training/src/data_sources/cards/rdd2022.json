@@ -9,7 +9,7 @@
   "data_access": {
     "method": "figshare download (large; Norway alone ≈ 9.9 GB per the project README)",
     "endpoint": "https://api.figshare.com/v2/articles/21431547",
-    "note": "On Kaggle prefer attaching an existing copy as a Dataset input rather than re-downloading; verify its licence/provenance too."
+    "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2022 INDIA subset (the project distribution provides it separately). Whoever uploaded that copy is a third party: record the copy's provenance and re-check the licence at the primary record. Nothing is downloaded or copied by this repository."
   },
   "license": {
     "name": "UNRESOLVED: CC BY-SA 4.0 (project README) vs CC BY 4.0 (search summaries of figshare/journal record)",

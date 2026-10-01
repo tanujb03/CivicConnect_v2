@@ -137,7 +137,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--name", default=None)
     a = ap.parse_args(argv)
     bmc_tasks = {"resolution_time_prior", "recurrence_hotspot", "routing_agreement", "triage_priority_prior"}
-    track = DESCRIPTIVE if (a.task == "taxonomy_coverage" or a.task in bmc_tasks) else (a.track or "synthetic")
+    # BMC structured tasks read prepared records of a (third-party) SYNTHETIC dataset: statistics of the dataset on the descriptive track
+    # (taxonomy coverage) or pipeline tests on the synthetic track. Neither can ever be a real-world claim.
+    track = DESCRIPTIVE if a.task == "taxonomy_coverage" else "synthetic" if a.task in bmc_tasks else (a.track or "synthetic")
+    if a.task in bmc_tasks and a.track not in (None, "synthetic"):
+        print(f"ERROR: task {a.task} runs on the 'synthetic' track only (the BMC dataset is synthetic); got --track {a.track}", file=sys.stderr)
+        return 2
 
     try:
         synth_rows = real_rows = None
@@ -145,11 +150,11 @@ def main(argv: list[str] | None = None) -> int:
         if track in ("synthetic", "hybrid") and a.task in ("intake", "fusion"):
             f = a.eval_dir / ("intake_eval.v1.jsonl" if a.task == "intake" else "fusion_eval_pairs.v1.jsonl")
             synth_rows, datasets[f.name] = read_jsonl(f), _sha(f)[:16]
-        if track in ("real_holdout", "hybrid", DESCRIPTIVE):
+        if track in ("real_holdout", "hybrid", DESCRIPTIVE) or a.task in bmc_tasks:
             if a.real_data is None:
                 raise TrackError(f"--real-data is required for track {track!r}")
             allrows = read_jsonl(a.real_data)
-            real_rows = allrows if track == DESCRIPTIVE else _holdout(allrows)
+            real_rows = allrows if (track == DESCRIPTIVE or a.task in bmc_tasks) else _holdout(allrows)
             datasets[a.real_data.name] = _sha(a.real_data)[:16]
         eval_rows = (synth_rows or []) + (real_rows or [])
         prov = build_provenance(eval_rows)

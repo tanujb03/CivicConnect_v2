@@ -11,7 +11,7 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
     "track": "none",
     "implemented_in_eval_harness": false,
@@ -50,7 +50,7 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
     "track": "none",
     "implemented_in_eval_harness": false,
@@ -58,7 +58,7 @@
     "requires_any": [],
     "operator_confirmations": [],
     "conditions": [],
-    "notes": "Realistic rows for copilot/demo databases; labelled as unverified-origin data; never an evaluation; sensitive/PII roles excluded.",
+    "notes": "Realistically-shaped SYNTHETIC rows for copilot/demo databases; labelled synthetic; never an evaluation; sensitive/PII roles excluded.",
     "source_priority": "primary"
   },
   {
@@ -94,9 +94,9 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "real_holdout",
+    "track": "synthetic",
     "implemented_in_eval_harness": false,
     "requires": [
       "duplicate_flag",
@@ -105,7 +105,7 @@
     "requires_any": [],
     "operator_confirmations": [],
     "conditions": [],
-    "notes": "Possible only if the file carries duplicate/parent information; none is known.",
+    "notes": "Possible only if the file carries duplicate/parent information; none is known. Any pairs would be synthetic.",
     "source_priority": "primary"
   },
   {
@@ -149,9 +149,9 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "real_holdout",
+    "track": "none",
     "implemented_in_eval_harness": false,
     "requires": [
       "description",
@@ -166,7 +166,7 @@
       "source_category (the label) must not be an input",
       "a description that echoes the label is refused"
     ],
-    "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does.",
+    "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does. For the BMC competition data this can never run: the data is synthetic, so the description cannot be confirmed as citizen-written (the adapter refuses --confirm-citizen-text).",
     "source_priority": "primary"
   },
   {
@@ -206,15 +206,15 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "descriptive",
+    "track": "synthetic",
     "implemented_in_eval_harness": true,
     "requires": [],
     "requires_any": [],
     "operator_confirmations": [],
     "conditions": [],
-    "notes": "Validate deterministic recurrence/hotspot definitions (design §38-39) on realistic Indian ward-level data.",
+    "notes": "Stress-test the deterministic recurrence/hotspot definitions (design §38-39) on a large synthetic Mumbai ward-level set.",
     "source_priority": "primary"
   },
   {
@@ -253,9 +253,9 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "descriptive",
+    "track": "synthetic",
     "implemented_in_eval_harness": true,
     "requires": [],
     "requires_any": [
@@ -267,7 +267,7 @@
       "triage-time information (severity, priority, department, SLA) is legitimately known before resolution",
       "unresolved complaints are right-censored: report the censored share, never silently drop them"
     ],
-    "notes": "Resolution-duration distributions per category/ward to sanity-check SLA hours.",
+    "notes": "Resolution-duration distributions per category/ward (generated) to exercise the SLA-reference pipeline.",
     "source_priority": "primary"
   },
   {
@@ -305,9 +305,9 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "descriptive",
+    "track": "synthetic",
     "implemented_in_eval_harness": true,
     "requires": [
       "department",
@@ -318,7 +318,7 @@
     "conditions": [
       "report the purity of department given source_category; if >= 0.99 the agreement is vacuous"
     ],
-    "notes": "Agreement between BMC's recorded department (mapped to ours) and our category->department routing. NOT model accuracy.",
+    "notes": "Agreement between the dataset's recorded (synthetic) department, mapped to ours, and our category->department routing. Pipeline test, NOT model accuracy.",
     "source_priority": "primary"
   },
   {
@@ -356,7 +356,7 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
     "track": "descriptive",
     "implemented_in_eval_harness": true,
@@ -364,7 +364,7 @@
     "requires_any": [],
     "operator_confirmations": [],
     "conditions": [],
-    "notes": "How the real complaint label space lands in taxonomy v1 (and which taxonomy labels have no real examples).",
+    "notes": "How the dataset's (synthetic) complaint label space lands in taxonomy v1, and which taxonomy labels have no examples.",
     "source_priority": "primary"
   },
   {
@@ -404,9 +404,9 @@
       "complainant_profile (sensitive)",
       "pii (never read)"
     ],
-    "labels": "13 reported complaint categories + departments (unverified)",
+    "labels": "13 reported complaint categories + departments (user-reported, unverified; SYNTHETIC data)",
     "taxonomy_mapping": "`bmc_mumbai_to_civic@0.1.0-draft` (DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE); departments `bmc_mumbai_departments`",
-    "track": "descriptive",
+    "track": "synthetic",
     "implemented_in_eval_harness": true,
     "requires": [],
     "requires_any": [
@@ -415,10 +415,10 @@
     ],
     "operator_confirmations": [],
     "conditions": [
-      "severity/priority provenance unknown: a determinism check against category is mandatory",
+      "severity/priority are generated: a determinism check against category is mandatory",
       "descriptive priors only: no learned triage model is trained on this data"
     ],
-    "notes": "Distribution of recorded severity/priority by category/ward/time; informs priority-score sanity checks, never ground truth.",
+    "notes": "Distribution of generated severity/priority by category/ward/time; exercises the priority-prior pipeline, never ground truth.",
     "source_priority": "primary"
   },
   {
