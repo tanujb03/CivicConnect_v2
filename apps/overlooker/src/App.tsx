@@ -11,6 +11,7 @@ import IssuesPage from "./pages/IssuesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import CommunityPage from "./pages/CommunityPage";
 import ProfilePage from "./pages/ProfilePage";
+import CitySituationPage from "./pages/CitySituationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,13 @@ const App = () => {
               <ProtectedRoute>
                 <MainLayout>
                   <ProfilePage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/city-situation" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <CitySituationPage />
                 </MainLayout>
               </ProtectedRoute>
             } />
