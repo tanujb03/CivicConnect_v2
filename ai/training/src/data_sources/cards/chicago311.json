@@ -110,5 +110,7 @@
   "mapping_id": "chicago311_to_civic",
   "citation": null,
   "last_reviewed": "2026-10-01",
-  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW",
+  "priority": "optional",
+  "role_summary": "Optional external source for real duplicate-pair behaviour (not Indian)."
 }

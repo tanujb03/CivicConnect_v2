@@ -121,7 +121,7 @@ def test_no_real_or_large_data_is_tracked_in_git():
     if r.returncode != 0:
         pytest.skip("not a git checkout")
     files = [f for f in r.stdout.splitlines() if (REPO_ROOT / f).exists()]
-    assert not [f for f in files if "real_data" in f]
+    assert not [f for f in files if f.startswith("ai/artifacts/real_data/")]
     big = [(f, (REPO_ROOT / f).stat().st_size) for f in files if (REPO_ROOT / f).stat().st_size > 1_000_000]
     assert not big, f"large tracked files: {big}"
     assert not [f for f in files if f.endswith((".zip", ".tar", ".gz", ".parquet", ".h5", ".pt", ".onnx"))]

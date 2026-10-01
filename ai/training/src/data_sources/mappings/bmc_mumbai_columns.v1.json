@@ -1,0 +1,817 @@
+{
+  "source_id": "bmc_mumbai",
+  "policy_version": "0.1.0-draft",
+  "status": "DRAFT_COLUMN_NAMES_NOT_VERIFIED_AGAINST_FILE",
+  "notes": [
+    "Aliases are expectations (the Kaggle page and data dictionary were unreachable). Every column the aliases do not claim is 'unclassified' and default-denied for every task.",
+    "Assign columns explicitly with --role-map after reading bmc_data_dictionary.csv; the adapter fails on ambiguous matches instead of choosing.",
+    "Phases: identifier/at_submission < post_triage < post_resolution. Sensitive/PII roles are never read, stored or used."
+  ],
+  "roles": [
+    {
+      "name": "complaint_id",
+      "phase": "identifier",
+      "aliases": [
+        "complaint_id",
+        "complaint_no",
+        "complaint_number",
+        "ticket_id",
+        "grievance_id",
+        "request_id",
+        "id"
+      ],
+      "field": "record_id",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "row identifier"
+    },
+    {
+      "name": "created_at",
+      "phase": "at_submission",
+      "aliases": [
+        "created_at",
+        "complaint_date",
+        "complaint_datetime",
+        "complaint_timestamp",
+        "registered_date",
+        "registration_date",
+        "date_of_complaint",
+        "filed_date",
+        "filing_date",
+        "filed_at",
+        "created_date"
+      ],
+      "field": "created_at",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "when the complaint was filed (confirm in the data dictionary)"
+    },
+    {
+      "name": "ward",
+      "phase": "at_submission",
+      "aliases": [
+        "ward",
+        "ward_name",
+        "ward_code",
+        "bmc_ward",
+        "administrative_ward",
+        "ward_id"
+      ],
+      "field": "place",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "BMC administrative ward (location context)"
+    },
+    {
+      "name": "latitude",
+      "phase": "at_submission",
+      "aliases": [
+        "latitude",
+        "lat"
+      ],
+      "field": "latitude",
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": ""
+    },
+    {
+      "name": "longitude",
+      "phase": "at_submission",
+      "aliases": [
+        "longitude",
+        "lon",
+        "lng",
+        "long"
+      ],
+      "field": "longitude",
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": ""
+    },
+    {
+      "name": "locality",
+      "phase": "at_submission",
+      "aliases": [
+        "locality",
+        "area",
+        "neighbourhood",
+        "neighborhood",
+        "sub_area"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "coarse locality (NOT a street address)"
+    },
+    {
+      "name": "source_category",
+      "phase": "at_submission",
+      "aliases": [
+        "complaint_category",
+        "complaint_type",
+        "category",
+        "issue_type",
+        "issue_category",
+        "problem_type",
+        "grievance_category"
+      ],
+      "field": "source_category",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "raw complaint category: the LABEL source for intake — never an input to intake"
+    },
+    {
+      "name": "source_subcategory",
+      "phase": "at_submission",
+      "aliases": [
+        "complaint_subcategory",
+        "subcategory",
+        "sub_category",
+        "complaint_subtype",
+        "issue_subtype"
+      ],
+      "field": "source_subcategory",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": ""
+    },
+    {
+      "name": "category",
+      "phase": "at_submission",
+      "aliases": [],
+      "field": "category",
+      "store": true,
+      "derived": true,
+      "dtype": "str",
+      "description": "taxonomy category mapped from source_category by an explicit mapping"
+    },
+    {
+      "name": "subcategory",
+      "phase": "at_submission",
+      "aliases": [],
+      "field": "subcategory",
+      "store": true,
+      "derived": true,
+      "dtype": "str",
+      "description": "taxonomy subcategory (exact mappings only)"
+    },
+    {
+      "name": "filing_channel",
+      "phase": "at_submission",
+      "aliases": [
+        "filing_channel",
+        "channel",
+        "complaint_channel",
+        "submission_mode",
+        "mode_of_complaint",
+        "complaint_source"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "how the complaint was filed"
+    },
+    {
+      "name": "description",
+      "phase": "at_submission",
+      "aliases": [
+        "description",
+        "complaint_description",
+        "complaint_text",
+        "complaint_details",
+        "narrative",
+        "grievance_text"
+      ],
+      "field": "text",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "free text; used ONLY after the operator confirms it is citizen-written, and never when it echoes the label"
+    },
+    {
+      "name": "infrastructure_context",
+      "phase": "at_submission",
+      "aliases": [
+        "infrastructure_context",
+        "road_type",
+        "asset_type",
+        "infrastructure_type"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "REVIEW before use: could contain post-event information"
+    },
+    {
+      "name": "department",
+      "phase": "post_triage",
+      "aliases": [
+        "department",
+        "dept",
+        "assigned_department",
+        "responsible_department",
+        "owner_department"
+      ],
+      "field": "source_agency",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "department the complaint was routed to (routing TARGET; derived after triage)"
+    },
+    {
+      "name": "severity",
+      "phase": "post_triage",
+      "aliases": [
+        "severity",
+        "severity_level",
+        "complaint_severity"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "severity as recorded: provenance unknown; a triage TARGET only after a determinism check"
+    },
+    {
+      "name": "priority",
+      "phase": "post_triage",
+      "aliases": [
+        "priority",
+        "priority_level",
+        "urgency"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "priority as recorded; triage TARGET"
+    },
+    {
+      "name": "sla_target_hours",
+      "phase": "post_triage",
+      "aliases": [
+        "sla_hours",
+        "sla_target_hours"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": "SLA assigned at triage (unit to be confirmed)"
+    },
+    {
+      "name": "assigned_contractor",
+      "phase": "post_triage",
+      "aliases": [
+        "contractor",
+        "contractor_id",
+        "contractor_type",
+        "assigned_contractor"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "contractor assigned to the work order: not known at triage time"
+    },
+    {
+      "name": "duplicate_flag",
+      "phase": "post_triage",
+      "aliases": [
+        "is_duplicate",
+        "duplicate",
+        "duplicate_flag"
+      ],
+      "field": "duplicate_flag",
+      "store": true,
+      "derived": false,
+      "dtype": "bool",
+      "description": "duplicate label assigned by the process (fusion TARGET)"
+    },
+    {
+      "name": "parent_complaint_id",
+      "phase": "post_triage",
+      "aliases": [
+        "parent_complaint_id",
+        "parent_id",
+        "original_complaint_id",
+        "duplicate_of"
+      ],
+      "field": "parent_record_id",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": ""
+    },
+    {
+      "name": "status",
+      "phase": "post_resolution",
+      "aliases": [
+        "status",
+        "complaint_status",
+        "resolution_status",
+        "current_status"
+      ],
+      "field": "status",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "workflow outcome"
+    },
+    {
+      "name": "closed_at",
+      "phase": "post_resolution",
+      "aliases": [
+        "closed_at",
+        "closed_date",
+        "resolution_date",
+        "resolved_date",
+        "resolved_at",
+        "closure_date",
+        "date_closed"
+      ],
+      "field": "closed_at",
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": ""
+    },
+    {
+      "name": "resolution_duration",
+      "phase": "post_resolution",
+      "aliases": [
+        "resolution_time_hours",
+        "resolution_hours",
+        "time_to_resolve",
+        "resolution_days",
+        "days_to_resolve",
+        "tat_hours",
+        "turnaround_hours"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "float",
+      "description": "unit unknown: converted only with an explicit --resolution-unit"
+    },
+    {
+      "name": "resolution_hours",
+      "phase": "post_resolution",
+      "aliases": [],
+      "field": null,
+      "store": true,
+      "derived": true,
+      "dtype": "float",
+      "description": "computed duration in hours (closed_at - created_at, or resolution_duration with explicit unit); a TARGET only"
+    },
+    {
+      "name": "resolution_remarks",
+      "phase": "post_resolution",
+      "aliases": [
+        "resolution_remarks",
+        "remarks",
+        "action_taken",
+        "resolution_notes",
+        "closure_remarks",
+        "officer_remarks"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "str",
+      "description": "free text written after the work: never stored, never an input"
+    },
+    {
+      "name": "reassigned",
+      "phase": "post_resolution",
+      "aliases": [
+        "reassigned",
+        "reassignment_count",
+        "num_reassignments",
+        "reassigned_flag"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": "reassignment during resolution"
+    },
+    {
+      "name": "escalated",
+      "phase": "post_resolution",
+      "aliases": [
+        "escalated",
+        "escalation_level",
+        "escalation_count"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": "escalation during resolution"
+    },
+    {
+      "name": "sla_breached",
+      "phase": "post_resolution",
+      "aliases": [
+        "sla_breached",
+        "sla_breach",
+        "within_sla",
+        "sla_met"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "str",
+      "description": "derived outcome"
+    },
+    {
+      "name": "reopened",
+      "phase": "post_resolution",
+      "aliases": [
+        "reopened",
+        "reopen_count",
+        "is_reopened"
+      ],
+      "field": null,
+      "store": true,
+      "derived": false,
+      "dtype": "float",
+      "description": ""
+    },
+    {
+      "name": "citizen_rating",
+      "phase": "post_resolution",
+      "aliases": [
+        "citizen_rating",
+        "rating",
+        "feedback_score",
+        "satisfaction_score"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "float",
+      "description": "post-resolution feedback"
+    },
+    {
+      "name": "citizen_satisfied",
+      "phase": "post_resolution",
+      "aliases": [
+        "citizen_satisfied"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "bool",
+      "description": "the Kaggle competition target; a post-resolution outcome, out of V1 scope"
+    },
+    {
+      "name": "complainant_profile",
+      "phase": "sensitive_attribute",
+      "aliases": [
+        "complainant_age",
+        "complainant_gender",
+        "complainant_income",
+        "complainant_education",
+        "complainant_type",
+        "complainant_profile",
+        "complainant_occupation",
+        "complainant_age_group",
+        "age",
+        "gender",
+        "income",
+        "income_level",
+        "education",
+        "occupation",
+        "religion",
+        "caste"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "str",
+      "description": "complainant attributes: protected/sensitive (system design §13)"
+    },
+    {
+      "name": "pii",
+      "phase": "pii_never_read",
+      "aliases": [
+        "complainant_name",
+        "name",
+        "phone",
+        "mobile",
+        "mobile_number",
+        "email",
+        "address",
+        "complainant_address",
+        "officer_name",
+        "assigned_officer",
+        "officer_id",
+        "engineer_name",
+        "contractor_name"
+      ],
+      "field": null,
+      "store": false,
+      "derived": false,
+      "dtype": "str",
+      "description": "direct identifiers"
+    }
+  ],
+  "tasks": [
+    {
+      "task": "taxonomy_coverage",
+      "capability": "AI-3/AI-5",
+      "status": "supported",
+      "purpose": "descriptive",
+      "max_phase": "at_submission",
+      "inputs": [
+        "source_category",
+        "source_subcategory",
+        "category",
+        "subcategory"
+      ],
+      "targets": [],
+      "forbidden": [
+        "phase:post_triage",
+        "phase:post_resolution"
+      ],
+      "track": "descriptive",
+      "notes": "How the real complaint label space lands in taxonomy v1 (and which taxonomy labels have no real examples)."
+    },
+    {
+      "task": "routing_agreement",
+      "capability": "AI-3",
+      "status": "conditional",
+      "purpose": "descriptive",
+      "max_phase": "at_submission",
+      "inputs": [
+        "source_category",
+        "source_subcategory",
+        "category",
+        "subcategory",
+        "ward"
+      ],
+      "targets": [
+        "department"
+      ],
+      "forbidden": [
+        "severity",
+        "priority",
+        "sla_target_hours",
+        "assigned_contractor",
+        "phase:post_resolution"
+      ],
+      "track": "descriptive",
+      "requires": [
+        "department",
+        "source_category"
+      ],
+      "leakage_checks": [
+        "target_determinism"
+      ],
+      "conditions": [
+        "report the purity of department given source_category; if >= 0.99 the agreement is vacuous"
+      ],
+      "notes": "Agreement between BMC's recorded department (mapped to ours) and our category->department routing. NOT model accuracy."
+    },
+    {
+      "task": "triage_priority_prior",
+      "capability": "AI-3",
+      "status": "conditional",
+      "purpose": "descriptive",
+      "max_phase": "at_submission",
+      "inputs": [
+        "category",
+        "subcategory",
+        "ward",
+        "latitude",
+        "longitude",
+        "created_at",
+        "filing_channel"
+      ],
+      "targets": [
+        "severity",
+        "priority"
+      ],
+      "forbidden": [
+        "department",
+        "assigned_contractor",
+        "sla_target_hours",
+        "phase:post_resolution"
+      ],
+      "track": "descriptive",
+      "requires_any": [
+        "severity",
+        "priority"
+      ],
+      "leakage_checks": [
+        "target_determinism"
+      ],
+      "conditions": [
+        "severity/priority provenance unknown: a determinism check against category is mandatory",
+        "descriptive priors only: no learned triage model is trained on this data"
+      ],
+      "notes": "Distribution of recorded severity/priority by category/ward/time; informs priority-score sanity checks, never ground truth."
+    },
+    {
+      "task": "resolution_time_prior",
+      "capability": "AI-3/AI-5",
+      "status": "conditional",
+      "purpose": "descriptive",
+      "max_phase": "post_triage",
+      "inputs": [
+        "category",
+        "subcategory",
+        "ward",
+        "latitude",
+        "longitude",
+        "created_at",
+        "filing_channel",
+        "severity",
+        "priority",
+        "department",
+        "sla_target_hours"
+      ],
+      "targets": [
+        "resolution_hours"
+      ],
+      "forbidden": [
+        "assigned_contractor",
+        "status",
+        "closed_at",
+        "resolution_remarks",
+        "reassigned",
+        "escalated",
+        "sla_breached",
+        "reopened",
+        "citizen_rating",
+        "citizen_satisfied"
+      ],
+      "track": "descriptive",
+      "requires_any": [
+        "closed_at",
+        "resolution_duration"
+      ],
+      "leakage_checks": [
+        "censoring_reported"
+      ],
+      "conditions": [
+        "triage-time information (severity, priority, department, SLA) is legitimately known before resolution",
+        "unresolved complaints are right-censored: report the censored share, never silently drop them"
+      ],
+      "notes": "Resolution-duration distributions per category/ward to sanity-check SLA hours."
+    },
+    {
+      "task": "recurrence_hotspot",
+      "capability": "AI-5",
+      "status": "supported",
+      "purpose": "descriptive",
+      "max_phase": "at_submission",
+      "inputs": [
+        "created_at",
+        "ward",
+        "latitude",
+        "longitude",
+        "category",
+        "subcategory"
+      ],
+      "targets": [],
+      "forbidden": [
+        "phase:post_triage",
+        "phase:post_resolution"
+      ],
+      "track": "descriptive",
+      "leakage_checks": [
+        "split_straddle"
+      ],
+      "notes": "Validate deterministic recurrence/hotspot definitions (design §38-39) on realistic Indian ward-level data."
+    },
+    {
+      "task": "intake_text",
+      "capability": "AI-1",
+      "status": "conditional",
+      "purpose": "evaluation",
+      "max_phase": "at_submission",
+      "inputs": [
+        "description",
+        "ward",
+        "latitude",
+        "longitude",
+        "filing_channel"
+      ],
+      "targets": [
+        "category",
+        "subcategory"
+      ],
+      "forbidden": [
+        "source_category",
+        "source_subcategory",
+        "department",
+        "severity",
+        "priority",
+        "phase:post_triage",
+        "phase:post_resolution"
+      ],
+      "track": "real_holdout",
+      "requires": [
+        "description",
+        "source_category"
+      ],
+      "operator_confirmations": [
+        "description_is_citizen_text"
+      ],
+      "leakage_checks": [
+        "text_contains_label_rate",
+        "split_straddle"
+      ],
+      "conditions": [
+        "the operator must inspect samples and confirm the column is citizen-written free text",
+        "source_category (the label) must not be an input",
+        "a description that echoes the label is refused"
+      ],
+      "notes": "Only possible if a genuine citizen description column exists. No such column is known; nothing here claims it does."
+    },
+    {
+      "task": "fusion_pairs",
+      "capability": "AI-2",
+      "status": "conditional",
+      "purpose": "evaluation",
+      "max_phase": "at_submission",
+      "inputs": [
+        "created_at",
+        "ward",
+        "latitude",
+        "longitude",
+        "category",
+        "subcategory"
+      ],
+      "targets": [
+        "duplicate_flag"
+      ],
+      "forbidden": [
+        "parent_complaint_id",
+        "phase:post_resolution"
+      ],
+      "track": "real_holdout",
+      "requires": [
+        "duplicate_flag",
+        "parent_complaint_id"
+      ],
+      "leakage_checks": [
+        "split_straddle"
+      ],
+      "notes": "Possible only if the file carries duplicate/parent information; none is known."
+    },
+    {
+      "task": "demo_seed",
+      "capability": "AI-6",
+      "status": "demo_only",
+      "purpose": "demo",
+      "max_phase": "post_resolution",
+      "inputs": [
+        "source_category",
+        "category",
+        "subcategory",
+        "ward",
+        "latitude",
+        "longitude",
+        "created_at",
+        "filing_channel",
+        "locality",
+        "department",
+        "severity",
+        "priority",
+        "status",
+        "closed_at",
+        "resolution_hours"
+      ],
+      "targets": [],
+      "forbidden": [],
+      "track": "none",
+      "notes": "Realistic rows for copilot/demo databases; labelled as unverified-origin data; never an evaluation; sensitive/PII roles excluded."
+    },
+    {
+      "task": "citizen_satisfaction",
+      "capability": "—",
+      "status": "not_pursued",
+      "purpose": "none",
+      "max_phase": "at_submission",
+      "inputs": [],
+      "targets": [],
+      "forbidden": [],
+      "track": "none",
+      "notes": "The competition target is a post-resolution outcome. CivicConnect V1 has no satisfaction/reputation scoring; the column is never an input to any task."
+    }
+  ]
+}

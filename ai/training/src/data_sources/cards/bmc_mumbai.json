@@ -1,0 +1,133 @@
+{
+  "id": "bmc_mumbai",
+  "name": "Mumbai Nagar Seva — BMC Civic Complaint Resolution 2018–2024 (Kaggle competition data)",
+  "kind": "real_public",
+  "publisher": "As listed on Kaggle (competition host not verified). NOT verified as an official BMC / Government of Maharashtra open-data source or API.",
+  "landing_url": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data",
+  "official_source_url": null,
+  "reference": "mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024",
+  "identity_status": "CONFIRMED_BY_USER",
+  "priority": "primary",
+  "role_summary": "Primary Indian structured civic source: analytics, recurrence/hotspots, taxonomy coverage, department/category mapping, SLA/triage priors, realistic demos — pending provenance and licence verification.",
+  "version_note": "Per a web-search summary of the Kaggle data page (secondary): ~1.2M complaints, Jan 2018–Dec 2024, all 24 BMC wards; files bmc_train.csv (960,000 rows, 35 features + target `citizen_satisfied`), bmc_test.csv (240,000 rows, 34 features, target WITHHELD) and bmc_data_dictionary.csv. Feature groups reported: geography, complaint type, filing channel, severity, complainant profile, resolution process, contractor details, infrastructure context. Competition task: predict citizen satisfaction with the resolution. Only the train file can be used for local supervised evaluation; the exact column names are NOT known to us.",
+  "data_access": {
+    "method": "Kaggle competition data: accept the competition rules on Kaggle, then attach it as a notebook input or use the Kaggle CLI with YOUR credentials. This repository never downloads it.",
+    "data_dictionary": "bmc_data_dictionary.csv ships with the data: read it, then assign every column to a role explicitly (see mappings/bmc_mumbai_columns.v1.json and `cli profile bmc_mumbai`)."
+  },
+  "license": {
+    "name": "Kaggle competition rules / data-use terms for this competition — NOT READ",
+    "url": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary of the Kaggle data page",
+        "reliability": "secondary",
+        "note": "Describes the files and task; states no licence in the summary.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "general knowledge of Kaggle competitions",
+        "reliability": "recalled",
+        "note": "Competition data is typically governed by the competition Rules (data use often limited to the competition, redistribution prohibited, sometimes non-commercial). Not read for this competition; the rules URL on this card is the conventional location and is unverified.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://www.kaggle.com/...",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Cite the Kaggle competition page and its host exactly as the Rules require (not read).",
+    "share_alike": null,
+    "commercial_use": "unverified (competition rules not read)",
+    "notes": [
+      "Read the competition Rules ('Data Access and Use') before ANY use outside the competition; if the rules restrict use to the competition, this source may not be usable for CivicConnect at all."
+    ]
+  },
+  "origin_status": "UNVERIFIED_ORIGIN",
+  "origin_notes": [
+    "Fixed 35-feature schema, 1.2M rows, 24 wards, a binary target and a train/test split indicate a competition-curated dataset. Nothing verified states whether the rows are real BMC complaint records, a simulation, or a modelled/derived dataset.",
+    "Do not describe this as official BMC data, a BMC API, or a government open-data release until its provenance is independently verified (read the competition description and data dictionary; check the host).",
+    "If it turns out to be synthetic/simulated, re-label it kind=synthetic: it then supports plumbing/analytics demos only and NO real-world claim."
+  ],
+  "subset_used": "Train file only. For development a bounded deterministic sample (prepare --max-rows N --sample-seed S); full 960k rows only if resources and rules permit. Time-based holdout (most recent months).",
+  "intended_use": [
+    "analytics_validation",
+    "calibration",
+    "evaluation",
+    "demo"
+  ],
+  "restrictions": [
+    "Competition rules not read; assume NO redistribution and possibly competition-only use until verified.",
+    "Complainant-profile columns are sensitive attributes: they must never be features or targets for any task (system design §13). The adapter never stores them.",
+    "Contractor/officer/address/contact columns can identify people or firms: the adapter never reads them (PII roles).",
+    "Post-resolution fields (status, closing time, resolution remarks, reassignment, escalation, satisfaction/rating) must never be inputs for intake or triage — see the per-task column policy.",
+    "Do not commit raw or prepared rows."
+  ],
+  "supports": [
+    {
+      "capability": "AI-5",
+      "how": "Validate deterministic recurrence/hotspot/baseline analytics on a large Indian ward-level spatio-temporal complaint set; seed realistic demo data.",
+      "caveats": [
+        "Provenance (real vs simulated) unverified: no real-world claim until verified."
+      ]
+    },
+    {
+      "capability": "AI-3",
+      "how": "Routing/department-mapping agreement against our taxonomy, and resolution-time / triage-time priors (descriptive) to sanity-check SLA hours and priority score ranges.",
+      "caveats": [
+        "Severity/priority labels may be derived from category or process: a determinism check is mandatory before any use as a target.",
+        "Resolution times are right-censored for unresolved complaints."
+      ]
+    },
+    {
+      "capability": "AI-6",
+      "how": "Realistically distributed rows to seed a copilot demo database (labelled as unverified-origin data).",
+      "caveats": [
+        "Demo realism only; not a model evaluation."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-1 text intake classification",
+      "why": "No verified citizen-written free text is known to exist in the columns; if a description column exists it must be inspected and explicitly confirmed as citizen text, and must not echo the label."
+    },
+    {
+      "capability": "AI-1 image intake / AI-4 resolution evidence",
+      "why": "Tabular data: no images, no before/after evidence. 'Resolution process' fields are workflow metadata, not evidence."
+    },
+    {
+      "capability": "Hindi / Marathi / Hinglish citizen narratives",
+      "why": "Not verified to contain any."
+    },
+    {
+      "capability": "Severity ground truth",
+      "why": "Severity is a competition feature of unknown provenance, not an independently validated label."
+    },
+    {
+      "capability": "Citizen-satisfaction prediction",
+      "why": "Post-resolution outcome; not part of CivicConnect V1 (no reputation/satisfaction scoring); its test labels are withheld."
+    }
+  ],
+  "known_limitations": [
+    "Mumbai/BMC-specific categories and wards.",
+    "Competition curation may differ from raw operational data (sampling, cleaning, simulation).",
+    "Timestamp semantics (filing vs registration vs closure) must be read from the data dictionary.",
+    "Test file has no target."
+  ],
+  "privacy_notes": [
+    "Complainant profile, contractor and any address/contact/officer columns are excluded by policy (never stored)."
+  ],
+  "expected_schema_notes": [
+    "User-reported complaint categories (not verified against the file): Pothole/Road Damage; Water Supply Disruption; Solid Waste/Garbage; Drainage Overflow/Flooding; Street Light Failure; Illegal Construction; Encroachment; Tree Fallen/Dangerous Tree; Public Toilet Condition; Water Leakage/Pipe Burst; Noise/Air Pollution; Stray Animal Menace; Health/Epidemic.",
+    "Exact column names unknown. The adapter resolves roles by alias and by an explicit operator-supplied --role-map; every other column is 'unclassified' and default-denied."
+  ],
+  "adapter": "bmc_mumbai",
+  "mapping_id": "bmc_mumbai_to_civic",
+  "citation": null,
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

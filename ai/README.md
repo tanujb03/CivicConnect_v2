@@ -33,11 +33,18 @@ ai/
 | AI-6 copilot | whitelisted read-only tools, scope enforced, answer/citation grounding; no DB credentials | no |
 
 ## Hybrid data strategy (real public + synthetic)
-Synthetic data is **not** the only source. Real public datasets (NYC 311, Chicago 311, RDD2022) are acquired *outside git*, prepared into a canonical schema through
+Synthetic data is **not** the only source. Real public datasets are acquired *outside git*, prepared into a canonical schema through
 explicit, versioned taxonomy mappings, and evaluated on **separate tracks** (`synthetic`, `real_holdout`, `hybrid`, plus descriptive statistics). Synthetic data covers
 multilingual text, code-mixing, edge cases and fixtures; real data supplies realism, holdout evaluation and geo/temporal behaviour. **No real data has been downloaded yet**
 and no source's licence is verified. See `training/src/data_sources/README.md` for dataset cards, the capability matrix (what each dataset can/cannot support), the
 licence status and the workflow. Reports always state their provenance and what may be claimed.
+
+**Indian sources (extension):** BMC Mumbai (`bmc_mumbai`) is the *primary* real structured civic source (analytics, routing/priority priors, recurrence, taxonomy coverage,
+demos) — under a default-deny column-role policy because category/department/severity are potential targets, post-resolution fields are not intake/triage inputs,
+sensitive/PII columns are never read, and its origin (real vs simulated) and licence are **unverified**. RDD2022/RDD2020 India, BharatPotHole and the Mumbai/Nashik
+road-surface set are *visual* evaluation sources (potholes → `roads/pothole`; no new taxonomy categories); IIIT-H IDD is future-only. Synthetic data remains the
+only source of Hindi/Marathi/Hinglish text. No Indian dataset has been downloaded; all licences are unverified. See `training/src/data_sources/README.md`,
+`TASK_MATRIX.md` and `BMC_COLUMN_POLICY.md` there.
 
 ## Quick start
 ```bash

@@ -1,0 +1,87 @@
+{
+  "id": "bharatpothole",
+  "name": "BharatPotHole (associated with iWatchRoad)",
+  "kind": "real_public",
+  "publisher": "iWatchRoad authors (smlab-niser) — dataset hosted on Kaggle",
+  "landing_url": "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole",
+  "official_source_url": "https://github.com/smlab-niser/iwatchroad",
+  "reference": "kaggle:surbhisaswatimohanty/bharatpothole",
+  "priority": "secondary",
+  "role_summary": "Additional Indian visual pothole evaluation/validation from forward-facing dashcam frames.",
+  "version_note": "The iWatchRoad repository README (read directly) states the dataset is hosted at the Kaggle URL above and contains 7,000+ annotated frames of forward-facing dashcam footage under diverse lighting, weather and road conditions, and asks users to cite the iWatchRoad paper. Secondary sources: collected over May–July, bounding boxes annotated in Roboflow and exported in YOLO format; a 'BharatPotHole-3K' subset is also mentioned — confirm which release you hold.",
+  "data_access": {
+    "method": "Kaggle dataset download (not automated here); attach as a notebook input or use the Kaggle CLI with your credentials"
+  },
+  "license": {
+    "name": "NOT STATED in the iWatchRoad README; dataset-page terms NOT READ",
+    "url": null,
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "https://github.com/smlab-niser/iwatchroad (README, fetched)",
+        "reliability": "primary",
+        "note": "The README states how to cite the dataset but gives NO dataset licence.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://github.com/smlab-niser/iwatchroad (README, fetched)",
+        "reliability": "primary",
+        "note": "The repository CODE is licensed CC BY-NC-SA 4.0. This is the code licence: it is NOT assumed to be the dataset's licence.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Cite: iWatchRoad: Scalable Detection and Geospatial Visualization of Potholes for Smart Cities (CODS '25 per the README; arXiv 2508.10945 per search results).",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "Check the Kaggle dataset page's licence field. The repository's NonCommercial code licence is a reason to be cautious about commercial use, not evidence of the dataset's terms."
+    ]
+  },
+  "subset_used": "To be chosen. Hold out whole videos/sequences (or directory/index blocks), never random frames.",
+  "intended_use": [
+    "evaluation"
+  ],
+  "restrictions": [
+    "Dataset licence unknown: no publication or redistribution of results/data until verified.",
+    "Do not commit images or annotations."
+  ],
+  "supports": [
+    {
+      "capability": "AI-1",
+      "how": "Indian visual pothole evaluation of the provider's vision path (class pothole → roads/pothole) on dashcam frames.",
+      "caveats": [
+        "Dashcam road-view frames, not citizen close-ups.",
+        "Frames from one video are near-identical: leakage unless whole groups are held out.",
+        "Probably positive-only (every frame has potholes): precision is not meaningful without negatives."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-4, text, multilingual, severity, other categories",
+      "why": "Pothole detection frames only."
+    }
+  ],
+  "known_limitations": [
+    "Single class expected.",
+    "Annotation format and class names were NOT verified (YOLO per secondary sources); a class-names file is required."
+  ],
+  "privacy_notes": [
+    "Dashcam frames may show people and number plates."
+  ],
+  "expected_schema_notes": [
+    "YOLO txt labels expected (secondary). Use `profile-images` first; then `prepare --format yolo --class-names-file …`. The adapter never guesses a format or class names."
+  ],
+  "adapter": "detection",
+  "mapping_id": "bharatpothole_to_civic",
+  "citation": "iWatchRoad: Scalable Detection and Geospatial Visualization of Potholes for Smart Cities (see attribution).",
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

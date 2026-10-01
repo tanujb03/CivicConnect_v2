@@ -8,6 +8,7 @@ Test-split images have no annotations and are skipped unless ``include_unannotat
 """
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Iterator
@@ -28,6 +29,18 @@ def infer_country(rel_parts: tuple[str, ...]) -> tuple[str | None, str | None]:
     country = next((name for kw, name in COUNTRY_KEYWORDS if any(kw in p for p in lowered)), None)
     context = "MotorBike" if any("motorbike" in p for p in lowered) else "Drone" if any("drone" in p for p in lowered) else None
     return country, context
+
+
+_TRAILING_INT = re.compile(r"(\d+)$")
+
+
+def block_group(country: str | None, context: str | None, split: str | None, stem: str, block_size: int) -> str:
+    """Group id for leakage-aware holdouts: consecutive frame numbers are usually the same drive, so whole index blocks
+    (not single frames) are the unit that must stay on one side of a split. A HEURISTIC: frame numbering is not verified
+    to follow drive order."""
+    m = _TRAILING_INT.search(stem)
+    block = f"{int(m.group(1)) // block_size}" if m else "nogroup"
+    return f"{country or 'unknown'}:{context or '-'}:{split or '-'}:{block}"
 
 
 def parse_voc(xml_path: Path) -> dict:
@@ -57,15 +70,16 @@ def parse_voc(xml_path: Path) -> dict:
 class RDD2022Adapter:
     source_id = "rdd2022"
 
-    def __init__(self, card: SourceCard, mapping: MappingTable, *, retrieved_at: str | None = None):
+    def __init__(self, card: SourceCard, mapping: MappingTable, *, retrieved_at: str | None = None, block_size: int = 100):
         self.card, self.mapping, self.retrieved_at = card, mapping, retrieved_at
+        self.block_size = block_size
         self.coverage = CoverageReport()          # over boxes
         self.stats = {"xml_files": 0, "images_missing": 0, "degenerate_boxes": 0, "unknown_classes": 0, "invalid_xml": 0}
 
     def provenance(self, rid: str) -> Provenance:
         return Provenance(kind="real_public", source_id=self.card.id, source_dataset=self.card.name,
                           source_version=self.card.version_note[:120], source_record_id=rid, license_id=self.card.license.name[:120],
-                          license_verified=self.card.license_verified, label_origin="human_annotated",
+                          license_verified=self.card.license_verified, origin_verified=self.card.origin_verified, label_origin="human_annotated",
                           mapping_id=self.mapping.mapping_id, mapping_version=self.mapping.version, retrieved_at=self.retrieved_at)
 
     def _image_for(self, xml_path: Path, filename: str) -> Path | None:
@@ -117,11 +131,13 @@ class RDD2022Adapter:
                                   category=res.category, subcategory=res.subcategory, mapping_status=res.status))
                 if res.category:
                     labels.add(f"{res.category}/{res.subcategory}" if res.subcategory else res.category)
-            split = next((s for s in ("train", "test", "val") if s in {p.lower() for p in rel.parts}), None)
-            yield ImageRecord(record_id=f"rdd2022:{country or 'unknown'}:{context or '-'}:{xml_path.stem}", provenance=self.provenance(xml_path.stem),
+            low_parts = {p.lower() for p in rel.parts}
+            split = "train" if "train" in low_parts else "test" if any(p.startswith("test") for p in low_parts) else "val" if "val" in low_parts else None
+            yield ImageRecord(record_id=f"{self.card.id}:{country or 'unknown'}:{context or '-'}:{xml_path.stem}", provenance=self.provenance(xml_path.stem),
                               image_relpath=img_rel, width=ann["width"], height=ann["height"], country=country, capture_context=context,
                               has_annotation=True, boxes=boxes, image_labels=sorted(labels),
-                              split_hint=None if split is None else ("train" if split == "train" else split))
+                              source_labels=sorted({b.class_code for b in boxes}), group_id=block_group(country, context, split, xml_path.stem, self.block_size),
+                              split_hint=split)
             n += 1
             if max_images and n >= max_images:
                 return
@@ -133,5 +149,6 @@ class RDD2022Adapter:
                 country, context = infer_country(rel.parts)
                 if xml.exists() or (countries and country not in countries) or seen.get(rel) is not None:
                     continue
-                yield ImageRecord(record_id=f"rdd2022:{country or 'unknown'}:{context or '-'}:{img.stem}", provenance=self.provenance(img.stem),
-                                  image_relpath=str(rel), country=country, capture_context=context, has_annotation=False)
+                yield ImageRecord(record_id=f"{self.card.id}:{country or 'unknown'}:{context or '-'}:{img.stem}", provenance=self.provenance(img.stem),
+                                  image_relpath=str(rel), country=country, capture_context=context, has_annotation=False,
+                                  group_id=block_group(country, context, None, img.stem, self.block_size))

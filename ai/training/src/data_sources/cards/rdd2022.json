@@ -5,7 +5,7 @@
   "publisher": "Arya et al. / sekilab (University of Tokyo) — released via figshare",
   "landing_url": "https://figshare.com/articles/dataset/RDD2022_-_The_multi-national_Road_Damage_Dataset_released_through_CRDDC_2022/21431547",
   "official_source_url": "https://github.com/sekilab/RoadDamageDetector",
-  "version_note": "figshare article 21431547 (DOI 10.6084/m9.figshare.21431547.v1 per a search summary). 47,420 images, >55,000 annotations (secondary source). Test-set images are released WITHOUT annotations.",
+  "version_note": "figshare article 21431547 (DOI 10.6084/m9.figshare.21431547.v1 per a search summary). 47,420 images, >55,000 annotations (secondary source). Test-set images are released WITHOUT annotations. RDD2020 (an earlier release, reported under a different licence) has its own card: do not assume the two share a licence.",
   "data_access": {
     "method": "figshare download (large; Norway alone ≈ 9.9 GB per the project README)",
     "endpoint": "https://api.figshare.com/v2/articles/21431547",
@@ -45,7 +45,7 @@
       "This repository never redistributes the images or derived annotation files."
     ]
   },
-  "subset_used": "To be selected (suggest: India subset first, plus one other country for cross-country evaluation). Classes D00, D10, D20, D40. Training split only (test images have no annotations).",
+  "subset_used": "India subset first (README lists India ≈ 502 MB), classes D00/D10/D20/D40, train split only (test images are unannotated); optionally one other country for cross-country checks. Hold out by index block / country, never random frames.",
   "intended_use": [
     "evaluation",
     "training"
@@ -108,5 +108,10 @@
   "mapping_id": "rdd2022_to_civic",
   "citation": "Arya, D., et al. (2024). RDD2022: A multi-national image dataset for automatic road damage detection. Geoscience Data Journal. https://doi.org/10.1002/gdj3.260 (DOI taken from a search result; verify).",
   "last_reviewed": "2026-10-01",
-  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW",
+  "priority": "secondary",
+  "role_summary": "Indian road-damage visual grounding (use the India subset first); latest RDD release.",
+  "related_sources": [
+    "rdd2020"
+  ]
 }

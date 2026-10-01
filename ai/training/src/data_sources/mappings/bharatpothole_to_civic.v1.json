@@ -1,0 +1,24 @@
+{
+  "mapping_id": "bharatpothole_to_civic",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "bharatpothole",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_CLASS_NAMES_NOT_VERIFIED",
+  "provenance_note": "Only a class named exactly 'pothole'/'potholes' maps to roads/pothole. Numeric ids or any other name stay unmapped: class names must come from the dataset's own class file; the adapter never guesses.",
+  "match_fields": [
+    "class_name"
+  ],
+  "rules": [
+    {
+      "id": "bph-pothole",
+      "when": {
+        "class_name": {
+          "regex": "^potholes?$"
+        }
+      },
+      "confidence": "high",
+      "category": "roads",
+      "subcategory": "pothole"
+    }
+  ]
+}

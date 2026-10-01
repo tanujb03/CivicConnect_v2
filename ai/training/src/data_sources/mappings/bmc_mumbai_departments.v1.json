@@ -1,0 +1,93 @@
+{
+  "mapping_id": "bmc_mumbai_departments",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "bmc_mumbai",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_GENERIC_KEYWORDS_NOT_VERIFIED_AGAINST_FILE",
+  "provenance_note": "The department/ward-office names used in the file are NOT known. These generic keyword rules are hypotheses used only for the descriptive routing-agreement report (source department mapped to our department vs our category->department). Replace with rules derived from `profile` output.",
+  "match_fields": [
+    "department"
+  ],
+  "rules": [
+    {
+      "id": "dept-storm",
+      "when": {
+        "department": {
+          "regex": "storm|drain|sewer|sewage"
+        }
+      },
+      "department_id": "drainage_sewerage",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-water",
+      "when": {
+        "department": {
+          "regex": "hydraulic|water"
+        }
+      },
+      "department_id": "water_supply",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-swm",
+      "when": {
+        "department": {
+          "regex": "solid waste|swm|garbage|conservancy|sanitation"
+        }
+      },
+      "department_id": "solid_waste",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-road",
+      "when": {
+        "department": {
+          "regex": "road|highway|bridge"
+        }
+      },
+      "department_id": "road_maintenance",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-light",
+      "when": {
+        "department": {
+          "regex": "light|electric"
+        }
+      },
+      "department_id": "street_lighting",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-garden",
+      "when": {
+        "department": {
+          "regex": "garden|tree|park"
+        }
+      },
+      "department_id": "parks_horticulture",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-health",
+      "when": {
+        "department": {
+          "regex": "health|medical"
+        }
+      },
+      "department_id": "public_health",
+      "confidence": "low"
+    },
+    {
+      "id": "dept-traffic",
+      "when": {
+        "department": {
+          "regex": "traffic|encroach|licen[cs]e"
+        }
+      },
+      "department_id": "traffic_enforcement",
+      "confidence": "low"
+    }
+  ]
+}

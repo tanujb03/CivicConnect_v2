@@ -1,0 +1,165 @@
+{
+  "mapping_id": "bmc_mumbai_to_civic",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "bmc_mumbai",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_FROM_USER_REPORTED_CATEGORIES_NOT_VERIFIED_AGAINST_FILE",
+  "provenance_note": "Rules are written from the complaint categories REPORTED to us for this dataset (not read from the file). Ambiguous labels are mapped to category level only: e.g. 'Pothole/Road Damage' mixes potholes and other damage, so it is NOT forced to roads/pothole. Verify every rule with `cli profile bmc_mumbai` and the dataset's data dictionary; keep the taxonomy unchanged (a V1 change review is required to add categories).",
+  "match_fields": [
+    "category",
+    "subcategory"
+  ],
+  "semantics": "first matching rule wins; case-insensitive; 'contains' on the complaint category (subcategory is available to rules but unused unless the file has one)",
+  "rules": [
+    {
+      "id": "bmc-oos-illegal-construction",
+      "when": {
+        "category": {
+          "contains": "illegal construction"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "building regulation, not a V1 taxonomy category"
+    },
+    {
+      "id": "bmc-oos-noise-air",
+      "when": {
+        "category": {
+          "regex": "noise|air pollution|pollution"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "noise/air pollution is not a V1 taxonomy category (open_burning is narrower)"
+    },
+    {
+      "id": "bmc-water-leak",
+      "when": {
+        "category": {
+          "regex": "leak|pipe burst"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": "pipe_leakage"
+    },
+    {
+      "id": "bmc-water-supply",
+      "when": {
+        "category": {
+          "contains": "water supply"
+        }
+      },
+      "confidence": "medium",
+      "category": "water_supply",
+      "subcategory": null,
+      "note": "'disruption' could be no supply or low pressure: category only"
+    },
+    {
+      "id": "bmc-pothole-road",
+      "when": {
+        "category": {
+          "regex": "pothole|road damage"
+        }
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": null,
+      "note": "combined label: not forced to roads/pothole"
+    },
+    {
+      "id": "bmc-toilet",
+      "when": {
+        "category": {
+          "contains": "toilet"
+        }
+      },
+      "confidence": "low",
+      "category": "sanitation",
+      "subcategory": null,
+      "note": "public toilet condition is not a V1 subcategory; sanitation by analogy — review"
+    },
+    {
+      "id": "bmc-garbage",
+      "when": {
+        "category": {
+          "regex": "solid waste|garbage"
+        }
+      },
+      "confidence": "medium",
+      "category": "sanitation",
+      "subcategory": null
+    },
+    {
+      "id": "bmc-drainage",
+      "when": {
+        "category": {
+          "regex": "drainage|flood"
+        }
+      },
+      "confidence": "medium",
+      "category": "drainage_sewerage",
+      "subcategory": null,
+      "note": "overflow/flooding could be blocked drain or sewage: category only"
+    },
+    {
+      "id": "bmc-streetlight",
+      "when": {
+        "category": {
+          "contains": "street light"
+        }
+      },
+      "confidence": "medium",
+      "category": "street_lighting",
+      "subcategory": "light_not_working",
+      "note": "'failure' read as not working; exposed-wire cases would need review"
+    },
+    {
+      "id": "bmc-tree",
+      "when": {
+        "category": {
+          "contains": "tree"
+        }
+      },
+      "confidence": "medium",
+      "category": "parks_trees",
+      "subcategory": null,
+      "note": "'dangerous tree' is not necessarily fallen: category only"
+    },
+    {
+      "id": "bmc-stray",
+      "when": {
+        "category": {
+          "contains": "stray"
+        }
+      },
+      "confidence": "high",
+      "category": "public_health",
+      "subcategory": "stray_animals"
+    },
+    {
+      "id": "bmc-health",
+      "when": {
+        "category": {
+          "regex": "health|epidemic"
+        }
+      },
+      "confidence": "medium",
+      "category": "public_health",
+      "subcategory": null
+    },
+    {
+      "id": "bmc-encroachment",
+      "when": {
+        "category": {
+          "contains": "encroachment"
+        }
+      },
+      "confidence": "low",
+      "category": "traffic_encroachment",
+      "subcategory": null,
+      "note": "could be hawkers, footpath or building encroachment: category only"
+    }
+  ]
+}

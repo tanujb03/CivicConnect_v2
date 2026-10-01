@@ -170,4 +170,7 @@ def test_coverage_report():
 
 def test_cards_and_mappings_directory_layout():
     assert {p.stem for p in CARDS_DIR.glob("*.json")} >= {"nyc311", "chicago311", "rdd2022", "synthetic_civic"}
-    assert {p.name for p in MAPPINGS_DIR.glob("*.json")} == {"nyc311_to_civic.v1.json", "chicago311_to_civic.v1.json", "rdd2022_to_civic.v1.json"}
+    names = {p.name for p in MAPPINGS_DIR.glob("*.json")}
+    assert {"nyc311_to_civic.v1.json", "chicago311_to_civic.v1.json", "rdd2022_to_civic.v1.json"} <= names
+    assert {"rdd2020_to_civic.v1.json", "bmc_mumbai_to_civic.v1.json", "bmc_mumbai_departments.v1.json", "bmc_mumbai_columns.v1.json",
+            "bharatpothole_to_civic.v1.json", "mumbai_nashik_to_civic.v1.json"} <= names

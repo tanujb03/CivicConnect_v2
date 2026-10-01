@@ -1,0 +1,87 @@
+{
+  "id": "mumbai_nashik_road_surface",
+  "name": "Dataset of road surface images with seasons — Nashik and Mumbai, Maharashtra (candidate identification)",
+  "kind": "real_public",
+  "publisher": "Authors of the Data in Brief article (names not captured); hosted on Mendeley Data",
+  "landing_url": "https://data.mendeley.com/datasets/tj2m7zz4rg/2",
+  "official_source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8933537/",
+  "reference": "doi:10.17632/tj2m7zz4rg.2",
+  "identity_status": "CANDIDATE_NEEDS_CONFIRMATION",
+  "priority": "secondary",
+  "role_summary": "Maharashtra-specific road-surface imagery/video for visual evaluation (category level) and demo realism.",
+  "version_note": "IDENTIFICATION: you described this dataset without naming it. The best match found via search is the Data in Brief article 'Dataset of road surface images with seasons for machine learning applications' (PMC8933537; Mendeley doi 10.17632/tj2m7zz4rg.2): images captured in 2020–2021 in Nashik and Mumbai; top-level folders Paved Road / Unpaved / Video; image forms include damaged road surface, speed breaker, and road surface with and without water (all secondary: search summary). Your list also mentions potholes and roadside barriers — NOT seen in anything I could read. A different Kaggle dataset ('Indian Roads Dataset', 4000+ images, speed breakers/unpaved/potholes, YOLO) was also found and was deliberately NOT added. CONFIRM this is the intended dataset.",
+  "data_access": {
+    "method": "Mendeley Data download (not automated here); the 'Video' folder must be converted to frames externally (e.g. ffmpeg) preserving the video id in the file/dir name"
+  },
+  "license": {
+    "name": "NOT STATED in any evidence seen; Mendeley record / article terms NOT READ",
+    "url": null,
+    "status": "UNVERIFIED",
+    "evidence": [
+      {
+        "source": "web search summary of the PMC article",
+        "reliability": "secondary",
+        "note": "Describes content and DOI; no licence in the summary.",
+        "retrieved_on": "2026-10-01"
+      },
+      {
+        "source": "https://data.mendeley.com/... / https://pmc.ncbi.nlm.nih.gov/...",
+        "reliability": "recalled",
+        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "retrieved_on": "2026-10-01"
+      }
+    ],
+    "conflicts": [],
+    "attribution": "Cite the Data in Brief article and the Mendeley record (wording from the record).",
+    "share_alike": null,
+    "commercial_use": "unverified",
+    "notes": [
+      "Read the licence on the Mendeley record before any evaluation claim or publication."
+    ]
+  },
+  "subset_used": "To be chosen after confirming identity and profiling the folder structure.",
+  "intended_use": [
+    "evaluation",
+    "demo"
+  ],
+  "restrictions": [
+    "Identity and licence unconfirmed: no publishable/evaluation claim yet.",
+    "Do not commit images/videos."
+  ],
+  "supports": [
+    {
+      "capability": "AI-1",
+      "how": "Maharashtra road-surface scenes: category-level checks ('damaged road surface' → category roads) and demo realism for the road/surface modality.",
+      "caveats": [
+        "Labels reported at folder/scene level (paved/unpaved/video; damaged, speed breaker, water), not per-pothole boxes: pothole-subcategory evaluation only if the files carry explicit pothole labels.",
+        "Speed breakers, paved/unpaved and water-on-road are NOT taxonomy v1 issues (mapped out_of_scope, no new taxonomy category).",
+        "Images from the same video/session are near-identical: hold out whole groups."
+      ]
+    }
+  ],
+  "does_not_support": [
+    {
+      "capability": "AI-4, text, multilingual, severity, non-road categories",
+      "why": "Road-surface imagery only."
+    },
+    {
+      "capability": "Pothole detection with boxes",
+      "why": "No bounding-box annotations reported."
+    }
+  ],
+  "known_limitations": [
+    "Two cities, 2020–2021.",
+    "Label granularity unverified."
+  ],
+  "privacy_notes": [
+    "Road imagery may show people and number plates."
+  ],
+  "expected_schema_notes": [
+    "Folder-labelled imagery expected: use `profile-images`, then `prepare --format folder` with an explicit group rule."
+  ],
+  "adapter": "detection",
+  "mapping_id": "mumbai_nashik_to_civic",
+  "citation": "Data in Brief — Dataset of road surface images with seasons for machine learning applications (PMC8933537); Mendeley doi 10.17632/tj2m7zz4rg.2 (from search results; verify).",
+  "last_reviewed": "2026-10-01",
+  "review_status": "DRAFT_NEEDS_HUMAN_REVIEW"
+}

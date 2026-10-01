@@ -23,6 +23,9 @@ from .errors import DataSourceError, TermsNotAccepted
 CARDS_DIR = Path(__file__).parent / "cards"
 
 Capability = Literal["AI-1", "AI-2", "AI-3", "AI-4", "AI-5", "AI-6"]
+Priority = Literal["primary", "secondary", "optional", "future"]
+OriginStatus = Literal["PUBLISHER_IDENTIFIED", "UNVERIFIED_ORIGIN"]   # UNVERIFIED_ORIGIN: unclear whether rows are real, simulated or derived
+IdentityStatus = Literal["CONFIRMED_BY_USER", "CONFIRMED_PUBLISHED_REFERENCE", "CANDIDATE_NEEDS_CONFIRMATION"]
 Reliability = Literal["primary", "secondary", "recalled"]
 
 
@@ -88,6 +91,13 @@ class SourceCard(_M):
     expected_schema_notes: list[str] = Field(default_factory=list)
     adapter: str | None = None
     mapping_id: str | None = None
+    priority: Priority = "secondary"
+    role_summary: str | None = None
+    identity_status: IdentityStatus = "CONFIRMED_PUBLISHED_REFERENCE"
+    reference: str | None = None             # exact identifier as supplied (e.g. a Kaggle slug / DOI); not guessed
+    origin_status: OriginStatus = "PUBLISHER_IDENTIFIED"
+    origin_notes: list[str] = Field(default_factory=list)
+    related_sources: list[str] = Field(default_factory=list)
     citation: str | None = None
     last_reviewed: str
     review_status: Literal["DRAFT_NEEDS_HUMAN_REVIEW", "REVIEWED"] = "DRAFT_NEEDS_HUMAN_REVIEW"
@@ -95,6 +105,17 @@ class SourceCard(_M):
     @property
     def license_verified(self) -> bool:
         return self.license.status == "VERIFIED_PRIMARY"
+
+    @property
+    def origin_verified(self) -> bool:
+        """False when it is unclear whether the rows are real records (vs simulated/derived)."""
+        return self.origin_status == "PUBLISHER_IDENTIFIED"
+
+    @model_validator(mode="after")
+    def _origin_notes_required(self) -> "SourceCard":
+        if self.origin_status == "UNVERIFIED_ORIGIN" and not self.origin_notes:
+            raise ValueError("UNVERIFIED_ORIGIN requires origin_notes explaining the uncertainty")
+        return self
 
     def fingerprint(self) -> str:
         return hashlib.sha256(json.dumps(self.model_dump(), sort_keys=True).encode()).hexdigest()
@@ -107,6 +128,10 @@ class SourceCard(_M):
         if lic.share_alike:
             lines.append("Share-alike: derivatives must be shared under the same licence.")
         lines += [f"CONFLICT: {c}" for c in lic.conflicts]
+        if self.identity_status == "CANDIDATE_NEEDS_CONFIRMATION":
+            lines.append("IDENTITY: this card is a CANDIDATE match for the dataset you described; confirm it is the intended dataset.")
+        if not self.origin_verified:
+            lines += [f"ORIGIN UNVERIFIED: {n}" for n in self.origin_notes]
         lines += [f"Restriction: {r}" for r in self.restrictions]
         lines.append("Raw and prepared data must NOT be committed to git or redistributed from this repository.")
         return "\n".join(lines)

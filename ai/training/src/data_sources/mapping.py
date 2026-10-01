@@ -151,3 +151,44 @@ class CoverageReport:
             "top_unmapped_source_labels": self.unmapped_source.most_common(top),
             "top_out_of_scope_source_labels": self.out_of_scope_source.most_common(top),
         }
+
+
+@dataclass
+class DepartmentMapping:
+    """Maps a source department string to a taxonomy department id (used ONLY for descriptive routing-agreement
+    reports; never copied into records as a feature or target)."""
+
+    raw: dict
+    taxonomy: Taxonomy
+
+    @classmethod
+    def load(cls, mapping_id: str, taxonomy: Taxonomy | None = None, mappings_dir: Path = MAPPINGS_DIR) -> "DepartmentMapping":
+        path = mappings_dir / f"{mapping_id}.v1.json"
+        if not path.is_file():
+            raise MappingError(f"department mapping not found: {path}")
+        m = cls(json.loads(path.read_text(encoding="utf-8")), taxonomy or load_taxonomy())
+        ids = [r["id"] for r in m.raw["rules"]]
+        if len(ids) != len(set(ids)):
+            raise MappingError("duplicate department rule ids")
+        for r in m.raw["rules"]:
+            if r["department_id"] not in m.taxonomy.departments:
+                raise MappingError(f"rule {r['id']}: unknown department {r['department_id']!r}")
+            if set(r["when"]) != {"department"}:
+                raise MappingError(f"rule {r['id']}: department rules match on 'department' only")
+        return m
+
+    @property
+    def mapping_id(self) -> str:
+        return self.raw["mapping_id"]
+
+    @property
+    def version(self) -> str:
+        return self.raw["mapping_version"]
+
+    def map(self, department: str | None) -> str | None:
+        if department is None:
+            return None
+        for r in self.raw["rules"]:
+            if MappingTable._match(r["when"]["department"], department):
+                return r["department_id"]
+        return None

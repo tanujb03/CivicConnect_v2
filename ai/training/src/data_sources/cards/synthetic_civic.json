@@ -65,5 +65,7 @@
   "adapter": "synthetic",
   "mapping_id": null,
   "last_reviewed": "2026-10-01",
-  "review_status": "REVIEWED"
+  "review_status": "REVIEWED",
+  "priority": "primary",
+  "role_summary": "Controlled multilingual (Hindi/Marathi/Hinglish), code-mixing, duplicate, rare/critical and edge-case source; the real datasets contain none of these."
 }

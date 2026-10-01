@@ -1,0 +1,68 @@
+{
+  "mapping_id": "mumbai_nashik_to_civic",
+  "mapping_version": "0.1.0-draft",
+  "source_id": "mumbai_nashik_road_surface",
+  "taxonomy_version": "1.0.0-draft",
+  "status": "DRAFT_LABELS_HYPOTHESISED_FROM_ARTICLE_SUMMARY_NOT_VERIFIED",
+  "provenance_note": "Labels (folder/file/scene names) were hypothesised from a search summary of the data article (Paved Road / Unpaved / Video; damaged road surface, speed breaker, water on road). No new taxonomy category is created: speed breakers, barriers and paved/unpaved/water scene attributes are out_of_scope for V1 issue classification; only explicit pothole labels map to roads/pothole; generic damaged-surface labels map to category 'roads' only.",
+  "match_fields": [
+    "label"
+  ],
+  "rules": [
+    {
+      "id": "mn-pothole",
+      "when": {
+        "label": {
+          "regex": "pothole"
+        }
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": "pothole"
+    },
+    {
+      "id": "mn-damaged",
+      "when": {
+        "label": {
+          "regex": "damag"
+        }
+      },
+      "confidence": "medium",
+      "category": "roads",
+      "subcategory": null,
+      "note": "damaged road surface is not necessarily a pothole"
+    },
+    {
+      "id": "mn-oos-speed-breaker",
+      "when": {
+        "label": {
+          "regex": "speed.?breaker|speed.?bump|hump"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "road feature, not a civic issue in taxonomy v1"
+    },
+    {
+      "id": "mn-oos-barrier",
+      "when": {
+        "label": {
+          "regex": "barrier|divider|barricade"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true
+    },
+    {
+      "id": "mn-oos-scene",
+      "when": {
+        "label": {
+          "regex": "paved|unpaved|water|wet|dry|season|summer|winter|monsoon|video"
+        }
+      },
+      "confidence": "medium",
+      "out_of_scope": true,
+      "note": "scene/surface attribute"
+    }
+  ]
+}

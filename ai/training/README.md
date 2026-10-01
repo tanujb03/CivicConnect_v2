@@ -69,7 +69,7 @@ Without credentials these exit with code 2 and `SKIPPED` — no numbers are fabr
 * Fusion scores are dominated by distance on synthetic pairs (duplicates have small GPS jitter by construction).
 
 ## 6b · Real public data
-See `src/data_sources/README.md` and notebook 04. Real data never enters the repo; outputs of that notebook are aggregate statistics only.
+See `src/data_sources/README.md` and notebook 04. Real data never enters the repo; outputs of that notebook are aggregate statistics only. The Indian-dataset layer (BMC Mumbai, RDD2020/2022 India, BharatPotHole, Mumbai/Nashik) is driven by the CLI described in that README (`profile bmc_mumbai`, `profile-images`, `prepare …`, `leakage-audit`); notebook 04 does not yet wrap it.
 
 ## 7 · Training code layout
 ```
@@ -79,7 +79,7 @@ src/train_text_classifier.py    B0 (+ parity check numpy vs sklearn)
 src/train_encoder_head.py       B1 (needs sentence-transformers)
 src/train_fusion_calibrator.py  AI-2 weights (non-negative, L2 by val log-loss)
 src/artifact_writer.py          writes civic-text-classifier/1 artifacts
-src/data_sources/               real-data cards, adapters, mappings, downloaders, pairs, hybrid assembly (see its README)
+src/data_sources/               real-data cards, adapters, mappings, column-role policy, leakage audits, downloaders, pairs, hybrid assembly (see its README)
 src/make_fixture_artifact.py    tiny committed fixture for tests
 notebooks/                      thin Kaggle notebooks
 tests/                          generator, trainer, calibrator, notebooks (incl. slow end-to-end execution)

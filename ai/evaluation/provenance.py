@@ -40,7 +40,8 @@ def build_provenance(rows: list[dict]) -> dict:
         s = per[p["source_id"]]
         s["n"] += 1
         s.update(kind=p["kind"], dataset=p.get("source_dataset"), version=p.get("source_version"), license_id=p.get("license_id"),
-                 license_verified=bool(p.get("license_verified")), mapping_id=p.get("mapping_id"), mapping_version=p.get("mapping_version"))
+                 license_verified=bool(p.get("license_verified")), origin_verified=bool(p.get("origin_verified", True)),
+                 mapping_id=p.get("mapping_id"), mapping_version=p.get("mapping_version"))
         s["label_origins"][p.get("label_origin")] += 1
         s["text_origins"][r.get("text_origin", "n/a")] += 1
     return {"n": len(rows), "kinds": dict(kinds),
@@ -75,19 +76,27 @@ def claims_for(track: str, prov: dict) -> dict:
     """What the reader may and may not conclude from the numbers of this report."""
     real_n = sum(v["n"] for v in prov["sources"].values() if v.get("kind") == "real_public")
     unverified = sorted(k for k, v in prov["sources"].items() if v.get("kind") == "real_public" and not v.get("license_verified"))
+    unknown_origin = sorted(k for k, v in prov["sources"].items() if v.get("kind") == "real_public" and not v.get("origin_verified", True))
     if track == DESCRIPTIVE:
         return {"track": track, "real_world_accuracy_claim_allowed": False, "pooled_headline_allowed": True,
-                "banner": "DESCRIPTIVE statistics of real public data under a DRAFT taxonomy mapping — not model performance.",
-                "reasons": ["no model is evaluated"] + ([f"licence not verified for {unverified}"] if unverified else [])}
+                "banner": "DESCRIPTIVE statistics of real public data under a DRAFT taxonomy mapping — not model performance."
+                          + (" ORIGIN UNVERIFIED (may not be real records): " + ", ".join(unknown_origin) if unknown_origin else ""),
+                "reasons": ["no model is evaluated"] + ([f"licence not verified for {unverified}"] if unverified else [])
+                + ([f"origin not verified (real vs simulated/derived) for {unknown_origin}"] if unknown_origin else [])}
     if track == "synthetic":
         return {"track": track, "real_world_accuracy_claim_allowed": False, "pooled_headline_allowed": True,
                 "banner": "SYNTHETIC DATA ONLY — not an estimate of real-world accuracy.", "reasons": ["all rows are synthetic"]}
     if track == "hybrid":
         reasons = ["hybrid report: synthetic and real slices are reported separately; no pooled number is a real-world estimate"]
+        if unknown_origin:
+            reasons.append(f"origin not verified for {unknown_origin}: the 'real' slice may not be real")
         return {"track": track, "real_world_accuracy_claim_allowed": False, "pooled_headline_allowed": False,
                 "banner": "HYBRID (synthetic + real) — read the slices separately; synthetic slice is NOT real-world accuracy.",
-                "reasons": reasons, "real_slice_claim": _real_claim(real_n, unverified, prov)}
+                "reasons": reasons, "real_slice_claim": {**_real_claim(real_n, unverified, prov), **({"allowed": False} if unknown_origin else {})}}
     c = _real_claim(real_n, unverified, prov)
+    if unknown_origin:
+        c["allowed"] = False
+        c["reasons"].append(f"origin not verified (real vs simulated/derived) for {unknown_origin}: cannot be called real-world evidence")
     return {"track": track, "real_world_accuracy_claim_allowed": c["allowed"], "pooled_headline_allowed": True,
             "banner": ("REAL PUBLIC DATA HOLDOUT — " + c["scope"]) if c["allowed"] else
                       "REAL PUBLIC DATA HOLDOUT — claim NOT allowed: " + "; ".join(c["reasons"]),

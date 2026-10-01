@@ -33,6 +33,7 @@ class Provenance(_M):
     source_record_id: str | None = None
     license_id: str
     license_verified: bool
+    origin_verified: bool = True     # False: unclear whether rows are real records (card origin_status=UNVERIFIED_ORIGIN)
     label_origin: LabelOrigin
     mapping_id: str | None = None
     mapping_version: str | None = None
@@ -64,6 +65,9 @@ class CaseRecord(_M):
     parent_record_id: str | None = None
     place: str | None = None                 # coarse region (borough / community area / city), never an address
     split_hint: Literal["train", "val", "test", "holdout"] | None = None
+    # Role-keyed extra fields (e.g. filing_channel, severity, resolution_hours). Usage is governed by the dataset's
+    # column-role policy (column_roles.py): which roles may be inputs/targets for which task. Unclassified columns are never stored.
+    attributes: dict[str, str | float | int | bool | None] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _consistent(self) -> "CaseRecord":
@@ -92,6 +96,7 @@ class BBox(_M):
     category: str | None = None
     subcategory: str | None = None
     mapping_status: MappingStatus = "unmapped"
+    normalized: bool = False         # True: coordinates are fractions of the image size (YOLO-style sources)
 
     @model_validator(mode="after")
     def _valid_box(self) -> "BBox":
@@ -114,6 +119,8 @@ class ImageRecord(_M):
     has_annotation: bool = False
     boxes: list[BBox] = Field(default_factory=list)
     image_labels: list[str] = Field(default_factory=list)   # distinct mapped labels: "cat/sub" or "cat"
+    source_labels: list[str] = Field(default_factory=list)  # distinct raw source labels (verbatim)
+    group_id: str | None = None      # video / sequence / directory / index-block id: splits must hold out whole groups
     split_hint: Literal["train", "val", "test", "holdout"] | None = None
 
 

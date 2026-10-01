@@ -83,10 +83,10 @@ def render_md(name: str, p: dict) -> str:
              f"- Track: `{p['track']}`  |  Task: `{p['task']}`  |  System: `{p.get('system')}`  |  Created: {p['created_at']}",
              f"- Artifact: `{p.get('artifact')}`", f"- Real-world accuracy claim allowed: **{c['real_world_accuracy_claim_allowed']}**"
              + (f" ({'; '.join(c['reasons'])})" if c.get("reasons") else ""), "",
-             "## Dataset provenance", "", "| source | kind | n | licence (verified?) | label origin | text origin | mapping |", "|---|---|---|---|---|---|---|"]
+             "## Dataset provenance", "", "| source | kind | n | licence (verified?) | origin verified? | label origin | text origin | mapping |", "|---|---|---|---|---|---|---|---|"]
     for sid, v in prov["sources"].items():
         lines.append(f"| {sid} | {v['kind']} | {v['n']} | {v.get('license_id')} ({'yes' if v.get('license_verified') else 'NO'}) | "
-                     f"{v['label_origins']} | {v['text_origins']} | {v.get('mapping_id')} {v.get('mapping_version') or ''} |")
+                     f"{'yes' if v.get('origin_verified', True) else 'NO'} | {v['label_origins']} | {v['text_origins']} | {v.get('mapping_id')} {v.get('mapping_version') or ''} |")
     lines += ["", f"Files: {json.dumps(p.get('datasets', {}))}", ""]
     if "by_provenance" in r:
         lines += ["## Results (separate slices — no pooled headline)", ""]
@@ -123,8 +123,9 @@ def _holdout(rows: list[dict]) -> list[dict]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--task", choices=["intake", "fusion", "taxonomy_coverage", "vision"], required=True)
-    ap.add_argument("--track", choices=TRACKS, default=None, help="default: synthetic (descriptive for taxonomy_coverage)")
+    ap.add_argument("--task", choices=["intake", "fusion", "taxonomy_coverage", "vision", "resolution_time_prior", "recurrence_hotspot", "routing_agreement",
+                                       "triage_priority_prior"], required=True)
+    ap.add_argument("--track", choices=TRACKS, default=None, help="default: synthetic (descriptive for taxonomy_coverage and the BMC tasks)")
     ap.add_argument("--system", choices=["local", "provider", "hybrid"], default="local")
     ap.add_argument("--artifact", type=Path, default=None, help="B0 classifier artifact dir")
     ap.add_argument("--fusion-weights", type=Path, default=None, help="weights fitted on the lexical semantic signal")
@@ -135,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=HERE / "reports")
     ap.add_argument("--name", default=None)
     a = ap.parse_args(argv)
-    track = DESCRIPTIVE if a.task == "taxonomy_coverage" else (a.track or "synthetic")
+    bmc_tasks = {"resolution_time_prior", "recurrence_hotspot", "routing_agreement", "triage_priority_prior"}
+    track = DESCRIPTIVE if (a.task == "taxonomy_coverage" or a.task in bmc_tasks) else (a.track or "synthetic")
 
     try:
         synth_rows = real_rows = None
@@ -158,6 +160,14 @@ def main(argv: list[str] | None = None) -> int:
         system = a.system if a.task in ("intake", "vision") else "lexical"
         if a.task == "taxonomy_coverage":
             results = eval_real.evaluate_taxonomy_coverage(real_rows)
+        elif a.task in bmc_tasks:
+            fn = {"resolution_time_prior": eval_real.evaluate_resolution_time_prior, "recurrence_hotspot": eval_real.evaluate_recurrence_hotspot,
+                  "routing_agreement": eval_real.evaluate_routing_agreement, "triage_priority_prior": eval_real.evaluate_triage_priority_prior}[a.task]
+            results = fn(real_rows)
+            system = "n/a"
+            blocked = results.get("leakage", {}).get("blocking")
+            if blocked:
+                results["WARNING"] = "leakage audit found blocking problems: " + "; ".join(blocked)
         elif a.task == "fusion":
             w = FusionWeights.load(a.fusion_weights) if a.fusion_weights else None
             artifact = f"fusion_weights@{w.version}" if w else "uncalibrated_prior"
