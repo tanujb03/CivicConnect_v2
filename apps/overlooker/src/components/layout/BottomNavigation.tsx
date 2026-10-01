@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, FileText, BarChart3, Users, User } from 'lucide-react';
+import { Home, FileText, BarChart3, Users, User, Activity } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -11,11 +11,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'home', label: 'Home', icon: Home, path: '/' },
-  { id: 'issues', label: 'Issues', icon: FileText, path: '/issues' },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  { id: 'community', label: 'Community', icon: Users, path: '/community' },
-  { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
+  { id: 'home',           label: 'Home',      icon: Home,     path: '/' },
+  { id: 'issues',         label: 'Issues',    icon: FileText, path: '/issues' },
+  { id: 'city-situation', label: 'City',      icon: Activity, path: '/city-situation' },
+  { id: 'community',      label: 'Community', icon: Users,    path: '/community' },
+  { id: 'profile',        label: 'Profile',   icon: User,     path: '/profile' },
 ];
 
 const BottomNavigation: React.FC = () => {
