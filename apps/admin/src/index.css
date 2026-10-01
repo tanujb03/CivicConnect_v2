@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CivicConnect Admin Portal Design System - Jharkhand Government Colors */
+
+@layer base {
+  :root {
+    /* Civic Admin Color Scheme */
+    --civic-primary: 142 69% 33%;     /* #16a34a - Primary Green */
+    --civic-success: 142 71% 45%;     /* #22c55e - Success */
+    --civic-warning: 45 93% 47%;      /* #eab308 - Warning */
+    --civic-danger: 0 84% 60%;        /* #ef4444 - Danger */
+    --civic-info: 221 83% 53%;        /* #3b82f6 - Info */
+    
+    /* Background System */
+    --civic-bg: 210 40% 98%;          /* #f8fafc - Background */
+    --civic-card: 0 0% 100%;          /* #ffffff - Card Background */
+    --civic-border: 214 32% 91%;      /* #e2e8f0 - Border */
+    
+    /* Text Colors */
+    --civic-text-primary: 215 28% 17%;
+    --civic-text-secondary: 215 20% 65%;
+    --civic-text-muted: 215 16% 47%;
+    
+    /* Component Colors */
+    --civic-gradient-start: 142 69% 33%;
+    --civic-gradient-end: 142 69% 28%;
+    
+    /* Shadcn Compatibility */
+    --background: var(--civic-bg);
+    --foreground: var(--civic-text-primary);
+    --card: var(--civic-card);
+    --card-foreground: var(--civic-text-primary);
+    --popover: var(--civic-card);
+    --popover-foreground: var(--civic-text-primary);
+    --primary: var(--civic-primary);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: var(--civic-text-primary);
+    --muted: 210 40% 96%;
+    --muted-foreground: var(--civic-text-muted);
+    --accent: 210 40% 96%;
+    --accent-foreground: var(--civic-text-primary);
+    --destructive: var(--civic-danger);
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--civic-border);
+    --input: var(--civic-border);
+    --ring: var(--civic-primary);
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* CivicConnect Component Classes */
+@layer components {
+  /* Civic Admin Button Variants */
+  .btn-civic-primary {
+    @apply bg-[hsl(var(--civic-primary))] hover:bg-[hsl(var(--civic-primary)/0.9)] text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-civic-success {
+    @apply bg-[hsl(var(--civic-success))] hover:bg-[hsl(var(--civic-success)/0.9)] text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-civic-danger {
+    @apply bg-[hsl(var(--civic-danger))] hover:bg-[hsl(var(--civic-danger)/0.9)] text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  /* Civic Admin Cards */
+  .civic-card {
+    @apply bg-[hsl(var(--civic-card))] border border-[hsl(var(--civic-border))] rounded-lg shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  /* Status Badges */
+  .status-submitted {
+    @apply bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-progress {
+    @apply bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-resolved {
+    @apply bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-urgent {
+    @apply bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  /* Gradient Backgrounds */
+  .civic-gradient {
+    @apply bg-gradient-to-br from-[hsl(var(--civic-gradient-start))] to-[hsl(var(--civic-gradient-end))];
+  }
+  
+  /* Navigation Active State */
+  .nav-active {
+    @apply bg-green-100 border-r-4 border-green-600 text-green-700;
+  }
+  
+  .nav-hover {
+    @apply hover:bg-green-50 transition-colors;
+  }
+  
+  /* Trend Indicators */
+  .trend-up {
+    @apply text-green-600;
+  }
+  
+  .trend-down {
+    @apply text-red-600;
+  }
+  
+  /* Ward Density Colors */
+  .density-high {
+    @apply bg-red-100 border-red-300 text-red-800;
+  }
+  
+  .density-medium {
+    @apply bg-yellow-100 border-yellow-300 text-yellow-800;
+  }
+  
+  .density-low {
+    @apply bg-green-100 border-green-300 text-green-800;
+  }
+}

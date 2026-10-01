@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CivicConnect Overlooker Portal Design System */
+@layer base {
+  :root {
+    /* CivicConnect Brand Colors */
+    --background: 0 0% 100%;
+    --foreground: 142 76% 36%;
+    
+    --civic-green: 142 76% 36%; /* #16a34a */
+    --civic-green-dark: 142 76% 30%;
+    --civic-green-light: 142 76% 45%;
+    --civic-green-subtle: 142 30% 95%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 142 76% 36%;
+    --card-border: 142 30% 85%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 76% 36%;
+
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 142 76% 36%;
+
+    --muted: 142 15% 96%;
+    --muted-foreground: 142 15% 45%;
+
+    --accent: 142 30% 90%;
+    --accent-foreground: 142 76% 36%;
+
+    /* Status Colors */
+    --status-urgent: 0 84% 60%;
+    --status-overdue: 25 95% 53%;
+    --status-disputed: 221 83% 53%;
+    --status-resolved: 142 76% 36%;
+    --status-ignored: 0 0% 45%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 142 30% 85%;
+    --input: 142 30% 90%;
+    --ring: 142 76% 36%;
+
+    --radius: 0.75rem;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--civic-green)), hsl(var(--civic-green-light)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--civic-green-subtle)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--civic-green)) 0%, hsl(var(--civic-green-dark)) 100%);
+    
+    /* Shadows */
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-floating: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 20px hsl(var(--civic-green) / 0.3);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Civic Connect Component Styles */
+  .civic-card {
+    @apply bg-card border border-card-border rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
+  }
+  
+  .civic-card-elevated {
+    @apply bg-card border border-card-border rounded-xl shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+  
+  .civic-button-primary {
+    @apply bg-primary text-primary-foreground border-0 rounded-xl font-semibold px-6 py-3 transition-all duration-300 hover:scale-105 active:scale-95;
+  }
+  
+  .civic-button-secondary {
+    @apply bg-secondary text-secondary-foreground border-2 border-primary rounded-xl font-semibold px-6 py-3 transition-all duration-300 hover:bg-primary hover:text-primary-foreground;
+  }
+  
+  .civic-gradient-bg {
+    background: var(--gradient-hero);
+  }
+  
+  .civic-status-urgent {
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+  
+  .civic-status-overdue {
+    @apply bg-orange-100 text-orange-800 border border-orange-200;
+  }
+  
+  .civic-status-disputed {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  .civic-status-resolved {
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+  
+  .civic-status-ignored {
+    @apply bg-gray-100 text-gray-800 border border-gray-200;
+  }
+  
+  .floating-nav {
+    @apply fixed bottom-4 left-4 right-4 bg-primary rounded-2xl shadow-2xl z-50;
+    box-shadow: var(--shadow-floating);
+  }
+  
+  .issue-pin {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer transition-all duration-200 hover:scale-110;
+  }
+  
+  .issue-pin-urgent {
+    @apply bg-red-500 animate-pulse;
+  }
+  
+  .issue-pin-overdue {
+    @apply bg-orange-500;
+  }
+  
+  .issue-pin-resolved {
+    @apply bg-green-500;
+  }
+  
+  .issue-pin-default {
+    @apply bg-primary;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .backdrop-blur-glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.8);
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
