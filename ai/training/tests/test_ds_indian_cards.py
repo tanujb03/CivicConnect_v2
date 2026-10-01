@@ -79,7 +79,9 @@ def test_a_card_with_unverified_origin_must_explain_why():
 def test_bharatpothole_card_separates_code_licence_from_dataset_licence_and_stays_unverified():
     c = load_card("bharatpothole")
     assert c.landing_url == "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole"
-    assert "NOT STATED" in c.license.name
+    assert "NOT STATED" in c.license.name and "NOT CC BY-NC-SA 4.0" in c.license.name
+    assert "NOT permitted to be assumed" in c.license.commercial_use and any("Do not redistribute the raw dataset" in n for n in c.license.notes)
+    assert any("Do NOT represent it as CC BY-NC-SA 4.0" in e.note and e.reliability == "secondary" for e in c.license.evidence)
     ev = " ".join(e.note for e in c.license.evidence)
     assert "NO dataset licence" in ev and "CODE" in ev and "NOT assumed" in ev
     assert any(e.reliability == "primary" for e in c.license.evidence)      # the README was actually fetched...
