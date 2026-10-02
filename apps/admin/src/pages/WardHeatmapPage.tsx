@@ -63,13 +63,13 @@ const WardHeatmapPage: React.FC = () => {
   const sortedWards = [...WARDS].sort((a, b) => (b[activeMetric] as number) - (a[activeMetric] as number));
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-6">
+    <div className="p-6 min-h-screen space-y-6 page-enter">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Layers className="h-5 w-5 text-green-600" />
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Layers className="h-5 w-5 text-emerald-600" />
           Ward Heatmap
         </h2>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Ward-level comparison derived from live case database aggregates.
         </p>
       </div>
@@ -80,10 +80,10 @@ const WardHeatmapPage: React.FC = () => {
           <button
             key={m.key}
             onClick={() => setActiveMetric(m.key)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
               activeMetric === m.key
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-green-300'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                : 'bg-white text-muted-foreground border-emerald-100 hover:border-emerald-300 hover:text-emerald-700'
             }`}
           >
             {m.label}
@@ -92,8 +92,8 @@ const WardHeatmapPage: React.FC = () => {
       </div>
 
       {/* Heatmap grid */}
-      <div className="civic-card p-5 rounded-xl border border-gray-100">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
+      <div className="civic-card p-5 hover-lift">
+        <h3 className="text-sm font-semibold text-foreground mb-4">
           {METRICS.find(m => m.key === activeMetric)?.label} by Ward
         </h3>
         <div className="grid grid-cols-5 gap-2">
@@ -111,21 +111,21 @@ const WardHeatmapPage: React.FC = () => {
 
         {/* Color scale legend */}
         <div className="flex items-center gap-2 mt-4">
-          <span className="text-xs text-gray-400">Low</span>
+          <span className="text-xs text-muted-foreground">Low</span>
           <div className="flex gap-1">
             {['bg-green-100', 'bg-green-300', 'bg-yellow-400', 'bg-orange-500', 'bg-red-600'].map(c => (
               <div key={c} className={`w-8 h-3 rounded ${c}`} />
             ))}
           </div>
-          <span className="text-xs text-gray-400">High</span>
+          <span className="text-xs text-muted-foreground">High</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         {/* Bar chart — all wards */}
-        <div className="civic-card p-5 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-green-600" />
+        <div className="civic-card p-5 hover-lift">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
             Ward Case Volume (all wards)
           </h3>
           <ResponsiveContainer width="100%" height={260}>
@@ -152,9 +152,9 @@ const WardHeatmapPage: React.FC = () => {
         </div>
 
         {/* Category distribution for top 5 wards */}
-        <div className="civic-card p-5 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-green-600" />
+        <div className="civic-card p-5 hover-lift">
+          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-emerald-600" />
             Category Distribution — Top 5 Wards
           </h3>
           <ResponsiveContainer width="100%" height={260}>
@@ -177,12 +177,12 @@ const WardHeatmapPage: React.FC = () => {
       {/* Top-3 alert wards */}
       <div className="grid grid-cols-3 gap-4">
         {sortedWards.slice(0, 3).map((w, i) => (
-          <div key={w.id} className="civic-card p-4 rounded-xl border border-red-100 bg-red-50/30">
+          <div key={w.id} className="civic-card p-4 border border-red-100/50 bg-red-50/30 hover-lift">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded">#{i + 1}</span>
-              <span className="text-sm font-semibold text-gray-800">{w.name}</span>
+              <span className="text-sm font-semibold text-foreground">{w.name}</span>
             </div>
-            <div className="space-y-1 text-xs text-gray-600">
+            <div className="space-y-1 text-xs text-muted-foreground">
               <div className="flex justify-between"><span>Total Cases</span><span className="font-semibold">{w.cases}</span></div>
               <div className="flex justify-between"><span>Critical</span><span className="font-semibold text-red-600">{w.critical}</span></div>
               <div className="flex justify-between"><span>Avg Resolution</span><span className="font-semibold">{w.resolution_days}d</span></div>

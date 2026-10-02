@@ -72,12 +72,12 @@ const AnalyticsPage: React.FC = () => {
   const [tab, setTab] = useState<'descriptive' | 'diagnostic' | 'patterns'>('descriptive');
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-6">
+    <div className="p-6 min-h-screen space-y-6 page-enter">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-green-600" /> Analytics
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-emerald-600" /> Analytics
         </h2>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Descriptive · Diagnostic · Pattern Detection
         </p>
       </div>
@@ -89,7 +89,7 @@ const AnalyticsPage: React.FC = () => {
       )}
 
       {/* Level tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-emerald-50/60 p-1 rounded-xl w-fit border border-emerald-100/50">
         {([
           ['descriptive', 'Descriptive'],
           ['diagnostic',  'Diagnostic'],
@@ -98,10 +98,10 @@ const AnalyticsPage: React.FC = () => {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
               tab === key
-                ? 'bg-white text-green-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100/50'
+                : 'text-muted-foreground hover:text-emerald-700'
             }`}
           >
             {label}
@@ -119,16 +119,16 @@ const AnalyticsPage: React.FC = () => {
               { label: 'SLA At Risk',       value: overview?.sla_at_risk ?? 41,          color: 'text-amber-600' },
               { label: 'Awaiting Verify',   value: overview?.awaiting_verification ?? 34,color: 'text-purple-600' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="civic-card p-4 rounded-xl border border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">{label}</p>
+              <div key={label} className="civic-card p-4 hover-lift">
+                <p className="text-xs text-muted-foreground mb-1">{label}</p>
                 <p className={`text-3xl font-bold ${color}`}>{isLoading ? '…' : value}</p>
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            <div className="civic-card p-5 rounded-xl border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Monthly Case Trends</h3>
+            <div className="civic-card p-5 hover-lift">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Monthly Case Trends</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={MONTHLY_TREND}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -143,8 +143,8 @@ const AnalyticsPage: React.FC = () => {
               </ResponsiveContainer>
             </div>
 
-            <div className="civic-card p-5 rounded-xl border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Category Distribution</h3>
+            <div className="civic-card p-5 hover-lift">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Category Distribution</h3>
               <div className="flex items-center gap-6">
                 <ResponsiveContainer width="55%" height={200}>
                   <PieChart>
@@ -158,8 +158,8 @@ const AnalyticsPage: React.FC = () => {
                   {CATEGORY_DIST.map((c, i) => (
                     <div key={c.name} className="flex items-center gap-2 text-xs">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i] }} />
-                      <span className="text-gray-600 flex-1">{c.name}</span>
-                      <span className="font-semibold text-gray-800">{c.value}</span>
+                      <span className="text-muted-foreground flex-1">{c.name}</span>
+                      <span className="font-semibold text-foreground">{c.value}</span>
                     </div>
                   ))}
                 </div>
@@ -168,8 +168,8 @@ const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* SLA compliance */}
-          <div className="civic-card p-5 rounded-xl border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">SLA Compliance by Department (%)</h3>
+          <div className="civic-card p-5 hover-lift">
+            <h3 className="text-sm font-semibold text-foreground mb-4">SLA Compliance by Department (%)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={SLA_DATA} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -188,9 +188,9 @@ const AnalyticsPage: React.FC = () => {
       {/* ── Diagnostic: Where/why? ───────────────────────────────────────── */}
       {tab === 'diagnostic' && (
         <div className="space-y-6">
-          <div className="civic-card p-5 rounded-xl border border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" /> Spatial Concentration — Top Wards
+          <div className="civic-card p-5 hover-lift">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-600" /> Spatial Concentration — Top Wards
             </h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={HOTSPOT_DATA}>
@@ -206,12 +206,12 @@ const AnalyticsPage: React.FC = () => {
 
           <div className="space-y-3">
             {HOTSPOT_DATA.map(h => (
-              <div key={h.ward} className="civic-card p-4 rounded-xl border border-gray-100 flex items-center justify-between">
+              <div key={h.ward} className="civic-card p-4 flex items-center justify-between hover-lift">
                 <div>
-                  <span className="font-mono text-xs text-green-700 font-bold">{h.ward}</span>
-                  <span className="ml-3 text-sm text-gray-700">{h.label}</span>
+                  <span className="font-mono text-xs text-emerald-700 font-bold">{h.ward}</span>
+                  <span className="ml-3 text-sm text-foreground">{h.label}</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>{h.count} cases</span>
                   <span className="text-amber-600 font-medium">{h.recurrence} recurring</span>
                 </div>
@@ -236,15 +236,15 @@ const AnalyticsPage: React.FC = () => {
 
           <div className="space-y-3">
             {RECURRING.map((r, i) => (
-              <div key={i} className="civic-card p-4 rounded-xl border border-gray-100">
+              <div key={i} className="civic-card p-4 hover-lift">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="h-7 w-7 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <div className="h-7 w-7 rounded-full bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0">
                       <Repeat className="h-4 w-4 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{r.location}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{r.category} · {r.events} events in {r.window}</p>
+                      <p className="text-sm font-medium text-foreground">{r.location}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{r.category} · {r.events} events in {r.window}</p>
                     </div>
                   </div>
                   <span className={`text-xs font-semibold ${TREND_COLOR[r.trend]} capitalize`}>

@@ -73,17 +73,17 @@ const DepartmentPerformancePage: React.FC = () => {
   const slaColor = perf.sla_compliance_pct >= 85 ? 'good' : perf.sla_compliance_pct >= 70 ? 'warn' : 'bad';
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-6">
+    <div className="p-6 min-h-screen space-y-6 page-enter">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Department Performance</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-xl font-bold text-foreground">Department Performance</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Workload-adjusted metrics — avoids simplistic rankings that ignore case complexity.
           </p>
         </div>
         <Select value={selectedDept} onValueChange={setSelectedDept}>
           <SelectTrigger className="w-56">
-            <Building2 className="h-4 w-4 mr-2 text-green-600" />
+            <Building2 className="h-4 w-4 mr-2 text-emerald-600" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -105,8 +105,8 @@ const DepartmentPerformancePage: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-6">
         {/* Workload by severity */}
-        <div className="civic-card p-5 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Workload by Severity</h3>
+        <div className="civic-card p-5 hover-lift">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Workload by Severity</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={perf.by_severity}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -125,8 +125,8 @@ const DepartmentPerformancePage: React.FC = () => {
         </div>
 
         {/* Cross-department radar */}
-        <div className="civic-card p-5 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Cross-Department Comparison</h3>
+        <div className="civic-card p-5 hover-lift">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Cross-Department Comparison</h3>
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={ALL_PERF_COMPARISON}>
               <PolarGrid />
@@ -137,7 +137,7 @@ const DepartmentPerformancePage: React.FC = () => {
               <Legend />
             </RadarChart>
           </ResponsiveContainer>
-          <p className="text-[10px] text-gray-400 mt-2 italic text-center">
+          <p className="text-[10px] text-muted-foreground mt-2 italic text-center">
             Resolution score = inverse of median resolution time (normalised)
           </p>
         </div>
