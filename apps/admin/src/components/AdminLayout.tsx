@@ -20,7 +20,7 @@ const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-civic-bg">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, hsl(140,30%,97%) 0%, hsl(140,25%,95%) 100%)' }}>
       <Sidebar />
       <Header
         userRole={userRole}
@@ -29,7 +29,9 @@ const AdminLayout: React.FC = () => {
       />
       {/* Main content area — offset for sidebar (w-64) and header */}
       <main className="ml-64 pt-[72px] min-h-screen">
-        <Outlet />
+        <div className="page-enter">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
