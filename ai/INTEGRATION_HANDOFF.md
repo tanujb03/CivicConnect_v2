@@ -138,3 +138,19 @@ Licences travel with the weights: RDD2020 is non-commercial, RDD2022 is applied 
 
 ## 15 · Free AI backends (no OpenAI needed)
 `backend/ai_gateway/providers/` implements the frozen `AIProvider` protocol for any OpenAI-compatible endpoint (Gemini, Groq, OpenRouter, Cloudflare Workers AI, OpenAI) with per-task routing (`CompositeProvider`) and env wiring (`build_provider_from_env`, used by `deps.build_ai_service`; it takes precedence over `AIService.from_env`'s OpenAI Responses provider). Nothing under `ai/inference/` changed. Configuration and the full free-stack audit of the design (storage, DB, Redis, hosting, maps, OTP, speech, translation, notifications): `docs/FREE_STACK_PROPOSAL.md`. Verified on mock transports only; run one live call per backend before relying on it. Free tiers can use prompts for product improvement: demo data only.
+
+## 16 · Local text models (M6 classifier, M7 embedder) and browser speech (M8)
+- `backend/ai_gateway/text_model.py`: `OnnxTextClassifier` (drop-in for `LocalTextClassifier`; `AI_TEXT_ONNX_PATH`) and `OnnxEmbedder` (cross-language duplicate fusion; `AI_EMBED_ONNX_PATH`). Artifacts are `civic-onnx-text/1` folders with checksummed files; a tampered or wrong-kind folder is refused and the gateway starts without it (warning logged). Embedding fusion reports `FUSION_UNCALIBRATED_PRIOR` until `train_fusion_calibrator --semantic-mode local` has produced weights (`AI_FUSION_EMBEDDING_WEIGHTS_PATH`).
+- Training data are LLM-written synthetic complaints (pipeline in `ai/training/src/text_corpus`, notebook 07). Evaluate with `python -m ai.evaluation.run_eval --task intake --system local --artifact <B0 or M6 folder>`.
+- Order of operations for the owner: `docs/RUNBOOK_ML.md`.
+- **M8 (frontend, Krrish/Vedant — not implemented here):** dictate with the browser Web Speech API and send the *text* to `POST /cases/intake/analyze`; fall back to recording with `MediaRecorder` and uploading the clip as AUDIO evidence (server transcribes with Groq Whisper).
+```ts
+const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+export function dictate(lang: "hi-IN" | "mr-IN" | "en-IN", onText: (t: string) => void) {
+  if (!SR) return null;                       // unsupported (e.g. Firefox): use the MediaRecorder upload fallback
+  const r = new SR(); r.lang = lang; r.interimResults = true; r.continuous = false;
+  r.onresult = (e: any) => onText(Array.from(e.results).map((x: any) => x[0].transcript).join(" "));
+  r.start(); return r;                        // r.stop() when the user taps the mic again
+}
+```
+Chrome/Edge only, needs HTTPS (or localhost) and a mic permission; recognition itself is done by the browser vendor's service, so show the transcript to the citizen for editing before submitting.

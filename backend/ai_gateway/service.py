@@ -58,10 +58,11 @@ def _utcnow() -> datetime:
 
 class AIGateway:
     def __init__(self, ai: AIService, repo: CaseRepository, evidence: EvidenceResolver, analyses: AIAnalysisStore, audit: AuditSink,
-                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None, vision: ImageAnalyzer | None = None):
+                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None, vision: ImageAnalyzer | None = None, embedder=None):
         self.ai, self.repo, self.evidence, self.analyses, self.audit, self.clock = ai, repo, evidence, analyses, audit, clock
         self.facts = facts
         self.vision = vision
+        self.embedder = embedder              # OnnxEmbedder (M7): local multilingual embeddings for duplicate detection
 
     # ------------------------------------------------------------------------------------------ helpers
     @staticmethod
@@ -168,15 +169,31 @@ class AIGateway:
         return FusionCase(case_id=c.id, category=c.category, subcategory=c.subcategory, latitude=c.latitude, longitude=c.longitude,
                           created_at=c.created_at, text=c.text, embedding=c.embedding, status=c.status)
 
+    def _embed_cases(self, subject: FusionCase, candidates: list[FusionCase], warnings) -> str | None:   # noqa: ARG002
+        """Fill missing embeddings with the local multilingual model (one batch). A failure leaves them empty: the adapter then falls back to the lexical signal visibly."""
+        todo = [c for c in (subject, *candidates) if c.embedding is None and c.text]
+        if not todo:
+            return None
+        try:
+            vecs = self.embedder.embed([c.text for c in todo])
+        except Exception as e:
+            log.warning("local embedder failed: %s", type(e).__name__)
+            return None
+        for c, v in zip(todo, vecs):
+            c.embedding = v
+        return self.embedder.tag
+
     def fusion(self, case_id: str, actor: Actor) -> FusionAnalyzeResponse:
         self._require(actor, "fusion")
         case = self._case(case_id)
         bounds = self.ai.fusion.candidate_query_params()
         cands = self.repo.fusion_candidates(case, radius_m=bounds["radius_m"], time_window_days=bounds["time_window_days"],
                                             max_candidates=bounds["max_candidates"], same_category=bool(bounds.get("same_category_required", True)))
+        subject, candidates, emb_model = self._fusion_case(case), [self._fusion_case(c) for c in cands], case.embedding_model
+        if self.embedder is not None:
+            emb_model = self._embed_cases(subject, candidates, warnings=None)
         try:
-            res = self.ai.analyze_fusion(FusionRequest(subject=self._fusion_case(case), candidates=[self._fusion_case(c) for c in cands],
-                                                       embedding_model=case.embedding_model))
+            res = self.ai.analyze_fusion(FusionRequest(subject=subject, candidates=candidates, embedding_model=emb_model))
         except (ValidationError, InputLimitExceeded, ValueError) as e:
             raise self._input_error(e) from e
         analysis_id = self._persist("fusion", case.id, actor, res, res.matches[0].similarity if res.matches else None,

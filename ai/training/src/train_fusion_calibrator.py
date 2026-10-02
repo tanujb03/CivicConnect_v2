@@ -51,6 +51,14 @@ def provider_embeddings(texts: list[str]) -> dict[str, list[float]]:
     return dict(zip(uniq, res.vectors))
 
 
+def local_embeddings(texts: list[str], embed_onnx: Path) -> dict[str, list[float]]:
+    """Embeddings from the exported local multilingual encoder (M7, ONNX on CPU): free, offline, cross-language."""
+    from ai.training.src.text_model.runtime import load_backend_text_model
+    emb = load_backend_text_model().OnnxEmbedder(embed_onnx)
+    uniq = sorted(set(texts))
+    return dict(zip(uniq, emb.embed(uniq)))
+
+
 def pair_features(pairs: list[dict], semantic_mode: str = "lexical", emb: dict[str, list[float]] | None = None):
     """Return (X, y, kept_pairs) for pairs that pass the deterministic candidate gate."""
     svc = FusionService()
@@ -61,7 +69,7 @@ def pair_features(pairs: list[dict], semantic_mode: str = "lexical", emb: dict[s
         ok, d, age_h = svc.in_policy(a, b)
         if not ok:
             continue
-        sem = (cosine(emb[p["a"]["text"]], emb[p["b"]["text"]]) if semantic_mode == "provider" and emb
+        sem = (cosine(emb[p["a"]["text"]], emb[p["b"]["text"]]) if semantic_mode in ("provider", "local") and emb
                else lexical_similarity(a.text, b.text))
         X.append([sem, geospatial_signal(d, cg["radius_m"]), temporal_signal(age_h, cg["time_window_days"]),
                   category_signal(a.category, a.subcategory, b.category, b.subcategory)])
@@ -131,7 +139,7 @@ def _trained_on(pairs: list[dict], kind: str) -> dict:
 
 def run(data_dir: Path | None, out_root: Path, *, semantic_mode: str = "lexical", version: str | None = None,
         l2_grid=(0.001, 0.01, 0.1, 1.0), train_pairs: Path | None = None, val_pairs: Path | None = None,
-        data_kind: str = "synthetic") -> Path:
+        data_kind: str = "synthetic", embed_onnx: Path | None = None) -> Path:
     """``data_kind='real'`` fits on REAL agency-linked pairs (``train_pairs``/``val_pairs`` from
     ``data_sources.cli pairs``); the weights are then labelled ``calibrated_real`` with their provenance."""
 
@@ -146,6 +154,10 @@ def run(data_dir: Path | None, out_root: Path, *, semantic_mode: str = "lexical"
     emb = None
     if semantic_mode == "provider":
         emb = provider_embeddings([p[s]["text"] for p in tr + va for s in ("a", "b")])
+    elif semantic_mode == "local":
+        if embed_onnx is None:
+            raise SystemExit("--semantic-mode local needs --embed-onnx <exported embedder dir>")
+        emb = local_embeddings([p[s]["text"] for p in tr + va for s in ("a", "b")], embed_onnx)
     X_tr, y_tr, _ = pair_features(tr, semantic_mode, emb)
     X_va, y_va, _ = pair_features(va, semantic_mode, emb)
     best = None
@@ -158,7 +170,7 @@ def run(data_dir: Path | None, out_root: Path, *, semantic_mode: str = "lexical"
     status = "calibrated_real" if data_kind == "real" else "calibrated_synthetic"
     weights = FusionWeights(bias=float(b), semantic=float(w[0]), geospatial=float(w[1]),
                             temporal=float(w[2]), category=float(w[3]), status=status,
-                            semantic_trained_on="embedding" if semantic_mode == "provider" else "lexical")
+                            semantic_trained_on="embedding" if semantic_mode in ("provider", "local") else "lexical")
     sc_va = np.array([weights.score(*x) for x in X_va])
     policy = load_fusion_policy()
     grid = np.linspace(0.05, 0.95, 91)
@@ -216,12 +228,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--kind", choices=["synthetic", "real"], default="synthetic")
     ap.add_argument("--pairs-train", type=Path); ap.add_argument("--pairs-val", type=Path)
-    ap.add_argument("--semantic-mode", choices=["lexical", "provider"], default="lexical")
+    ap.add_argument("--semantic-mode", choices=["lexical", "provider", "local"], default="lexical")
+    ap.add_argument("--embed-onnx", type=Path, default=None, help="exported M7 embedder directory (for --semantic-mode local)")
     ap.add_argument("--version", default=None)
     a = ap.parse_args(argv)
     if a.kind == "synthetic" and a.data is None:
         raise SystemExit("--data is required for --kind synthetic")
-    run(a.data, a.out, semantic_mode=a.semantic_mode, version=a.version, train_pairs=a.pairs_train, val_pairs=a.pairs_val, data_kind=a.kind)
+    run(a.data, a.out, semantic_mode=a.semantic_mode, version=a.version, train_pairs=a.pairs_train, val_pairs=a.pairs_val, data_kind=a.kind, embed_onnx=a.embed_onnx)
     return 0
 
 

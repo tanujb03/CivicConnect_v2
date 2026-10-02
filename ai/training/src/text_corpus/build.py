@@ -104,13 +104,26 @@ def load_gold(path: Path) -> tuple[list[dict], dict]:
 
 
 def split(rows: list[dict], seed: int, val: float, test: float) -> dict[str, list[dict]]:
+    """Group-safe AND stratified: within every (label, language) the generation requests are ordered by a hash and the first ~``test`` / next ~``val`` of them go to test / val
+    (at least one each when there are >= 5 requests), so every label stays represented in train. Template rows never enter test."""
     out: dict[str, list[dict]] = {"train": [], "val": [], "test": []}
+    llm_groups: dict[tuple, set[str]] = defaultdict(set)
     for r in rows:
-        f = hash_fraction(r["group"], seed)
-        sp = "test" if f < test else "val" if f < test + val else "train"
-        if r["source"] == "template" and sp == "test":
-            sp = "val"                                   # template rows never enter the LLM test split
-        out[sp].append(r)
+        if r["source"] == "llm":
+            llm_groups[(r["label_id"], r["language"])].add(r["group"])
+    side: dict[str, str] = {}
+    for groups in llm_groups.values():
+        ordered = sorted(groups, key=lambda g: (hash_fraction(g, seed), g))
+        n = len(ordered)
+        n_test = max(1, round(test * n)) if n >= 5 else 0
+        n_val = max(1, round(val * n)) if n >= 5 else 0
+        for i, g in enumerate(ordered):
+            side[g] = "test" if i < n_test else "val" if i < n_test + n_val else "train"
+    for r in rows:
+        if r["source"] == "template":
+            out["val" if hash_fraction(r["group"], seed) < val else "train"].append(r)
+        else:
+            out[side[r["group"]]].append(r)
     return out
 
 

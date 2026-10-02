@@ -67,7 +67,7 @@ def test_generation_is_resumable_limited_and_stops_on_quota_failures(tmp_path):
 
 
 def test_build_splits_by_request_group_keeps_templates_out_of_test_and_writes_a_manifest(tmp_path):
-    cells = spec.build_cells(languages=["en", "hi"], styles=["sms_short", "angry", "typo_noisy"], k=12)[:120]
+    cells = spec.build_cells(languages=["en", "hi"], styles=["sms_short", "angry", "typo_noisy", "landmark", "voice_transcript", "elderly_simple"], k=12)[:324]
     prov = Fake()
     gen.generate_shards(cells, {"en": prov, "hi": prov}, tmp_path / "shards")
     tpl = tmp_path / "tpl"
@@ -76,6 +76,8 @@ def test_build_splits_by_request_group_keeps_templates_out_of_test_and_writes_a_
     m = cb.build(tmp_path / "shards", tmp_path / "corpus", templates=tpl, templates_per_label_lang=10, seed=3)
     rows = {sp: [json.loads(ln) for ln in (tmp_path / "corpus" / f"{sp}.jsonl").read_text(encoding="utf-8").splitlines()] for sp in ("train", "val", "test")}
     assert sum(len(r) for r in rows.values()) == m["generation"]["items_kept"] + 10 and all(rows[s] for s in rows)
+    train_labels = {r["label_id"] for r in rows["train"]}
+    assert {r["label_id"] for sp in ("val", "test") for r in rows[sp]} <= train_labels            # every evaluated label is also trained
     side = {}
     for sp, rs in rows.items():
         for r in rs:

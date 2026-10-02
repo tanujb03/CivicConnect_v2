@@ -12,31 +12,34 @@ from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityTo
 from .envfile import load_env_file
 from .providers import build_provider_from_env
 from .service import Actor, AIGateway
+from .text_model import build_from_env as build_text_models
 from .vision import build_from_env as build_vision
 
 _gateway: AIGateway | None = None
 _lock = threading.Lock()
 
 
-def build_ai_service(executor) -> AIService:
+def build_ai_service(executor, classifier=None) -> AIService:
     """``AIService.from_env`` loads the local classifier / fusion weights (and an OpenAI Responses provider if configured); a free/alternative backend (Gemini, Groq,
     OpenRouter, Cloudflare, or OpenAI via chat completions) configured through ``providers.build_provider_from_env`` takes precedence."""
-    load_env_file()          # AI keys / model ids from a local .env (real environment variables win)
     base = AIService.from_env(tool_executor=executor)
     provider = build_provider_from_env()
-    if provider is None:
+    classifier = classifier or base.classifier                    # M6 (ONNX) replaces the old B0 fallback when AI_TEXT_ONNX_PATH is set
+    if provider is None and classifier is base.classifier:
         return base
-    return AIService(provider, base.classifier, base.fusion.weights, executor, embedding_weights=base.fusion.embedding_weights)
+    return AIService(provider or base.provider, classifier, base.fusion.weights, executor, embedding_weights=base.fusion.embedding_weights)
 
 
 def build_default_gateway() -> AIGateway:
     """Demo wiring: synthetic demo city + in-memory stores. AI provider/classifier/weights come from the environment (``AIService.from_env``);
     with none configured every endpoint still answers, in the documented degraded mode."""
+    load_env_file()          # AI keys / model ids / model paths from a local .env (real environment variables win) — before anything reads them
     repo = DemoCityRepository()
     executor = DemoCityToolExecutor(repo)
-    ai = build_ai_service(executor)
+    classifier, embedder = build_text_models()
+    ai = build_ai_service(executor, classifier)
     return AIGateway(ai=ai, repo=repo, evidence=MemoryEvidenceResolver(), analyses=MemoryAnalysisStore(), audit=EventStreamAuditSink(),
-                     clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor), vision=build_vision())
+                     clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor), vision=build_vision(), embedder=embedder)
 
 
 def configure_gateway(gateway: AIGateway | None) -> None:

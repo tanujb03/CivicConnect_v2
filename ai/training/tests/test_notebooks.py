@@ -14,7 +14,7 @@ SECRET_PATTERNS = [re.compile(p) for p in (r"sk-[A-Za-z0-9]{10,}", r"api[_-]?key
 def test_all_notebooks_exist():
     assert [p.name for p in NOTEBOOKS] == ["01_b0_text_classifier_kaggle.ipynb", "02_b1_encoder_experiment_kaggle.ipynb", "03_fusion_calibration_kaggle.ipynb",
                                            "04_real_data_prepare_evaluate_kaggle.ipynb", "05_kaggle_real_data_profile_evaluate.ipynb",
-                                           "06_road_damage_detector_kaggle.ipynb"]
+                                           "06_road_damage_detector_kaggle.ipynb", "07_text_models_m6_m7_kaggle.ipynb"]
 
 
 @pytest.mark.parametrize("path", NOTEBOOKS, ids=lambda p: p.name)
@@ -73,7 +73,7 @@ def test_notebooks_keep_logic_out_of_notebooks():
     for path in NOTEBOOKS:
         nb = nbformat.read(path, as_version=4)
         code_lines = sum(len(c.source.splitlines()) for c in nb.cells if c.cell_type == "code")
-        limit = 200 if path.name.startswith(("05_", "06_")) else 160            # 05/06 carry the explicit repo bootstrap + dependency check (it cannot import the repo before it exists)
+        limit = 200 if path.name.startswith(("05_", "06_", "07_")) else 160            # 05/06 carry the explicit repo bootstrap + dependency check (it cannot import the repo before it exists)
         assert code_lines < limit, f"{path.name} has {code_lines} code lines; move logic into ai/training"
         assert "LogisticRegression" not in "".join(c.source for c in nb.cells), "model code belongs in ai/training"
 
