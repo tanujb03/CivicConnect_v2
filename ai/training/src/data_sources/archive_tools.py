@@ -42,11 +42,32 @@ def sniff_kind(path: Path) -> str | None:
         return "tar"
     if head and all(b in b"\t\n\r" or 32 <= b < 127 or b >= 128 for b in head[:200]):
         try:
-            head.decode("utf-8")
-            return "text"
+            text = head.decode("utf-8", errors="strict")
         except UnicodeDecodeError:
             return None
+        low = text.lstrip().lower()
+        if low.startswith(("<!doctype html", "<html")) or "<html" in low[:300]:
+            return "html"
+        if low.startswith(("{", "[")):
+            return "json"
+        if low.startswith("<?xml"):
+            return "xml"
+        return "text"
     return None
+
+
+def text_preview(path: Path, limit: int = 160) -> dict:
+    """First characters of a small text-like file (whitespace collapsed) and, for HTML, its <title>. Used to say what an opaque file IS."""
+    import re
+    try:
+        raw = Path(path).read_bytes()[:200_000].decode("utf-8", errors="ignore")
+    except OSError:
+        return {}
+    out = {"preview": " ".join(raw.split())[:limit]}
+    m = re.search(r"<title[^>]*>(.*?)</title>", raw, re.I | re.S)
+    if m:
+        out["html_title"] = " ".join(m.group(1).split())[:160]
+    return out
 
 
 class ArchiveReader:

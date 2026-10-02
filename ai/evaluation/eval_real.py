@@ -195,7 +195,18 @@ def evaluate_recurrence_hotspot(rows: Sequence[dict], policy: TaskPolicy | None 
     wards = Counter(w for items in recurrent.values() for _, w in items)
     top = sorted(recurrent.items(), key=lambda kv: -len(kv[1]))[:10]
     ins, _ = policy.allowed_roles(task)
-    return {"task": task, "n": len(recs), "n_with_location_time_category": n_loc, "inputs_used": ins, "roles_never_read": sorted(policy.effective_forbidden(task)),
+    if n_loc == 0:       # no coordinates: site-level recurrence is NOT computable — say so instead of reporting an empty "success"
+        wc: Counter = Counter()
+        for r in recs:
+            v = policy.view(r, task).inputs
+            if v["ward"] is not None and v["category"]:
+                wc[(str(v["ward"]), v["category"])] += 1
+        return {"task": task, "n": len(recs), "computable": False, "n_with_location_time_category": 0, "inputs_used": ins, "roles_never_read": sorted(policy.effective_forbidden(task)),
+                "reason": "no complaint has usable coordinates (latitude/longitude), so site-level recurrence/hotspots cannot be computed; only ward-level volumes are available",
+                "ward_category_counts_top10": [{"ward": k[0], "category": k[1], "complaints": c} for k, c in wc.most_common(10)],
+                "leakage": audit_task(recs, policy, task),
+                "interpretation": "NOT a recurrence/hotspot result: the dataset has no coordinates. Ward x category volumes are descriptive counts of a SYNTHETIC third-party dataset."}
+    return {"task": task, "computable": True, "n": len(recs), "n_with_location_time_category": n_loc, "inputs_used": ins, "roles_never_read": sorted(policy.effective_forbidden(task)),
             "definition": f"same mapped category within a ~{int(cell_deg * 111000)} m cell, >= {min_cases} complaints inside {int(window_days)} days (design §38 style)",
             "n_cells": len(cells), "n_recurrent_cells": len(recurrent), "complaints_in_recurrent_cells": sum(len(v) for v in recurrent.values()),
             "share_of_located_complaints_in_recurrent_cells": round(sum(len(v) for v in recurrent.values()) / max(n_loc, 1), 4),

@@ -579,3 +579,23 @@ def test_summary_records_the_executed_repo_ref_and_commit(tmp_path):
     kr.run_all(cfg, ("bmc_mumbai",))
     assert json.loads((cfg.out / "SUMMARY.json").read_text(encoding="utf-8"))["repo"] == meta
     assert f"@ `claude/epic-fermat-3qlw5c` · commit `{'a' * 40}`" in (cfg.out / "SUMMARY.md").read_text(encoding="utf-8")
+
+
+def test_real_style_bmc_headers_enable_routing_and_flag_the_uncomputable_recurrence(tmp_path):
+    import csv
+    root = make_fake_kaggle_input(tmp_path / "in", rdd2022=False)
+    f = next(root.rglob("bmc_train.csv"))
+    rows = list(csv.DictReader(f.open(encoding="utf-8")))
+    with f.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["department_assigned" if h == "department" else h for h in rows[0] if h not in ("latitude", "longitude")])
+        w.writeheader()
+        for r in rows:
+            r = {("department_assigned" if k == "department" else k): v for k, v in r.items() if k not in ("latitude", "longitude")}
+            w.writerow(r)
+    res = kr.run_dataset(cfg_for(tmp_path, root), "bmc_mumbai")
+    assert res["status"] == "OK"
+    assert stage(res, "profile_and_role_validation")["detail"]["resolved_roles"]["department"] == "department_assigned"
+    ev = stage(res, "synthetic_evaluation")["detail"]
+    assert ev["routing_agreement"]["ran"] is True                                                         # it was skipped before the alias existed
+    assert ev["recurrence_hotspot"]["ran"] is True and ev["recurrence_hotspot"]["meaningful"] is False and "coordinates" in ev["recurrence_hotspot"]["not_computable_because"]
+    assert any("recurrence_hotspot is NOT computable" in n for n in res["next_steps"])

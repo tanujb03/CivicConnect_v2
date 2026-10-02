@@ -221,7 +221,8 @@
         "dept",
         "assigned_department",
         "responsible_department",
-        "owner_department"
+        "owner_department",
+        "department_assigned"
       ],
       "field": "source_agency",
       "store": true,

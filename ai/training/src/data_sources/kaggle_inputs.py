@@ -60,24 +60,25 @@ SPECS: dict[str, DatasetSpec] = {s.id: s for s in (
         "mumbai_nashik_road_surface", "Mumbai/Nashik road-surface dataset v2 (Mendeley tj2m7zz4rg)", "images",
         ("mumbainashik", "nashikmumbai", "roadsurface", "tj2m7zz4rg", "roadsurfaceimages", "nashik"),
         ("https://data.mendeley.com/datasets/tj2m7zz4rg/2",),
-        "Download the Mendeley files (version 2) on a machine that can, upload them as a PRIVATE Kaggle Dataset (keep the attribution/licence text), then Add Input → Your Datasets. "
-        "(The authors do not host it on Kaggle; this repository never downloads or copies it.)",
+        "The authors do not host it on Kaggle, and a Mendeley PAGE URL is not a data file (a 'remote file' import of it stores only the HTML page). Create a PRIVATE Kaggle Dataset from the actual data (version 2): either a "
+        "direct file/zip URL (Mendeley's public zip endpoint https://data.mendeley.com/public-api/zip/tj2m7zz4rg/download/2 — unverified from here) or the zip you download from the Mendeley page and upload; keep the attribution/licence text.",
         "/kaggle/input/<your-dataset>/… images, videos and any annotation files. The layout is NOT assumed: the profile reports what exists."),
     DatasetSpec(
         "rdd2022", "RDD2022 — Kaggle copy aliabdelmenam/rdd-2022", "images", ("rdd2022",),
         ("https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022",),
-        "Notebook → Add Input → Datasets → 'aliabdelmenam/rdd-2022' (a THIRD-PARTY re-upload of the upstream RDD2022 project; its provenance and licence must be re-checked).",
+        "Notebook → Add Input → search 'aliabdelmenam/rdd-2022' and add THAT dataset itself (a THIRD-PARTY re-upload of the upstream RDD2022 project; its provenance and licence must be re-checked). Do NOT create your own dataset from the page URL: that stores only the HTML landing page.",
         "/kaggle/input/rdd-2022/… (or /kaggle/input/datasets/aliabdelmenam/rdd-2022/…). Its layout, annotation format, class list, countries and splits are NOT assumed: "
         "the profile reports what exists and you then set IMAGE['rdd2022'] (e.g. a countries filter for the India subset)."),
     DatasetSpec(
         "rdd2020", "RDD2020 (Mendeley 5ty2wb6gvg v1) — India subset where applicable", "images", ("rdd2020",),
         ("https://data.mendeley.com/datasets/5ty2wb6gvg/1",),
-        "Download the Mendeley files on a machine that can, upload them (or just the India subset) as a private Kaggle Dataset whose name contains 'rdd2020', then Add Input.",
+        "A Mendeley PAGE URL is not a data file (a 'remote file' import stores only the HTML page). Create a private Kaggle Dataset whose name contains 'rdd2020' from the actual data: a direct zip URL "
+        "(https://data.mendeley.com/public-api/zip/5ty2wb6gvg/download/1 — unverified from here) or the downloaded zip; the India subset is enough.",
         "/kaggle/input/<name containing rdd2020>/… The layout is NOT assumed: the profile reports what exists; use a countries filter if several countries are present."),
     DatasetSpec(
         "bharatpothole", "BharatPotHole (iWatchRoad)", "images", ("bharatpothole", "iwatchroad"),
         ("https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole",),
-        "Notebook → Add Input → Datasets → 'surbhisaswatimohanty/bharatpothole'.",
+        "Notebook → Add Input → search 'surbhisaswatimohanty/bharatpothole' and add THAT dataset itself. Do NOT create your own dataset from the page URL: that stores only the HTML landing page.",
         "/kaggle/input/bharatpothole/… frames + annotations. Format, class-names file and grouping are NOT assumed: the profile reports what exists."),
 )}
 
@@ -127,7 +128,7 @@ MAX_SNIFFS = 400
 def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
     """Bounded census of one mount: counts by extension, files whose TYPE was sniffed from their first bytes (extension-less or unknown files are
     often archives), archive files, top-level entries and a sample of files with sizes. Reads names and <= 512 bytes of unknown files only."""
-    from .archive_tools import ARCHIVE_KINDS, sniff_kind
+    from .archive_tools import ARCHIVE_KINDS, sniff_kind, text_preview
     path = Path(path)
     ext: dict[str, int] = {}
     n = 0
@@ -167,7 +168,10 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
         elif e in (".zip", ".tar", ".tgz", ".7z", ".rar", ".gz") and len(archive_files) < 50:
             archive_files.append({"relpath": str(p.relative_to(path)), "kind": sniff_kind(p), "bytes": size})
         if len(sample) < 15:
-            sample.append({"relpath": str(p.relative_to(path)), "bytes": size, "extension": e or "(none)", "content_type": kind})
+            item = {"relpath": str(p.relative_to(path)), "bytes": size, "extension": e or "(none)", "content_type": kind}
+            if kind in ("text", "html", "json", "xml") and 0 <= size <= 5_000_000 and sum("preview" in x for x in sample) < 3:
+                item.update(text_preview(p))
+            sample.append(item)
     top = []
     for c in sorted(path.iterdir())[:30]:
         top.append({"name": c.name, "type": "symlink" if c.is_symlink() else "dir" if c.is_dir() else "file",
@@ -180,7 +184,8 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
 def census_text(st: dict) -> str:
     """One-paragraph human description of what a mount actually contains (used in every 'not usable' message)."""
     tops = ", ".join(f"{e['name']} ({e['type']}{', ' + format(e['bytes'] / 1e6, '.1f') + ' MB' if e['bytes'] else ''})" for e in st["top_level_entries"][:8]) or "nothing"
-    return (f"it contains {st['files']} file(s); top-level entries: {tops}; extensions {st['extensions']}; "
+    previews = [f"{x['relpath']}: {x.get('html_title') or x['preview'][:100]!r}" for x in st["sample_files"] if x.get("preview")][:3]
+    return (f"it contains {st['files']} file(s); top-level entries: {tops}; extensions {st['extensions']}; previews {previews or 'n/a'}; "
             f"content types of unrecognised files {st['content_types_of_unknown_files'] or 'n/a'}; archives {[(a['relpath'], a['kind']) for a in st['archive_files'][:5]] or 'none'}")
 
 
@@ -207,7 +212,12 @@ def _structure_problem(spec: DatasetSpec, st: dict) -> str | None:
         if any(a["kind"] in ("zip", "tar", "gzip", "bzip2", "xz") for a in st["archive_files"]):
             return None                                         # usable: profiled from the archive listing; extraction is an explicit opt-in
         why = "no image files found"
-        if any(a["kind"] in ("7z", "rar") for a in st["archive_files"]):
+        pages = [x for x in st["sample_files"] if x.get("content_type") == "html"]
+        if pages:
+            titles = [x.get("html_title") or x["preview"][:60] for x in pages[:2]]
+            why += (f" — the mount contains only a saved WEB PAGE ({', '.join(repr(t) for t in titles)}), i.e. the dataset's landing page, not its data. "
+                    "This happens when a Kaggle dataset is created from a page URL ('remote file'). Re-attach the original Kaggle dataset, or create the dataset from the actual data file(s)")
+        elif any(a["kind"] in ("7z", "rar") for a in st["archive_files"]):
             why += " — the archive is 7z/rar, which is not supported (re-upload it as zip or tar)"
         elif st["extensions"].get(".mp4") or st["extensions"].get(".avi"):
             why += " (videos only? frames must be extracted first)"

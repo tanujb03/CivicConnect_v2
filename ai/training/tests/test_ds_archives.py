@@ -267,3 +267,49 @@ def test_a_mount_with_images_never_triggers_archive_logic(tmp_path):
     zip_tree(make_rdd_copy(tmp_path / "other", "images_only", n=3), root / "rdd-2022" / "backup.zip")
     res = kr.run_dataset(cfg_for(tmp_path, root, image=YOLO_CFG), "rdd2022")
     assert res["status"] == "OK" and not any(s["stage"] in ("archive_listing", "extraction") for s in res["stages"])
+
+
+# ================================================================== what the real Kaggle run showed: mounts holding only a saved web page
+LANDING = ("<!DOCTYPE html><html><head><title>Road surface images with seasons - Mendeley Data</title></head>"
+           "<body>" + "<p>dataset description</p>" * 40 + "</body></html>")
+
+
+@pytest.mark.parametrize("ds,mount,filename", [
+    ("mumbai_nashik_road_surface", "civicconnect-mumbai-nashik-road-surface-v2", "2"),            # URL .../datasets/tj2m7zz4rg/2
+    ("rdd2020", "rdd2020-mendeleydata", "1"),                                                      # URL .../datasets/5ty2wb6gvg/1
+    ("rdd2022", "rdd2022", "rdd-2022"),                                                            # URL .../datasets/aliabdelmenam/rdd-2022
+    ("bharatpothole", "bharatpothole", "bharatpothole"),                                           # URL .../datasets/surbhisaswatimohanty/bharatpothole
+])
+def test_a_dataset_made_from_a_page_url_is_diagnosed_as_a_saved_web_page_with_the_fix(tmp_path, ds, mount, filename):
+    root = tmp_path / "in"
+    d = root / "datasets" / "tanujbhide" / mount
+    d.mkdir(parents=True)
+    (d / filename).write_text(LANDING, encoding="utf-8")
+    res = kr.run_dataset(cfg_for(tmp_path, root, accept_terms=[ds]), ds)
+    assert res["status"] == "BLOCKED"
+    msg = res["next_steps"][0]
+    assert "saved WEB PAGE" in msg and "Road surface images with seasons - Mendeley Data" in msg and "landing page, not its data" in msg
+    assert "remote file" in msg and "Re-attach the original Kaggle dataset" in msg
+    census = stage(res, "locate")["detail"]["census"]
+    assert census["content_types_of_unknown_files"] == {"html": 1} and census["sample_files"][0]["html_title"].startswith("Road surface")
+    assert not list((tmp_path / "work").rglob("records.jsonl"))
+
+
+def test_sniffing_distinguishes_html_json_xml_and_plain_text(tmp_path):
+    files = {"a": "<!doctype html><html></html>", "b": "<html lang='en'>", "c": '{"x": 1}', "d": "<?xml version='1.0'?><a/>", "e": "just words\n"}
+    got = {}
+    for name, body in files.items():
+        (tmp_path / name).write_text(body, encoding="utf-8")
+        got[name] = at.sniff_kind(tmp_path / name)
+    assert got == {"a": "html", "b": "html", "c": "json", "d": "xml", "e": "text"}
+    prev = at.text_preview(tmp_path / "a")
+    assert prev["preview"].startswith("<!doctype html>")
+
+
+def test_the_attach_instructions_warn_against_page_urls_and_name_the_real_sources():
+    from ai.training.src.data_sources.kaggle_inputs import SPECS
+    for sid in ("rdd2022", "bharatpothole"):
+        assert "Do NOT create your own dataset from the page URL" in SPECS[sid].attach
+    for sid in ("mumbai_nashik_road_surface", "rdd2020"):
+        a = SPECS[sid].attach
+        assert "HTML page" in a and "public-api/zip" in a and "unverified from here" in a

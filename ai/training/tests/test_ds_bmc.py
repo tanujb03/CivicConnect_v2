@@ -529,3 +529,42 @@ def test_cli_rejects_unknown_role_map_roles(tmp_path, capsys):
     rm.write_text(json.dumps({"ward": "not_a_role"}), encoding="utf-8")
     rc = cli.main(["profile", "bmc_mumbai", "--input", str(BMC_CSV), "--out", str(tmp_path / "p.json"), "--role-map", str(rm)])
     assert rc == 2 and "unknown roles" in capsys.readouterr().err
+
+
+# ================================================================== real BMC column names (from the actual data dictionary)
+REAL_HEADERS = ["complaint_id", "complaint_date", "year", "month", "is_monsoon_season", "complaint_time_of_day", "ward_code", "ward_area", "zone", "ward_type",
+                "population_density", "ward_slum_percentage", "complaint_category", "department_assigned", "complaint_channel", "severity", "has_photo_evidence",
+                "has_gps_location", "media_attention", "politically_sensitive", "complainant_type", "property_type", "repeat_complainant", "prior_complaints_count",
+                "resolution_days", "num_reassignments", "complaint_status", "contractor_category", "work_quality_rating", "site_inspected", "defect_liability_claim",
+                "estimated_cost_inr", "infrastructure_age_years", "months_since_last_maintained", "citizen_satisfied"]
+
+
+def test_the_real_data_dictionary_headers_resolve_to_safe_roles(policy):
+    res = policy.classify_headers(REAL_HEADERS)
+    assert res.columns["department"] == "department_assigned" and policy.roles["department"].phase == "post_triage"
+    assert res.columns["status"] == "complaint_status" and res.columns["resolution_duration"] == "resolution_days"
+    assert res.columns["citizen_satisfied"] == "citizen_satisfied" and res.sensitive_ignored == ["complainant_type"] and res.pii_ignored == []
+    for denied in ("repeat_complainant", "prior_complaints_count", "media_attention", "politically_sensitive", "estimated_cost_inr", "work_quality_rating", "ward_area"):
+        assert denied in res.unclassified, denied                                                    # not claimed by any role: unavailable to every task
+    for t, spec in policy.tasks.items():
+        if spec.purpose != "demo":
+            assert not {"status", "resolution_duration", "resolution_hours", "citizen_satisfied", "reassigned"} & set(spec.inputs), t
+        if spec.purpose != "demo" and t != "resolution_time_prior":            # only the resolution-time prior may take the post-triage department as an input
+            assert "department" not in spec.inputs, t
+    assert "department" in policy.tasks["routing_agreement"].targets and "department" not in policy.tasks["routing_agreement"].inputs
+
+
+def test_a_dataset_without_coordinates_reports_recurrence_as_not_computable_not_as_an_empty_success(tmp_path):
+    import csv
+    f = tmp_path / "x.csv"
+    rows = list(csv.DictReader(BMC_CSV.open(encoding="utf-8")))
+    with f.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=[h for h in rows[0] if h not in ("latitude", "longitude")])
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: v for k, v in r.items() if k not in ("latitude", "longitude")})
+    out = tmp_path / "prep"
+    prep.prepare_bmc(load_card("bmc_mumbai"), f, out, retrieved_at="2026-10-02")
+    res = eval_real.evaluate_recurrence_hotspot(read_jsonl(out / "records.jsonl"))
+    assert res["computable"] is False and "no complaint has usable coordinates" in res["reason"] and res["ward_category_counts_top10"]
+    assert "n_recurrent_cells" not in res and "NOT a recurrence/hotspot result" in res["interpretation"]

@@ -248,14 +248,19 @@ def run_bmc(cfg: RunConfig) -> dict:
         if rc == 0:
             rep = json.loads((d / "results" / f"bmc_mumbai_{t}.json").read_text(encoding="utf-8"))
             leak = (rep["results"].get("leakage") or {}).get("blocking") if isinstance(rep["results"], dict) else None
+            computable = rep["results"].get("computable", True) if isinstance(rep["results"], dict) else True
             out.update({"track": rep["track"], "banner": rep["claims"]["banner"], "real_world_claim_allowed": rep["claims"]["real_world_accuracy_claim_allowed"],
-                        "leakage_blocking": leak or [], "meaningful": not leak,
+                        "leakage_blocking": leak or [], "meaningful": not leak and computable,
+                        "not_computable_because": None if computable else rep["results"].get("reason"),
                         "report": f"bmc_mumbai/results/bmc_mumbai_{t}.json"})
             res["artifacts"].append(out["report"])
         else:
             out["error"] = buf.getvalue().strip()[-400:]
         results[t] = out
     _stage(res, "synthetic_evaluation", "ok", results)
+    for t, v in results.items():
+        if v.get("not_computable_because"):
+            res["next_steps"].append(f"{t} is NOT computable on this file: {v['not_computable_because']}.")
     vac = [t for t, v in results.items() if v.get("leakage_blocking")]
     if vac:
         res["next_steps"].append(f"Tasks whose targets are (near-)deterministic given their allowed inputs — evaluation is vacuous, do not quote it: {vac}.")
