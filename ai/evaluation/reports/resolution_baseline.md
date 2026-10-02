@@ -4,7 +4,7 @@
 
 > Read the provenance and claims blocks first. Synthetic results are a regression/ablation signal, NOT real-world accuracy; real-data results are scoped to the named dataset, holdout and (draft) taxonomy mapping.
 
-- Track: `synthetic`  |  Task: `resolution`  |  System: `rules`  |  Created: 2026-10-02T05:14:14+00:00
+- Track: `synthetic`  |  Task: `resolution`  |  System: `rules`  |  Created: 2026-10-02T18:36:07+00:00
 - Artifact: `None`
 - Real-world accuracy claim allowed: **False** (all rows are synthetic)
 
@@ -22,47 +22,47 @@ Files: {"resolution_v1": "resolution-scenarios/1"}
 {
   "task": "resolution",
   "n": 240,
-  "n_truly_unresolved": 63,
+  "n_truly_unresolved": 77,
   "mode": "deterministic baseline (no provider)",
-  "unresolved_flag_recall": 0.4921,
+  "unresolved_flag_recall": 0.6364,
   "unresolved_flag_false_positive_rate": 0.0,
   "verification_request_recall_of_unresolved": 1.0,
-  "verification_request_rate_when_truly_fixed": 0.4407,
+  "verification_request_rate_when_truly_fixed": 0.5215,
   "verification_request_rate_when_truly_fixed_and_citizen_confirmed": 0.0,
   "insufficient_evidence_correct_when_no_resolution_photo": 1.0,
   "autonomous_closure_allowed_any": false,
   "monotonic_violations_with_optimistic_ai": 0,
   "unresolved_by_detectable_signal": {
     "citizen_signal": {
-      "n": 31,
+      "n": 49,
       "flagged_unresolved": 1.0,
       "verification_requested": 1.0
     },
     "notes_text": {
-      "n": 17,
+      "n": 16,
       "flagged_unresolved": 0.0,
       "verification_requested": 1.0
     },
     "images_only": {
-      "n": 15,
+      "n": 12,
       "flagged_unresolved": 0.0,
       "verification_requested": 1.0
     }
   },
   "outside_deterministic_baseline": {
-    "share_of_unresolved_only_in_field_notes": 0.2698,
-    "share_of_unresolved_only_visible_in_photos": 0.2381,
+    "share_of_unresolved_only_in_field_notes": 0.2078,
+    "share_of_unresolved_only_visible_in_photos": 0.1558,
     "meaning": "The baseline never reads note text or pixels. These cases are caught only by the citizen-verification step (every unconfirmed case gets a request) or by the multimodal provider path, which is NOT evaluated here (no before/after images exist)."
   },
   "archetypes": {
-    "fixed_confirmed": 88,
-    "fixed_pending": 51,
-    "fixed_sparse": 18,
-    "no_after_evidence": 20,
-    "partial_reported": 12,
-    "unfixed_reported": 19,
-    "unfixed_silent_no_signal": 15,
-    "unfixed_silent_notes": 17
+    "fixed_confirmed": 69,
+    "fixed_pending": 61,
+    "fixed_sparse": 16,
+    "no_after_evidence": 17,
+    "partial_reported": 16,
+    "unfixed_reported": 33,
+    "unfixed_silent_no_signal": 12,
+    "unfixed_silent_notes": 16
   },
   "not_evaluated": [
     "multimodal provider comparison (needs real before/after images + a configured model)",

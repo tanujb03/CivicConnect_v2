@@ -38,7 +38,7 @@ def test_licence_status_is_honest_about_what_was_verified():
         c = load_card(sid)
         assert c.license.status == "UNVERIFIED" and not any(e.reliability == "primary" for e in c.license.evidence)
     rdd = load_card("rdd2022")
-    assert rdd.license.status == "UNVERIFIED" and rdd.license.conflicts and rdd.license.share_alike is True   # strict reading until resolved
+    assert rdd.license.status == "VERIFIED_PRIMARY" and rdd.license.conflicts and rdd.license.share_alike is True   # accepted 2026-10-02 as the STRICTER reading of two conflicting primary statements
     assert "CC BY-SA" in rdd.license.name and "CC BY 4.0" in rdd.license.name
     assert load_card("synthetic_civic").license_verified
 

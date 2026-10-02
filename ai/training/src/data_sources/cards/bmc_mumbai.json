@@ -15,10 +15,16 @@
     "data_dictionary": "bmc_data_dictionary.csv ships with the data: read it, then assign every column to a role explicitly (see mappings/bmc_mumbai_columns.v1.json and `cli profile bmc_mumbai`)."
   },
   "license": {
-    "name": "Kaggle competition rules / data-use terms for this competition — NOT READ",
+    "name": "CC BY 4.0 — stated additionally in the Competition Rules (commercial or non-commercial use subject to the Rules)",
     "url": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
-    "status": "UNVERIFIED",
+    "status": "VERIFIED_PRIMARY",
     "evidence": [
+      {
+        "source": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
+        "reliability": "primary",
+        "note": "Quote: \"The Competition Data is additionally released under the Creative Commons Attribution 4.0 International License (CC BY 4.0).\" The Rules also allow use for \"commercial or non-commercial\" purposes, subject to the Rules, and state that the dataset is synthetically generated and does not represent real citizens/actual complaint records. Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "web search summary of the Kaggle data page",
         "reliability": "secondary",
@@ -39,18 +45,20 @@
       }
     ],
     "conflicts": [],
-    "attribution": "Cite the Kaggle competition page and its host exactly as the Rules require (not read).",
-    "share_alike": null,
-    "commercial_use": "unverified (competition rules not read)",
+    "attribution": "Attribute under CC BY 4.0 and cite the Kaggle competition page and host as the Rules require.",
+    "share_alike": false,
+    "commercial_use": "permitted per the Rules ('commercial or non-commercial' purposes), subject to the Rules",
     "notes": [
-      "Read the competition Rules ('Data Access and Use') before ANY use outside the competition; if the rules restrict use to the competition, this source may not be usable for CivicConnect at all."
-    ]
+      "The Rules (not the data page) are the authority; re-read them if the competition page changes.",
+      "The licence changes nothing about the data being synthetic: it is never real-world evidence."
+    ],
+    "verified_on": "2026-10-02"
   },
   "origin_status": "SYNTHETIC_PER_COMPETITION",
   "origin_notes": [
     "The competition RULES are reported (by the repository owner) to state explicitly that this dataset is synthetically generated, not a collection of actual BMC complaint records. It must never be presented as real-world BMC validation, official BMC data, or evidence of real citizen behaviour.",
-    "What is NOT yet recorded from the primary pages: the exact wording of the origin statement, the generation method, the host/organisation and the exact licence/rules text. Record them from the competition Overview / Data / Rules pages (see the manual checklist).",
-    "Because the data is synthetic its free-text columns (if any) are not citizen-written, so they can never be confirmed as citizen narratives, and nothing here supports a real Hindi/Marathi/Hinglish claim."
+    "Because the data is synthetic its free-text columns (if any) are not citizen-written, so they can never be confirmed as citizen narratives, and nothing here supports a real Hindi/Marathi/Hinglish claim.",
+    "Per the Competition Rules (2026-10-02): the dataset is synthetically generated and does not represent real citizens or actual complaint records. The generation method is not documented anywhere we hold."
   ],
   "subset_used": "Train file only (the test file's target is withheld). For development a bounded deterministic sample (prepare --max-rows N --sample-seed S); time-based holdout (most recent months).",
   "intended_use": [
@@ -60,7 +68,7 @@
   ],
   "restrictions": [
     "SYNTHETIC: never report results as real-world accuracy, real-world validation or BMC performance; keep it on the synthetic/descriptive-of-synthetic tracks, separate from real Indian datasets and from this project's own synthetic data.",
-    "Competition rules not read; assume NO redistribution and possibly competition-only use until verified.",
+    "Licence is CC BY 4.0 per the Rules; this repository still never commits or redistributes raw or prepared rows.",
     "Complainant-profile columns are sensitive attributes: never features or targets for any task (system design §13). The adapter never stores them.",
     "Contractor/officer/address/contact columns are never read (PII roles).",
     "Post-resolution fields (status, closing time, resolution remarks, reassignment, escalation, satisfaction/rating) must never be inputs for intake or triage — see the per-task column policy.",

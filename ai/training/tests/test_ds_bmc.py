@@ -237,10 +237,10 @@ def test_department_on_the_canonical_record_is_never_filled_from_the_taxonomy(re
     assert {r.source_agency for r in records} >= {"Roads Department", "Hydraulic Engineer"}      # the SOURCE value is kept, as source_agency only
 
 
-def test_provenance_marks_the_data_as_third_party_synthetic_with_unverified_licence_and_unknown_language(records):
+def test_provenance_marks_the_data_as_third_party_synthetic_with_the_cc_by_licence_and_unknown_language(records):
     for r in records:
         p = r.provenance
-        assert p.kind == "synthetic_third_party" and p.license_verified is False and p.origin_verified is True
+        assert p.kind == "synthetic_third_party" and p.license_verified is True and p.origin_verified is True
         assert r.language is None
     assert all(r.record_id.startswith("bmc_mumbai:FMT-B") for r in records)
 
@@ -395,7 +395,7 @@ def test_recurrence_audit_declares_split_straddle(policy):
 # ------------------------------------------------------------------ prepared manifest honesty
 def test_manifest_is_honest_about_synthetic_origin_licence_identity_and_text(prepared):
     out, m = prepared
-    assert m["license_verified"] is False and m["origin_status"] == "SYNTHETIC_PER_COMPETITION" and m["source_kind"] == "synthetic_third_party" and m["origin_notes"]
+    assert m["license_verified"] is True and m["origin_status"] == "SYNTHETIC_PER_COMPETITION" and m["source_kind"] == "synthetic_third_party" and m["origin_notes"]
     assert m["citizen_narrative_text_available"] is False and m["text_origin_counts"] == {"none": 120}
     assert m["views_clean"]["violations"] == [] and m["split_counts"] == {"train": 56, "holdout": 64}
     assert "NOT permitted" in m["redistribution"] and m["column_policy"]["status"].startswith("DRAFT")
@@ -510,7 +510,8 @@ def test_cli_profile_and_prepare_and_leakage_audit_and_matrix(tmp_path, capsys):
     assert "UNCLASSIFIED_SENTINEL_COL" in capsys.readouterr().out
     args = ["prepare", "bmc_mumbai", "--input", str(BMC_CSV), "--out", str(tmp_path / "prep")]
     assert cli.main(args) == 2 and "--accept-terms bmc_mumbai" in capsys.readouterr().err        # terms gate
-    assert cli.main([*args, "--accept-terms", "bmc_mumbai"]) == 2 and "UNVERIFIED" in capsys.readouterr().err
+    assert cli.main([*args, "--accept-terms", "bmc_mumbai"]) == 0      # licence verified (CC BY 4.0 per the Rules): the terms acceptance is enough
+    capsys.readouterr()
     assert cli.main([*args, *ACCEPT, "--holdout-after", "2024-03-01", "--confirm-citizen-text"]) == 2 and "synthetic" in capsys.readouterr().err
     assert cli.main([*args, *ACCEPT, "--holdout-after", "2024-03-01"]) == 0
     m = json.loads((tmp_path / "prep" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))

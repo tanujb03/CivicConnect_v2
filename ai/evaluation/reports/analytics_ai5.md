@@ -4,7 +4,7 @@
 
 > Read the provenance and claims blocks first. Synthetic results are a regression/ablation signal, NOT real-world accuracy; real-data results are scoped to the named dataset, holdout and (draft) taxonomy mapping.
 
-- Track: `synthetic`  |  Task: `analytics_ai5`  |  System: `rules+scripted`  |  Created: 2026-10-02T05:19:10+00:00
+- Track: `synthetic`  |  Task: `analytics_ai5`  |  System: `rules+scripted`  |  Created: 2026-10-02T18:37:39+00:00
 - Artifact: `None`
 - Real-world accuracy claim allowed: **False** (all rows are synthetic)
 
@@ -24,8 +24,11 @@ Files: {"demo_city_v1": "demo_city_v1"}
   "facts": {
     "hotspot_recall": 1.0,
     "growth_recall_of_planted_hotspot_subcategories": 1.0,
+    "growth_explained_by_planted_incidents": [
+      "exposed_live_wire"
+    ],
     "growth_unexplained_subcategories": [],
-    "recurring_sites_recall_in_facts": 0.4167,
+    "recurring_sites_recall_in_facts": 0.3333,
     "recurring_note": "Facts list only the top 5 recurring sites, so recall below 1.0 is a display cap, not a detection failure (see demo-city recovery).",
     "active_incident_recall": 1.0,
     "reproducible": true,

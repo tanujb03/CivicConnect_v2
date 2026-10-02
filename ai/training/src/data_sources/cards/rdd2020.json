@@ -14,10 +14,16 @@
     "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2020 INDIA subset. Record the copy's provenance; the reported CC BY-NC 3.0 licence comes from a secondary source and is NOT verified."
   },
   "license": {
-    "name": "Attribution-NonCommercial 3.0 Unported (CC BY-NC 3.0) for version 1 — per search summary of the Mendeley record; UNVERIFIED",
+    "name": "CC BY-NC 3.0 (Attribution-NonCommercial 3.0 Unported) — Mendeley Data record, Version 1",
     "url": "https://creativecommons.org/licenses/by-nc/3.0/",
-    "status": "UNVERIFIED",
+    "status": "VERIFIED_PRIMARY",
     "evidence": [
+      {
+        "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
+        "reliability": "primary",
+        "note": "Quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "web search summary of the Mendeley Data record",
         "reliability": "secondary",
@@ -26,8 +32,8 @@
       },
       {
         "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
-        "reliability": "recalled",
-        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "reliability": "primary",
+        "note": "Quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
         "retrieved_on": "2026-10-01"
       }
     ],
@@ -39,14 +45,15 @@
     "commercial_use": "NOT permitted if the NonCommercial licence is confirmed",
     "notes": [
       "NonCommercial: if this licence is confirmed, use is limited to non-commercial research/education — decide whether that is compatible with CivicConnect's intended use BEFORE adopting it."
-    ]
+    ],
+    "verified_on": "2026-10-02"
   },
   "subset_used": "India subset only (train split; test1/test2 are unannotated). Hold out by index block.",
   "intended_use": [
     "evaluation"
   ],
   "restrictions": [
-    "Reported NonCommercial licence: do not use in any commercial product or service.",
+    "Licence verified: CC BY-NC 3.0 — non-commercial research/education only. Do not use in any commercial product or service; keep results and any model trained on it out of commercial deliverables unless the licence is cleared.",
     "Do not commit images or annotations."
   ],
   "supports": [

@@ -271,14 +271,14 @@ def test_cli_profile_images_then_prepare_requires_explicit_format_and_terms(tmp_
     assert m["records"] == 4 and m["license_verified"] is False
 
 
-def test_cli_prepare_mumbai_nashik_keeps_licence_unverified_and_idd_is_refused(tmp_path, capsys):
+def test_cli_prepare_mumbai_nashik_records_the_verified_licence_and_idd_is_refused(tmp_path, capsys):
     root = tmp_path / "mn"
     img(root, "Paved Road/a.jpg")
     args = ["prepare", "mumbai_nashik_road_surface", "--input", str(root), "--out", str(tmp_path / "o"), "--accept-terms", "mumbai_nashik_road_surface",
             "--acknowledge-unverified-license", "--format", "folder"]
     assert cli.main(args) == 0
     man = json.loads((tmp_path / "o" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))
-    assert man["identity_status"] == "CONFIRMED_BY_USER" and man["license_verified"] is False and man["license_status"] == "UNVERIFIED"
+    assert man["identity_status"] == "CONFIRMED_BY_USER" and man["license_verified"] is True and man["license_status"] == "VERIFIED_PRIMARY"
     capsys.readouterr()
     rc = cli.main(["prepare", "idd", "--input", str(root), "--out", str(tmp_path / "i"), "--accept-terms", "idd", "--acknowledge-unverified-license"])
     assert rc == 2 and "not part of V1" in capsys.readouterr().err
@@ -301,7 +301,7 @@ def test_rdd2020_prepare_prefixes_ids_uses_its_own_card_and_keeps_test_splits_an
 def test_rdd2020_and_rdd2022_cards_do_not_share_licence_claims():
     a, b = load_card("rdd2020"), load_card("rdd2022")
     assert a.license.name != b.license.name and "NonCommercial" in a.license.name and "NonCommercial" not in b.license.name
-    assert a.license.status == "UNVERIFIED" and b.license.status == "UNVERIFIED"
+    assert a.license.status == "VERIFIED_PRIMARY" and b.license.status == "VERIFIED_PRIMARY"        # both accepted 2026-10-02, each on its own evidence
 
 
 # ------------------------------------------------------------------ vision evaluation plumbing (scripted provider; no network)
@@ -361,3 +361,15 @@ def test_cli_prepare_rdd_accepts_default_country_and_holdout_fraction(tmp_path):
     assert rc == 0
     man = json.loads((tmp_path / "o" / "PREPARE_MANIFEST.json").read_text(encoding="utf-8"))
     assert man["images_per_country"] == {"India": 30} and man["split_counts"].get("holdout", 0) > 0
+
+
+def test_profile_reports_yolo_class_id_counts_and_country_markers_in_file_names_without_naming_classes():
+    """RDD2022 re-uploads ship YOLO labels with NO class-names file: the profile must state which ids occur (facts) and never name them."""
+    from ai.training.src.data_sources.image_profile import profile_entries
+    entries = [("S/train/images/India_000001.jpg", 9), ("S/train/labels/India_000001.txt", 9), ("S/train/images/China_Drone_000008.jpg", 9), ("S/train/labels/China_Drone_000008.txt", 9)]
+    data = {"S/train/labels/India_000001.txt": b"3 0.5 0.5 0.1 0.1\n0 0.2 0.2 0.1 0.1\n", "S/train/labels/China_Drone_000008.txt": b"3 0.5 0.5 0.1 0.1\n"}
+    prof = profile_entries(entries, lambda rel, n=0: data.get(rel, b""), "S")
+    h = prof["yolo_class_id_histogram_sample"]
+    assert h["class_id_counts"] == {0: 1, 3: 2} and h["label_files_total"] == 2 and "never guessed" in h["note"]
+    assert prof["country_markers_in_filenames"] == {"india": 1, "china": 1} and prof["class_name_files"] == []
+    assert any("NO class-names file" in w for w in prof["warnings"])

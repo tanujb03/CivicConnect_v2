@@ -12,10 +12,16 @@
     "kaggle": "EXECUTION SOURCE: https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022 — a THIRD-PARTY Kaggle re-upload, attached read-only under /kaggle/input and processed in place. Its directory layout, annotation format, class list, countries and splits are NOT assumed to match the official RDD2022 distribution: Notebook 05 profiles the attached copy first and requires explicit configuration. The upstream project is recorded separately as RDD2022; the uploader's own licence statement (if any) is a separate, unverified record. Nothing is downloaded or copied by this repository."
   },
   "license": {
-    "name": "UNRESOLVED: CC BY-SA 4.0 (project README) vs CC BY 4.0 (search summaries of figshare/journal record)",
+    "name": "CC BY-SA 4.0 — applied as the stricter of two primary statements (Figshare record: CC BY 4.0; authors' GitHub README: CC BY-SA 4.0)",
     "url": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "status": "UNVERIFIED",
+    "status": "VERIFIED_PRIMARY",
     "evidence": [
+      {
+        "source": "https://figshare.com/articles/dataset/RDD2022_-_The_multi-national_Road_Damage_Dataset_released_through_CRDDC_2022/21431547",
+        "reliability": "primary",
+        "note": "Quote: \"Licence — CC BY 4.0.\" (official Figshare dataset record). Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "https://github.com/sekilab/RoadDamageDetector (README)",
         "reliability": "primary",
@@ -36,14 +42,15 @@
       }
     ],
     "conflicts": [
-      "The GitHub README says CC BY-SA 4.0 but secondary summaries of the figshare record say CC BY 4.0. Resolve at the figshare record before any use. Until then, treat as the STRICTER CC BY-SA 4.0 (share-alike): any redistributed derivative would have to carry the same licence."
+      "Figshare says CC BY 4.0 while the authors' GitHub README says CC BY-SA 4.0. The owner accepted (2026-10-02) the licence as verified; obeying the stricter CC BY-SA 4.0 satisfies both statements, so that is what is applied: any redistributed derivative would carry CC BY-SA 4.0."
     ],
     "attribution": "Cite Arya et al. (RDD2022, Geoscience Data Journal, 2024), the CRDDC'2022 challenge summary (Arya et al., 2022) and, where relevant, the review in Advanced Engineering Informatics (Arya et al., 2024), as required by the project README. Provide licence name, link and note of changes.",
     "share_alike": true,
     "commercial_use": "unverified (CC BY / BY-SA generally permit it with attribution — confirm)",
     "notes": [
       "This repository never redistributes the images or derived annotation files."
-    ]
+    ],
+    "verified_on": "2026-10-02"
   },
   "subset_used": "India subset first (README lists India ≈ 502 MB), classes D00/D10/D20/D40, train split only (test images are unannotated); optionally one other country for cross-country checks. Hold out by index block / country, never random frames.",
   "intended_use": [
@@ -51,7 +58,7 @@
     "training"
   ],
   "restrictions": [
-    "Licence unresolved (BY vs BY-SA): treat as BY-SA until verified.",
+    "Apply CC BY-SA 4.0 (the stricter of two conflicting primary statements).",
     "Required citations (see attribution).",
     "Do not commit images or annotation derivatives.",
     "Faces/plates are blurred in the source; do not attempt to unblur or re-identify."

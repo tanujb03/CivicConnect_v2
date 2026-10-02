@@ -4,15 +4,15 @@
 
 > Read the provenance and claims blocks first. Synthetic results are a regression/ablation signal, NOT real-world accuracy; real-data results are scoped to the named dataset, holdout and (draft) taxonomy mapping.
 
-- Track: `synthetic`  |  Task: `fusion`  |  System: `lexical`  |  Created: 2026-10-01T12:16:21+00:00
+- Track: `synthetic`  |  Task: `fusion`  |  System: `lexical`  |  Created: 2026-10-02T18:36:07+00:00
 - Artifact: `uncalibrated_prior`
 - Real-world accuracy claim allowed: **False** (all rows are synthetic)
 
 ## Dataset provenance
 
-| source | kind | n | licence (verified?) | label origin | text origin | mapping |
-|---|---|---|---|---|---|---|
-| synthetic_civic | synthetic | 300 | project-owned (yes) | {'synthetic_template': 300} | {'n/a': 300} | None  |
+| source | kind | n | licence (verified?) | origin verified? | label origin | text origin | mapping |
+|---|---|---|---|---|---|---|---|
+| synthetic_civic | synthetic | 300 | project-owned (yes) | yes | {'synthetic_template': 300} | {'n/a': 300} | None  |
 
 Files: {"fusion_eval_pairs.v1.jsonl": "503f4ddc08aa5e23"}
 

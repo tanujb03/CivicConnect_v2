@@ -1,7 +1,7 @@
 {
   "artifact_schema": "civic-text-classifier/1",
-  "model_name": "civic_text_b0_fixture",
-  "model_version": "fixture-1",
+  "model_name": "civic_text_b0",
+  "model_version": "0.1.0+b22811b6",
   "kind": "tfidf_char_ngram_logreg",
   "synthetic_data": true,
   "label_ids": [
@@ -43,46 +43,49 @@
     ],
     "sublinear_tf": true,
     "normalizer": "civic-norm/1",
-    "n_features": 1000
+    "n_features": 12536
   },
   "calibration": {
     "method": "temperature",
-    "temperature": 0.65,
+    "temperature": 0.55,
     "fitted_on": "synthetic validation split (unseen template families)"
   },
   "files": {
-    "weights.npz": "4bdc2dd643fbeee8876dfa3162f53c062576c48a7595f79399c40d03af289bd2",
-    "vocab.json": "3abd44e729a0ad6de158112431fabb810354866e612dc02fde778872209e62f5"
+    "weights.npz": "f3727f3459be33a24fc23f562ff21fd1d22faab9c8bd32fe940643e25e8b7e8b",
+    "vocab.json": "793c5495c98a6afbe25d45cf89b98eafed571ecfd7cc364435ed4f8bbb0b0372"
   },
-  "weights_content_sha256": "55c60ccd4230b357298d9380896a0f5b2960916be554bdcf91cb8df7c550a4bb",
+  "weights_content_sha256": "6e68f6c70ab4d32208baca2d9a3103c947bbce055f76f47db923e2a5676bc780",
   "training": {
-    "seed": 7,
-    "dataset_manifest_sha256": "in-memory-fixture",
-    "n_train": 648,
-    "n_val": 108,
+    "seed": 42,
+    "dataset_manifest_sha256": "b22811b62f878fc008304ea9b992828a1b94de31cec8932560f482785ef4fecf",
+    "n_train": 3240,
+    "n_val": 648,
     "hyperparameters": {
-      "C": 3.0,
+      "C": 10.0,
       "ngram_range": [
         2,
         4
       ],
-      "min_df": 3,
-      "max_features": 1000,
+      "min_df": 2,
+      "max_features": 30000,
       "solver": "lbfgs",
-      "seed": 7,
-      "refit_on_trainval": false
+      "seed": 42,
+      "refit_on_trainval": true
     },
-    "split": "fixture only"
+    "split": "by template family and place pool"
   },
   "metrics": {
-    "note": "fixture artifact for tests; not a quality model",
-    "val_accuracy": 0.2407,
-    "val_macro_f1": 0.2048,
-    "train_accuracy": 0.9907,
-    "val_category_accuracy": 0.4444,
+    "val_accuracy": 0.5293,
+    "val_macro_f1": 0.5155,
+    "train_accuracy": 1.0,
+    "val_category_accuracy": 0.6667,
     "c_sweep_val_macro_f1": {
-      "3.0": 0.2048
-    }
+      "1.0": 0.4903,
+      "3.0": 0.506,
+      "10.0": 0.5155,
+      "30.0": 0.5111
+    },
+    "note": "val metrics are for the train-only model used for selection/calibration; shipped model refit on train+val"
   },
   "limitations": [
     "Trained and evaluated on SYNTHETIC template-generated reports only; metrics do not estimate real-world accuracy.",
@@ -91,7 +94,7 @@
     "Calibration (temperature) was fitted on synthetic validation data; probabilities are optimistic for real text.",
     "Not suitable as the sole basis for any workflow decision; proposals always require human confirmation."
   ],
-  "created_at": "2026-10-02T18:35:31+00:00",
+  "created_at": "2026-10-02T18:35:23+00:00",
   "git_sha": "14f7686235e5fcf7c1a026a3718a267f0bfd08b5",
   "runtime": {
     "python": "3.11.15",

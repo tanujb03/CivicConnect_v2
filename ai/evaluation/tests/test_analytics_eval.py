@@ -32,7 +32,10 @@ def test_explanation_guard_rails():
 def test_growth_is_relative_to_the_city_trend_not_absolute():
     g = subcategory_growth(D["cases"], NOW)
     assert g["city_growth_ratio"] > 1.5                      # the demo city as a whole is growing...
-    assert {i["subcategory"] for i in g["items"]} == {h["subcategory"] for h in D["ground_truth"]["hotspots"]}   # ...and only the planted ones stand out
+    planted = {h["subcategory"] for h in D["ground_truth"]["hotspots"]}
+    incident = {c["subcategory"] for c in D["cases"] if c["id"] in {x for ids in D["ground_truth"]["incident_cases"].values() for x in ids}}
+    found = {i["subcategory"] for i in g["items"]}
+    assert planted <= found <= planted | incident            # ...only planted hotspots and subcategories of planted incidents stand out
     assert subcategory_growth(D["cases"], NOW, min_relative_ratio=50)["items"] == []
 
 

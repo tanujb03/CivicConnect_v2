@@ -49,14 +49,14 @@ def test_kaggle_in_place_notebook_never_downloads_copies_or_calls_a_provider_by_
     head = nb.cells[0].source
     assert "REAL PUBLIC DATA" in head and "SYNTHETIC third-party" in head and "in place" in head and "aggregate reports only" in head
     assert "RUN_PROVIDER_EVAL = False" in code
-    assert "OWNER_ACCEPTANCE" in code and "NOT licence verification" in code and "ACK_UNVERIFIED_LICENSE = True" in code        # recorded owner acceptance, not silent defaults
+    assert "OWNER_ACCEPTANCE" in code and "accepted as verified on 2026-10-02" in code and "BharatPotHole stays UNVERIFIED" in code and "ACK_UNVERIFIED_LICENSE = True" in code        # recorded owner acceptance, not silent defaults
     assert '"owner_acceptance": OWNER_ACCEPTANCE' in code and "not CC BY-NC-SA 4.0" in code and "not CC BY-NC-SA 4.0" in head
     for link in ("https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data", "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
                  "https://data.mendeley.com/datasets/tj2m7zz4rg/2", "https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022", "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
                  "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole"):
         assert link in head, link
     assert 'DATASETS = ["bmc_mumbai", "mumbai_nashik_road_surface", "rdd2022", "rdd2020", "bharatpothole"]' in code
-    assert "CIVIC_GIT_URL" in code and "CIVIC_GIT_REF" in code and "claude/epic-fermat-3qlw5c" in code and "EXECUTING REPO" in code and "**REPO_INFO" in code
+    assert "CIVIC_GIT_URL" in code and "CIVIC_GIT_REF" in code and "tanuj" in code and "EXECUTING REPO" in code and "**REPO_INFO" in code
     assert "never an implicit `main`" in nb.cells[1].source and "STALE" in code
     assert "kr.run_all(" in code and "kr.plan(" in code and "kr.bundle(" in code
     for forbidden in ("kaggle datasets download", "kaggle competitions download", "figshare", "socrata", "urlretrieve", "requests.get", "wget", "curl"):
@@ -126,3 +126,15 @@ def test_notebook_executes_end_to_end_locally(name, env, tmp_path, monkeypatch):
         names = zipfile.ZipFile(work / "civic_real_aggregates.zip").namelist()
         assert "SUMMARY.md" in names and not any(n.endswith(("records.jsonl", ".jpg", ".csv")) for n in names)
         assert "bundle (aggregates only)" in out and "FOUND    bmc_mumbai" in out and "third_party_synthetic" in out
+
+
+def test_notebooks_01_to_04_clone_the_project_repo_by_default_on_kaggle():
+    """Regression: notebook 02 stopped with 'Cannot find the repo' on a fresh Kaggle session because cloning needed an env var nobody sets."""
+    import glob
+
+    import nbformat
+    for f in sorted(glob.glob(str(Path(__file__).resolve().parents[1] / "notebooks" / "0[1234]_*.ipynb"))):
+        nb = nbformat.read(f, as_version=4)
+        src = next(c.source for c in nb.cells if c.cell_type == "code" and "CIVIC_GIT_URL" in c.source)
+        assert 'os.environ.get("CIVIC_GIT_URL", "https://github.com/tanujb03/CivicConnect_v2")' in src, f
+        assert '"--branch", os.environ.get("CIVIC_GIT_REF", "tanuj")' in src and "turn Internet ON" in src, f
