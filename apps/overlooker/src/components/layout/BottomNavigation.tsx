@@ -22,7 +22,7 @@ const BottomNavigation: React.FC = () => {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white shadow-lg">
+    <nav className="floating-nav">
       <div className="flex items-center justify-around py-2 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -33,16 +33,30 @@ const BottomNavigation: React.FC = () => {
               key={item.id}
               to={item.path}
               className={cn(
-                "flex flex-col items-center space-y-1 py-2 px-3 rounded-xl transition-all duration-300",
+                "relative flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all duration-300",
                 isActive 
-                  ? "bg-white/20 text-white scale-110" 
-                  : "text-white/80 hover:text-white hover:bg-white/10"
+                  ? "text-emerald-700" 
+                  : "text-gray-400 hover:text-gray-600"
               )}
             >
-              <Icon className={cn("w-5 h-5", isActive && "drop-shadow-sm")} />
+              {/* Active indicator */}
+              {isActive && (
+                <div
+                  className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full"
+                  style={{ background: 'linear-gradient(90deg, #16a34a, #22c55e)' }}
+                />
+              )}
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                isActive 
+                  ? "bg-emerald-50 text-emerald-600" 
+                  : "text-gray-400"
+              )}>
+                <Icon className="w-5 h-5" />
+              </div>
               <span className={cn(
-                "text-xs font-medium",
-                isActive ? "text-white" : "text-white/80"
+                "text-[10px] font-semibold transition-colors duration-300",
+                isActive ? "text-emerald-700" : "text-gray-400"
               )}>
                 {item.label}
               </span>
