@@ -97,7 +97,7 @@ const AITriagePage: React.FC = () => {
   const confColor = confPct >= 80 ? 'bg-green-500' : confPct >= 60 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-6 max-w-4xl">
+    <div className="p-6 min-h-screen space-y-6 max-w-4xl page-enter">
 
       {/* Back + header */}
       <div>
@@ -111,8 +111,8 @@ const AITriagePage: React.FC = () => {
             <Brain className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">AI Triage Panel</h2>
-            <p className="text-sm text-gray-500">Case <span className="font-mono text-green-700">{caseId}</span></p>
+            <h2 className="text-xl font-bold text-foreground">AI Triage Panel</h2>
+            <p className="text-sm text-muted-foreground">Case <span className="font-mono text-emerald-700">{caseId}</span></p>
           </div>
         </div>
       </div>
@@ -120,18 +120,18 @@ const AITriagePage: React.FC = () => {
       {/* AI Recommendation */}
       <div className="civic-card p-6 rounded-xl border border-purple-100 bg-purple-50/30 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Brain className="h-4 w-4 text-purple-600" />
             AI Recommendation
           </h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Confidence</span>
+            <span className="text-xs text-muted-foreground">Confidence</span>
             <span className={`text-xs font-bold ${confPct >= 80 ? 'text-green-700' : 'text-yellow-700'}`}>{confPct}%</span>
           </div>
         </div>
 
         {/* Confidence bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-emerald-100/50 rounded-full h-2">
           <div className={`${confColor} h-2 rounded-full transition-all`} style={{ width: `${confPct}%` }} />
         </div>
 
@@ -146,18 +146,18 @@ const AITriagePage: React.FC = () => {
             { label: 'SLA',        value: `${MOCK_ANALYSIS.recommendation.sla_hours} hours` },
           ].map(({ label, value }) => (
             <div key={label} className="flex flex-col bg-white rounded-lg p-3 border border-purple-100">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{label}</span>
-              <span className="font-semibold text-gray-800">{value}</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{label}</span>
+              <span className="font-semibold text-foreground">{value}</span>
             </div>
           ))}
         </div>
 
         {/* Reasons */}
         <div>
-          <p className="text-xs font-semibold text-gray-600 mb-2">Evidence-backed reasoning</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Evidence-backed reasoning</p>
           <ul className="space-y-1.5">
             {MOCK_ANALYSIS.reasons.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
+              <li key={i} className="flex items-start gap-2 text-xs text-foreground">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0 mt-0.5" />
                 {r}
               </li>
@@ -177,16 +177,16 @@ const AITriagePage: React.FC = () => {
           </div>
         )}
 
-        <p className="text-[10px] text-gray-400 italic flex items-center gap-1">
+        <p className="text-[10px] text-muted-foreground italic flex items-center gap-1">
           <Info className="h-3 w-3" />
           AI recommendations are advisory only. Authorized admin decision is final and audited.
         </p>
       </div>
 
       {/* Decision form */}
-      <div className="civic-card p-6 rounded-xl border border-gray-100 space-y-5">
+      <div className="civic-card p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800">Triage Decision</h3>
+          <h3 className="font-semibold text-foreground">Triage Decision</h3>
           <Button
             variant="outline"
             size="sm"
@@ -201,7 +201,7 @@ const AITriagePage: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           {/* Severity */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600">Severity</label>
+            <label className="text-xs font-medium text-muted-foreground">Severity</label>
             <Select value={severity} onValueChange={setSeverity} disabled={!editing}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -212,7 +212,7 @@ const AITriagePage: React.FC = () => {
 
           {/* Priority */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600">Priority</label>
+            <label className="text-xs font-medium text-muted-foreground">Priority</label>
             <Select value={priority} onValueChange={setPriority} disabled={!editing}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -223,7 +223,7 @@ const AITriagePage: React.FC = () => {
 
           {/* Department */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600">Department</label>
+            <label className="text-xs font-medium text-muted-foreground">Department</label>
             <Select value={department} onValueChange={setDepartment} disabled={!editing}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -234,7 +234,7 @@ const AITriagePage: React.FC = () => {
 
           {/* SLA */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600">SLA (hours)</label>
+            <label className="text-xs font-medium text-muted-foreground">SLA (hours)</label>
             <Select value={slaHours} onValueChange={setSlaHours} disabled={!editing}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -263,7 +263,7 @@ const AITriagePage: React.FC = () => {
         {/* Action buttons */}
         <div className="flex gap-3 pt-2">
           <Button
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={isEdited ? handleSaveEdit : handleAccept}
             disabled={isEdited && !reason.trim()}
           >

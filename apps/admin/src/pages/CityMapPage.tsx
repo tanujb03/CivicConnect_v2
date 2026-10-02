@@ -74,19 +74,19 @@ const CityMapPage: React.FC = () => {
   return (
     <div className="h-[calc(100vh-72px)] flex flex-col">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center gap-4 flex-wrap z-10">
-        <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-          <Layers className="h-4 w-4 text-green-600" /> Map Layers
+      <div className="bg-white/80 backdrop-blur-lg border-b border-emerald-100/50 px-5 py-3 flex items-center gap-4 flex-wrap z-10">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <Layers className="h-4 w-4 text-emerald-600" /> Map Layers
         </span>
 
         {(Object.keys(layers) as LayerKey[]).map(k => (
           <button
             key={k}
             onClick={() => toggleLayer(k)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all duration-300 ${
               layers[k]
-                ? 'bg-green-100 text-green-800 border-green-300'
-                : 'bg-gray-100 text-gray-500 border-gray-200'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-muted text-muted-foreground border-border'
             }`}
           >
             {k === 'cases' ? 'Cases' : k === 'hotspots' ? 'Hotspots' : 'Recurring'}
@@ -94,16 +94,16 @@ const CityMapPage: React.FC = () => {
         ))}
 
         <div className="flex items-center gap-2 ml-auto">
-          <Filter className="h-3.5 w-3.5 text-gray-400" />
-          <span className="text-xs text-gray-500">Severity:</span>
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Severity:</span>
           {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(s => (
             <button
               key={s}
               onClick={() => setFilterSeverity(s)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-all duration-300 ${
                 filterSeverity === s
-                  ? 'bg-gray-800 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-emerald-50'
               }`}
             >
               {s}
