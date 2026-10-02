@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, MapPin, AlertCircle, Eye, Edit, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, Calendar, AlertCircle, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -90,7 +91,7 @@ const IssueManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="ml-64 p-6 bg-civic-bg min-h-screen">
+    <div className="p-6 bg-civic-bg min-h-screen">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-civic-text-primary mb-2">Issue Management</h2>
         <p className="text-civic-text-secondary">Comprehensive issue tracking and resolution management</p>
@@ -267,15 +268,17 @@ const IssueManagementPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Link to={`/cases/${issue.id}`}>
+                        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="text-blue-600 hover:text-blue-700"
                         onClick={() => setSelectedIssue(issue)}
                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">

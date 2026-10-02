@@ -473,7 +473,7 @@ const SystemSettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="ml-64 p-6 bg-civic-bg min-h-screen">
+    <div className="p-6 bg-civic-bg min-h-screen">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-civic-text-primary mb-2">System Settings</h2>
         <p className="text-civic-text-secondary">Configure system-wide settings and preferences</p>
