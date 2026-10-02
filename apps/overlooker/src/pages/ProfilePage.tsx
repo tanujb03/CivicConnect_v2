@@ -97,9 +97,9 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-enter">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white">
+      <div className="civic-gradient-bg text-white">
         <div className="flex items-center space-x-4">
           <div className="relative">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">

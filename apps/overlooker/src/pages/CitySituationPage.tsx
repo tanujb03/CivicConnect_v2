@@ -125,7 +125,7 @@ const CitySituationPage: React.FC = () => {
   const cityHealth = Math.round(WARD_HEALTH.reduce((a, w) => a + w.score, 0) / WARD_HEALTH.length);
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 page-enter">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>

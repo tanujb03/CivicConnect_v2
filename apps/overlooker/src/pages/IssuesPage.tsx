@@ -94,9 +94,9 @@ const IssuesPage: React.FC = () => {
   const activeFiltersCount = [statusFilter, priorityFilter, wardFilter].filter(f => f !== 'all').length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-enter">
       {/* Top Heading Bar */}
-      <div className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] p-6 text-white">
+      <div className="civic-gradient-bg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Issue Management</h1>
         <h3 className="text-white/100">Roads and Transportation Department</h3>
         <p className="text-white/60">Monitor and manage civic issues in your jurisdiction</p>
@@ -108,25 +108,25 @@ const IssuesPage: React.FC = () => {
           <div className="flex items-center space-x-4 py-3">
             <button
               onClick={() => setActiveTab('all')}
-              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'all' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-gray-50'}`}
+              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'all' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-emerald-50'}`}
             >
               All
             </button>
             <button
               onClick={() => setActiveTab('incoming')}
-              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'incoming' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-gray-50'}`}
+              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'incoming' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-emerald-50'}`}
             >
               Incoming
             </button>
             <button
               onClick={() => setActiveTab('ongoing')}
-              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'ongoing' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-gray-50'}`}
+              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'ongoing' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-emerald-50'}`}
             >
               Ongoing
             </button>
             <button
               onClick={() => setActiveTab('resolved')}
-              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'resolved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-gray-50'}`}
+              className={`text-sm font-medium px-3 py-2 rounded ${activeTab === 'resolved' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-emerald-50'}`}
             >
               Resolved
             </button>

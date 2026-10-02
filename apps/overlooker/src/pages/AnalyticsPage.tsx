@@ -103,9 +103,9 @@ const AnalyticsPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background page-enter">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] p-6 text-white">
+      <div className="civic-gradient-bg p-6 text-white">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
