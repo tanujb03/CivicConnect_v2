@@ -8,7 +8,7 @@
 import React from 'react';
 import {
   ArrowUpRight, ArrowDownRight, Users, FileText, Clock, AlertCircle,
-  TrendingUp, RotateCcw, Brain, MapPin, Loader2
+  TrendingUp, RotateCcw, Brain, MapPin, Loader2, Sparkles
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -22,12 +22,12 @@ import { useAnalyticsOverview } from '../hooks/useAdminApi';
 
 // ─── Mock data — replaced by API when backend is ready ────────────────────────
 const mockKpis = [
-  { title: 'Active Cases',        value: '248',    change: '+12',   trend: 'up',   icon: FileText,    danger: false },
-  { title: 'Critical Cases',      value: '23',     change: '+5',    trend: 'up',   icon: AlertCircle, danger: true },
-  { title: 'SLA At Risk',         value: '41',     change: '+8',    trend: 'up',   icon: Clock,       danger: true },
-  { title: 'Unassigned',          value: '17',     change: '-3',    trend: 'down', icon: TrendingUp,  danger: false },
-  { title: 'Awaiting Verification',value: '34',    change: '+2',    trend: 'up',   icon: Users,       danger: false },
-  { title: 'Reopened',            value: '9',      change: '+1',    trend: 'up',   icon: RotateCcw,   danger: true },
+  { title: 'Active Cases',         value: '248',    change: '+12',  trend: 'up',   icon: FileText,    danger: false },
+  { title: 'Critical Cases',       value: '23',     change: '+5',   trend: 'up',   icon: AlertCircle, danger: true },
+  { title: 'SLA At Risk',          value: '41',     change: '+8',   trend: 'up',   icon: Clock,       danger: true },
+  { title: 'Unassigned',           value: '17',     change: '-3',   trend: 'down', icon: TrendingUp,  danger: false },
+  { title: 'Awaiting Verification',value: '34',     change: '+2',   trend: 'up',   icon: Users,       danger: false },
+  { title: 'Reopened',             value: '9',      change: '+1',   trend: 'up',   icon: RotateCcw,   danger: true },
 ];
 
 const mockPriorityQueue = [
@@ -62,13 +62,13 @@ const categoryData = [
 
 function SeverityBadge({ severity }: { severity: string }) {
   const cls: Record<string, string> = {
-    CRITICAL: 'bg-red-100 text-red-800 border border-red-200',
-    HIGH:     'bg-orange-100 text-orange-800 border border-orange-200',
-    MEDIUM:   'bg-yellow-100 text-yellow-800 border border-yellow-200',
-    LOW:      'bg-green-100 text-green-800 border border-green-200',
+    CRITICAL: 'bg-red-50 text-red-700 border border-red-100',
+    HIGH:     'bg-orange-50 text-orange-700 border border-orange-100',
+    MEDIUM:   'bg-amber-50 text-amber-700 border border-amber-100',
+    LOW:      'bg-emerald-50 text-emerald-700 border border-emerald-100',
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls[severity] ?? 'bg-gray-100 text-gray-700'}`}>
+    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${cls[severity] ?? 'bg-gray-100 text-gray-700'}`}>
       {severity}
     </span>
   );
@@ -80,18 +80,24 @@ const Dashboard: React.FC = () => {
   const { data: overview, isLoading, isError } = useAnalyticsOverview();
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-8">
+    <div className="p-6 min-h-screen space-y-6">
 
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="text-xl font-bold text-civic-text-primary mb-4">Operations Overview</h2>
-        {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading live data…
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Operations Overview</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Real-time municipal operations metrics</p>
           </div>
-        )}
+          {isLoading && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+            </div>
+          )}
+        </div>
         {isError && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg px-4 py-2 mb-4">
+          <div className="bg-amber-50 border border-amber-100 text-amber-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             Live data unavailable — showing cached figures. Backend not yet connected.
           </div>
         )}
@@ -101,16 +107,26 @@ const Dashboard: React.FC = () => {
             const Icon = kpi.icon;
             const isDown = kpi.trend === 'down';
             return (
-              <div key={i} className="civic-card p-5 rounded-xl border border-gray-100">
+              <div
+                key={i}
+                className="civic-card p-5 hover-lift cursor-default group"
+                style={{ animationDelay: `${i * 0.05}s` }}
+              >
                 <div className="flex items-start justify-between mb-3">
-                  <Icon className={`h-6 w-6 ${kpi.danger ? 'text-red-500' : 'text-green-600'}`} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                    kpi.danger
+                      ? 'bg-red-50 text-red-500 group-hover:bg-red-100'
+                      : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
+                  }`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
                   {isDown
-                    ? <ArrowDownRight className="h-4 w-4 text-green-500" />
-                    : <ArrowUpRight className={`h-4 w-4 ${kpi.danger ? 'text-red-500' : 'text-gray-400'}`} />}
+                    ? <ArrowDownRight className="h-4 w-4 text-emerald-500" />
+                    : <ArrowUpRight className={`h-4 w-4 ${kpi.danger ? 'text-red-400' : 'text-gray-300'}`} />}
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{kpi.title}</p>
-                <p className={`text-xs font-medium mt-1 ${kpi.danger && !isDown ? 'text-red-600' : 'text-green-600'}`}>
+                <p className="text-2xl font-extrabold text-gray-900 tracking-tight">{kpi.value}</p>
+                <p className="text-xs text-gray-400 mt-1 font-medium">{kpi.title}</p>
+                <p className={`text-xs font-semibold mt-1.5 ${kpi.danger && !isDown ? 'text-red-500' : 'text-emerald-600'}`}>
                   {kpi.change} this week
                 </p>
               </div>
@@ -120,15 +136,22 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* ── AI Situation Summary ──────────────────────────────────────────── */}
-      <section className="civic-card p-5 rounded-xl border border-green-100 bg-green-50/40">
-        <div className="flex items-start gap-3">
-          <div className="h-8 w-8 rounded-lg bg-green-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Brain className="h-4 w-4 text-white" />
+      <section className="civic-card p-5 overflow-hidden relative"
+               style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(5,150,105,0.02) 100%)' }}>
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+               style={{ background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)', boxShadow: '0 4px 15px rgba(22,163,74,0.25)' }}>
+            <Brain className="h-5 w-5 text-white" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-green-900">AI Situation Summary</h3>
-            <p className="mt-1 text-sm text-green-800 leading-relaxed">{aiSituationSummary}</p>
-            <p className="mt-2 text-xs text-green-600 italic">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1.5">
+              <h3 className="text-sm font-bold text-gray-900">AI Situation Summary</h3>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-semibold border border-emerald-100">
+                <Sparkles className="w-3 h-3" /> AI Generated
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">{aiSituationSummary}</p>
+            <p className="mt-2 text-xs text-gray-400 italic">
               Backed by case database — click any linked case to verify.
             </p>
           </div>
@@ -136,35 +159,42 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* ── Priority Queue ────────────────────────────────────────────────── */}
-      <section className="civic-card rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-800">Priority Queue</h3>
-          <span className="text-xs text-gray-400">Sorted by deterministic priority score · AI suggestion shown separately</span>
+      <section className="civic-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100/60 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-gray-900">Priority Queue</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Sorted by deterministic priority score</p>
+          </div>
+          <span className="text-xs text-emerald-600 font-semibold hover:text-emerald-700 cursor-pointer transition-colors">
+            View All →
+          </span>
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-5 py-3 text-left">Case</th>
-              <th className="px-5 py-3 text-left">Title</th>
-              <th className="px-5 py-3 text-left">Severity</th>
-              <th className="px-5 py-3 text-left">Ward</th>
-              <th className="px-5 py-3 text-left">Dept.</th>
-              <th className="px-5 py-3 text-left">Age</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {mockPriorityQueue.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-3 font-mono text-xs text-green-700">{item.id}</td>
-                <td className="px-5 py-3 text-gray-700 max-w-xs truncate">{item.title}</td>
-                <td className="px-5 py-3"><SeverityBadge severity={item.severity} /></td>
-                <td className="px-5 py-3 text-gray-500">{item.ward}</td>
-                <td className="px-5 py-3 text-gray-500">{item.dept}</td>
-                <td className="px-5 py-3 text-gray-400">{item.age}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-50">
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Case</th>
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Title</th>
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Severity</th>
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Ward</th>
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Dept.</th>
+                <th className="px-5 py-3 text-left text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Age</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50/80">
+              {mockPriorityQueue.map((item) => (
+                <tr key={item.id} className="hover:bg-emerald-50/30 transition-colors duration-200 cursor-pointer group">
+                  <td className="px-5 py-3.5 font-mono text-xs text-emerald-700 font-semibold">{item.id}</td>
+                  <td className="px-5 py-3.5 text-gray-700 max-w-xs truncate group-hover:text-gray-900 transition-colors">{item.title}</td>
+                  <td className="px-5 py-3.5"><SeverityBadge severity={item.severity} /></td>
+                  <td className="px-5 py-3.5 text-gray-500 font-medium">{item.ward}</td>
+                  <td className="px-5 py-3.5 text-gray-500">{item.dept}</td>
+                  <td className="px-5 py-3.5 text-gray-400 font-medium">{item.age}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* ── City Map ──────────────────────────────────────────────────────── */}
@@ -181,35 +211,61 @@ const Dashboard: React.FC = () => {
 
       {/* ── Analytics Charts ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="civic-card p-6 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-green-600" />
+        <div className="civic-card p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+            </div>
             Resolution Trends
           </h3>
+          <p className="text-xs text-gray-400 mb-4">Monthly resolved vs pending cases</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="resolved" stroke="#16a34a" strokeWidth={2} dot={false} name="Resolved" />
-              <Line type="monotone" dataKey="pending"  stroke="#ef4444" strokeWidth={2} dot={false} name="Pending" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+                  padding: '10px 14px',
+                }}
+              />
+              <Line type="monotone" dataKey="resolved" stroke="#16a34a" strokeWidth={2.5} dot={false} name="Resolved" />
+              <Line type="monotone" dataKey="pending"  stroke="#ef4444" strokeWidth={2.5} dot={false} name="Pending" />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="civic-card p-6 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-600" />
+        <div className="civic-card p-6">
+          <h3 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <MapPin className="h-4 w-4 text-emerald-600" />
+            </div>
             Top Issue Categories
           </h3>
+          <p className="text-xs text-gray-400 mb-4">Distribution by category type</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={categoryData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={70} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#16a34a" radius={[0, 4, 4, 0]} name="Cases" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f0" />
+              <XAxis type="number" tick={{ fontSize: 12, fill: '#9ca3af' }} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#6b7280' }} width={70} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+                  padding: '10px 14px',
+                }}
+              />
+              <Bar dataKey="value" fill="url(#greenGradient)" radius={[0, 6, 6, 0]} name="Cases" />
+              <defs>
+                <linearGradient id="greenGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#16a34a" />
+                  <stop offset="100%" stopColor="#22c55e" />
+                </linearGradient>
+              </defs>
             </BarChart>
           </ResponsiveContainer>
         </div>
