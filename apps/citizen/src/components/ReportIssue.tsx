@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Mic, Square, MapPin, ChevronDown, RotateCw } from 'lucide-react';
+import { Camera, Mic, Square, MapPin, ChevronDown, RotateCw, Send, Save, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import BottomNavigation from './BottomNavigation';
@@ -63,10 +63,8 @@ const ReportIssue: React.FC = () => {
       location: { lat: 23.3441 + Math.random() * 0.01, lng: 85.3096 + Math.random() * 0.01 }
     };
 
-    // Add issue to global state
     dispatch({ type: 'ADD_ISSUE', payload: newIssue });
 
-    // Add notification
     dispatch({
       type: 'ADD_NOTIFICATION',
       payload: {
@@ -78,22 +76,18 @@ const ReportIssue: React.FC = () => {
       }
     });
 
-    // Reset form
     setFormData({ title: '', description: '', category: 'roads', landmark: '', image: null });
     clearRecording();
-
-    // Navigate to My Reports
     navigate('/my-reports');
   };
 
   const handleSaveDraft = () => {
-    // Implement draft saving logic here
     const draftIssue = {
       id: Date.now().toString(),
       title: formData.title,
       description: formData.description,
       category: formData.category as any,
-      status: 'draft' as const, // This is a new status for drafts
+      status: 'draft' as const,
       date: new Date().toISOString().split('T')[0],
       image: formData.image,
       audio: audioUrl || undefined,
@@ -103,10 +97,8 @@ const ReportIssue: React.FC = () => {
       location: { lat: 23.3441 + Math.random() * 0.01, lng: 85.3096 + Math.random() * 0.01 }
     };
 
-    // Dispatch an action to save the draft
     dispatch({ type: 'SAVE_DRAFT', payload: draftIssue });
 
-    // Add notification for saving draft
     dispatch({
       type: 'ADD_NOTIFICATION',
       payload: {
@@ -118,7 +110,6 @@ const ReportIssue: React.FC = () => {
       }
     });
 
-    // Optionally, navigate or clear the form
     navigate('/my-reports');
   };
 
@@ -129,34 +120,44 @@ const ReportIssue: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] p-4">
-        <h1 className="text-xl font-bold text-white">Report Issue</h1>
+    <div className="min-h-screen bg-gradient-to-b from-[#f0faf2] via-white to-[#e8f8ec] pb-24">
+      {/* Premium Header */}
+      <div className="header-civic text-white px-5 pt-6 pb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+            <Camera className="w-4 h-4 text-white/80" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight">Report Issue</h1>
+            <p className="text-[11px] text-white/40 font-medium">Submit a civic problem report</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 space-y-6">
+      <form onSubmit={handleSubmit} className="px-5 pt-5 space-y-5">
         {/* Photo Section */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">Add Photo *</label>
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            Add Photo <span className="text-red-400">*</span>
+          </label>
 
           {formData.image ? (
-            <div className="relative">
+            <div className="relative rounded-2xl overflow-hidden shadow-glass">
               <img
                 src={formData.image}
                 alt="Issue"
-                className="w-full h-48 object-cover rounded-xl"
+                className="w-full h-48 object-cover"
               />
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                className="absolute top-3 right-3 w-8 h-8 bg-red-500/90 backdrop-blur-sm text-white rounded-xl flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
               >
                 ×
               </button>
             </div>
           ) : cameraOpen ? (
-            <div className="relative w-full h-64">
+            <div className="relative w-full h-64 rounded-2xl overflow-hidden shadow-glass">
               <Webcam
                 audio={false}
                 ref={webcamRef}
@@ -164,22 +165,22 @@ const ReportIssue: React.FC = () => {
                 videoConstraints={{
                   facingMode: useFrontCamera ? 'user' : 'environment'
                 }}
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-2 left-2 flex space-x-2">
+              <div className="absolute bottom-3 left-3 flex gap-2">
                 <button
                   type="button"
                   onClick={handleCapture}
-                  className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white px-4 py-2 rounded-lg"
+                  className="btn-civic px-4 py-2 text-sm rounded-xl"
                 >
                   Capture
                 </button>
                 <button
                   type="button"
                   onClick={() => setUseFrontCamera(prev => !prev)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-lg flex items-center space-x-1"
+                  className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-2 rounded-xl flex items-center gap-1.5 text-sm"
                 >
-                  <RotateCw className="w-4 h-4" />
+                  <RotateCw className="w-3.5 h-3.5" />
                   <span>Flip</span>
                 </button>
               </div>
@@ -188,22 +189,27 @@ const ReportIssue: React.FC = () => {
             <button
               type="button"
               onClick={() => setCameraOpen(true)}
-              className="w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center hover:border-green-400 transition-colors"
+              className="w-full h-44 border-2 border-dashed border-emerald-200 rounded-2xl flex flex-col items-center justify-center hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-300 group"
             >
-              <Camera className="w-12 h-12 text-gray-400 mb-2" />
-              <p className="text-gray-600">Open Camera</p>
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-3 group-hover:bg-emerald-100 transition-colors">
+                <Camera className="w-7 h-7 text-emerald-500" />
+              </div>
+              <p className="text-gray-500 font-medium text-sm">Tap to open camera</p>
+              <p className="text-xs text-gray-400 mt-0.5">Take a photo of the issue</p>
             </button>
           )}
         </div>
 
         {/* Title */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Title *</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700">
+            Title <span className="text-red-400">*</span>
+          </label>
           <input
             type="text"
             value={formData.title}
             onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="input-civic"
             placeholder="Brief description of the issue"
             required
           />
@@ -211,54 +217,57 @@ const ReportIssue: React.FC = () => {
 
         {/* Description & Audio */}
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label className="block text-sm font-semibold text-gray-700">Description</label>
           <textarea
             value={formData.description}
             onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[100px]"
+            className="input-civic min-h-[100px] resize-none"
             placeholder="Detailed description of the issue..."
           />
 
           {/* Audio Recorder */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-            <p className="text-sm font-medium text-gray-700">Or record audio (max 1 minute)</p>
+          <div className="glass-card p-4 space-y-3">
+            <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+              <Mic className="w-3.5 h-3.5 text-gray-400" />
+              Or record audio <span className="text-gray-400 font-normal">(max 1 min)</span>
+            </p>
             <div className="flex items-center justify-between">
               {!isRecording && !audioUrl && (
                 <button
                   type="button"
                   onClick={startRecording}
-                  className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                  className="flex items-center gap-2 bg-red-500 text-white px-4 py-2.5 rounded-xl hover:bg-red-600 transition-colors text-sm font-semibold shadow-sm"
                 >
                   <Mic className="w-4 h-4" />
                   <span>Start Recording</span>
                 </button>
               )}
               {isRecording && (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium">Recording...</span>
-                    <span className="text-sm text-gray-600">{formatTime(recordingTime)}</span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-semibold text-gray-700">Recording...</span>
+                    <span className="text-sm text-gray-500 font-mono">{formatTime(recordingTime)}</span>
                   </div>
                   <button
                     type="button"
                     onClick={stopRecording}
-                    className="flex items-center space-x-1 bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 bg-gray-700 text-white px-3 py-2 rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium"
                   >
-                    <Square className="w-4 h-4" />
+                    <Square className="w-3.5 h-3.5" />
                     <span>Stop</span>
                   </button>
                 </div>
               )}
               {audioUrl && (
-                <div className="flex items-center space-x-4 w-full">
-                  <audio controls className="flex-1">
+                <div className="flex items-center gap-3 w-full">
+                  <audio controls className="flex-1 h-10">
                     <source src={audioUrl} type="audio/wav" />
                   </audio>
                   <button
                     type="button"
                     onClick={clearRecording}
-                    className="text-red-600 hover:text-red-700 text-sm"
+                    className="text-red-500 hover:text-red-600 text-xs font-semibold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
                   >
                     Clear
                   </button>
@@ -269,13 +278,15 @@ const ReportIssue: React.FC = () => {
         </div>
 
         {/* Category */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Category *</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700">
+            Category <span className="text-red-400">*</span>
+          </label>
           <div className="relative">
             <select
               value={formData.category}
               onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none"
+              className="input-civic appearance-none pr-10"
               required
             >
               <option value="roads">Roads & Transportation</option>
@@ -283,42 +294,56 @@ const ReportIssue: React.FC = () => {
               <option value="water">Water</option>
               <option value="lighting">Street Lighting</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Landmark */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Landmark (Optional)</label>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700">Landmark (Optional)</label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={formData.landmark}
               onChange={e => setFormData(prev => ({ ...prev, landmark: e.target.value }))}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="input-civic pl-10"
               placeholder="Near landmark or address"
             />
           </div>
         </div>
 
+        {/* Validation hint */}
+        {(!formData.title || !formData.image) && (
+          <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-xl px-4 py-2.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>Photo and title are required to submit</span>
+          </div>
+        )}
+
+        {/* Submit */}
         <motion.button
           type="submit"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full py-4 bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+          whileTap={{ scale: 0.97 }}
+          className="w-full py-4 text-white font-bold rounded-2xl text-[15px] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          style={{
+            background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)',
+            boxShadow: formData.title && formData.image ? '0 8px 30px rgba(22, 163, 74, 0.3)' : 'none',
+          }}
           disabled={!formData.title || !formData.image}
         >
+          <Send className="w-4 h-4" />
           Submit Report
         </motion.button>
 
+        {/* Save Draft */}
         <motion.button
           type="button"
           onClick={handleSaveDraft}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full py-4 bg-gray-200 text-gray-800 font-semibold rounded-xl hover:bg-gray-300 transition-all duration-300 mt-2"
+          whileTap={{ scale: 0.97 }}
+          className="w-full py-3.5 bg-gray-100 text-gray-600 font-semibold rounded-2xl hover:bg-gray-200 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
         >
+          <Save className="w-4 h-4" />
           Save as Draft
         </motion.button>
       </form>
