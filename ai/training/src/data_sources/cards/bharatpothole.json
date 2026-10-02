@@ -19,6 +19,12 @@
     "status": "UNVERIFIED",
     "evidence": [
       {
+        "source": "owner's research agent (Kaggle dataset page + authors' iWatchRoad sources)",
+        "reliability": "secondary",
+        "note": "2026-10-02: still no dataset-specific licence found on the Kaggle dataset or the authors' iWatchRoad sources. The iWatchRoad REPOSITORY is CC BY-NC-SA 4.0, which is not proof that the dataset has the same licence.",
+        "retrieved_on": "2026-10-02"
+      },
+      {
         "source": "owner's research notes (relayed; not read from the Kaggle page by this tooling)",
         "reliability": "secondary",
         "note": "Research conclusion relayed by the repository owner: the dataset licence is unclear. Do NOT represent it as CC BY-NC-SA 4.0. Track as UNVERIFIED and preserve the dataset attribution/citation. Do not redistribute the raw dataset or claim commercial redistribution rights unless the dataset authors/Kaggle provide an explicit licence permitting that use.",

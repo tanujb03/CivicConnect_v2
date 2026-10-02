@@ -14,10 +14,16 @@
     "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2020 INDIA subset. Record the copy's provenance; the reported CC BY-NC 3.0 licence comes from a secondary source and is NOT verified."
   },
   "license": {
-    "name": "Attribution-NonCommercial 3.0 Unported (CC BY-NC 3.0) for version 1 — per search summary of the Mendeley record; UNVERIFIED",
+    "name": "CC BY-NC 3.0 (Attribution-NonCommercial 3.0 Unported) — Mendeley record Version 1, quoted by the owner's research agent (relayed 2026-10-02); UNVERIFIED here",
     "url": "https://creativecommons.org/licenses/by-nc/3.0/",
     "status": "UNVERIFIED",
     "evidence": [
+      {
+        "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
+        "reliability": "secondary",
+        "note": "Reported quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Quoted by the owner's research agent from the official page and relayed by the repository owner on 2026-10-02 (screenshot of the findings table). Recorded as relayed (secondary), NOT as a primary read by this tooling: to verify, open the page, confirm the quoted line and date, add it as a primary evidence entry and set status VERIFIED_PRIMARY with verified_on.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "web search summary of the Mendeley Data record",
         "reliability": "secondary",

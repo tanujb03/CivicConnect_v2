@@ -15,10 +15,16 @@
     "data_dictionary": "bmc_data_dictionary.csv ships with the data: read it, then assign every column to a role explicitly (see mappings/bmc_mumbai_columns.v1.json and `cli profile bmc_mumbai`)."
   },
   "license": {
-    "name": "Kaggle competition rules / data-use terms for this competition — NOT READ",
+    "name": "CC BY 4.0 — reported to be stated additionally in the Competition Rules (commercial or non-commercial use subject to the Rules); relayed, UNVERIFIED here",
     "url": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
     "status": "UNVERIFIED",
     "evidence": [
+      {
+        "source": "https://www.kaggle.com/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/rules",
+        "reliability": "secondary",
+        "note": "Reported quote: \"The Competition Data is additionally released under the Creative Commons Attribution 4.0 International License (CC BY 4.0).\" The Rules also reportedly allow use for \"commercial or non-commercial\" purposes, subject to the Rules, and state that the dataset is synthetically generated and does not represent real citizens/actual complaint records. Quoted by the owner's research agent from the official page and relayed by the repository owner on 2026-10-02 (screenshot of the findings table). Recorded as relayed (secondary), NOT as a primary read by this tooling: to verify, open the page, confirm the quoted line and date, add it as a primary evidence entry and set status VERIFIED_PRIMARY with verified_on.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "web search summary of the Kaggle data page",
         "reliability": "secondary",
@@ -39,11 +45,12 @@
       }
     ],
     "conflicts": [],
-    "attribution": "Cite the Kaggle competition page and its host exactly as the Rules require (not read).",
-    "share_alike": null,
-    "commercial_use": "unverified (competition rules not read)",
+    "attribution": "Attribute under CC BY 4.0 (as reported) and cite the Kaggle competition page and host as the Rules require.",
+    "share_alike": false,
+    "commercial_use": "reported permitted ('commercial or non-commercial' purposes, subject to the Rules); unverified",
     "notes": [
-      "Read the competition Rules ('Data Access and Use') before ANY use outside the competition; if the rules restrict use to the competition, this source may not be usable for CivicConnect at all."
+      "Verify against the Rules page itself before any publishable claim; the Rules (not the data page) are the authority.",
+      "The Rules reportedly state the data is synthetic: the licence changes nothing about it never being real-world evidence."
     ]
   },
   "origin_status": "SYNTHETIC_PER_COMPETITION",
@@ -60,7 +67,7 @@
   ],
   "restrictions": [
     "SYNTHETIC: never report results as real-world accuracy, real-world validation or BMC performance; keep it on the synthetic/descriptive-of-synthetic tracks, separate from real Indian datasets and from this project's own synthetic data.",
-    "Competition rules not read; assume NO redistribution and possibly competition-only use until verified.",
+    "Competition rules reported (2026-10-01/02) as CC BY 4.0 but not verified here: still never commit or redistribute raw or prepared rows.",
     "Complainant-profile columns are sensitive attributes: never features or targets for any task (system design §13). The adapter never stores them.",
     "Contractor/officer/address/contact columns are never read (PII roles).",
     "Post-resolution fields (status, closing time, resolution remarks, reassignment, escalation, satisfaction/rating) must never be inputs for intake or triage — see the per-task column policy.",

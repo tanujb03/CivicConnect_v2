@@ -45,7 +45,9 @@ def test_bmc_card_records_that_the_dataset_is_synthetic_third_party_and_never_of
     assert c.landing_url.endswith("/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data")
     assert c.identity_status == "CONFIRMED_BY_USER" and c.priority == "primary"
     assert "SYNTHETIC DATA (third-party generated)" in c.terms_summary() and "ORIGIN UNVERIFIED" not in c.terms_summary()
-    assert "NOT READ" in c.license.name and c.license.status == "UNVERIFIED" and "NOT READ" in c.license.name
+    # the Rules' CC BY 4.0 statement was quoted by the owner's research agent (2026-10-02) and relayed: recorded as secondary evidence, licence stays UNVERIFIED
+    assert "CC BY 4.0" in c.license.name and "relayed" in c.license.name and c.license.status == "UNVERIFIED"
+    assert any("Competition Data is additionally released under" in e.note and e.reliability == "secondary" for e in c.license.evidence)
 
 
 def test_bmc_card_declares_supported_and_unsupported_tasks_honestly():

@@ -15,10 +15,16 @@
     "video": "Videos must be converted to frames outside the repository, keeping the video id in the file/dir name, so holdouts keep whole videos together."
   },
   "license": {
-    "name": "CC BY 4.0 — the source is REPORTED (by the repository owner) to currently state this; not read by this tooling, so UNVERIFIED here",
+    "name": "CC BY 4.0 — Mendeley record Version 2, quoted by the owner's research agent (relayed 2026-10-02); UNVERIFIED here",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "status": "UNVERIFIED",
     "evidence": [
+      {
+        "source": "https://data.mendeley.com/datasets/tj2m7zz4rg/2",
+        "reliability": "secondary",
+        "note": "Reported quote: \"Licence — CC BY 4.0.\" (Version 2 page). Quoted by the owner's research agent from the official page and relayed by the repository owner on 2026-10-02 (screenshot of the findings table). Recorded as relayed (secondary), NOT as a primary read by this tooling: to verify, open the page, confirm the quoted line and date, add it as a primary evidence entry and set status VERIFIED_PRIMARY with verified_on.",
+        "retrieved_on": "2026-10-02"
+      },
       {
         "source": "Mendeley Data record tj2m7zz4rg (reported by the repository owner)",
         "reliability": "secondary",
@@ -40,10 +46,10 @@
     ],
     "conflicts": [],
     "attribution": "Attribution required (CC BY 4.0 as reported): cite the Data in Brief article and the Mendeley record, wording taken from the record itself.",
-    "share_alike": null,
-    "commercial_use": "unverified",
+    "share_alike": false,
+    "commercial_use": "reported permitted with attribution (CC BY 4.0); unverified",
     "notes": [
-      "Read the licence on the Mendeley record, then update this card with a primary evidence entry before any publishable claim.",
+      "Applies to Version 2 of the record; a different version may carry a different licence.",
       "If you re-upload the data as a private Kaggle Dataset, keep the original attribution and licence text with it and record the copy's provenance (who uploaded, when, from which record version)."
     ]
   },
@@ -53,7 +59,7 @@
     "demo"
   ],
   "restrictions": [
-    "Licence reported as CC BY 4.0 but not verified in this repo: no publishable/evaluation claim until the card has primary licence evidence.",
+    "Licence reported as CC BY 4.0 (Version 2, quoted 2026-10-02) but not verified in this repo: no publishable/evaluation claim until the card has primary licence evidence.",
     "Do not commit images/videos; process them in place from /kaggle/input."
   ],
   "supports": [
