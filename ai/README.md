@@ -41,6 +41,9 @@ licence status and the workflow. Reports always state their provenance and what 
 
 **Indian sources (extension):** the genuinely *real* Indian sources are visual: the Mumbai/Nashik road-surface set (Mendeley `tj2m7zz4rg`, priority), RDD2022 and RDD2020 India, and BharatPotHole (licence pending) — potholes map to `roads/pothole`, no new taxonomy categories; IIIT-H IDD is future-only. **BMC Mumbai** (`bmc_mumbai`) is a large *synthetically generated* Mumbai/BMC-structured civic dataset (per the Kaggle competition information): it is used for pipeline/stress/leakage testing under a default-deny column-role policy and is **never** real-world validation, official BMC data, or pooled with real or project-synthetic results. Synthetic data remains the only source of Hindi/Marathi/Hinglish text, and there is no real before/after resolution evidence anywhere. **Datasets are processed in place on Kaggle** (`/kaggle/input`, notebook `05_kaggle_real_data_profile_evaluate`): nothing is downloaded locally or committed, every licence is unverified, so no publishable real-world claim exists yet. See `training/src/data_sources/README.md`, `TASK_MATRIX.md` and `BMC_COLUMN_POLICY.md` there.
 
+## Demo city (design §58) — synthetic
+`ai/evaluation/datasets/demo_city_v1/` is the seeded **synthetic** city the demos run on: 10 wards, 8 departments, 560 Civic Cases with multilingual reports, duplicate groups, recurring problems, hotspots, SLA violations, reopened cases and active incidents, plus planted ground truth. Everything is labelled synthetic (`DEMO-` ids, `"synthetic": true`). Build/verify with `python -m ai.training.src.build_demo_city`, evaluate with `python -m ai.evaluation.eval_demo_city`. See its `README.md`.
+
 ## Quick start
 ```bash
 pip install -e "ai[training,dev]"

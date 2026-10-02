@@ -1,0 +1,8 @@
+{"id":"road_maintenance","code":"ROADS","name":"Road Maintenance","name_i18n":{"en":"Road Maintenance","hi":"सड़क रखरखाव","mr":"रस्ते देखभाल"},"category_coverage":["roads"],"synthetic":true}
+{"id":"water_supply","code":"WATER","name":"Water Supply","name_i18n":{"en":"Water Supply","hi":"जल आपूर्ति","mr":"पाणीपुरवठा"},"category_coverage":["water_supply"],"synthetic":true}
+{"id":"solid_waste","code":"SWM","name":"Solid Waste Management","name_i18n":{"en":"Solid Waste Management","hi":"ठोस कचरा प्रबंधन","mr":"घनकचरा व्यवस्थापन"},"category_coverage":["sanitation"],"synthetic":true}
+{"id":"drainage_sewerage","code":"DRAINAGE","name":"Drainage & Sewerage","name_i18n":{"en":"Drainage & Sewerage","hi":"जल निकासी एवं सीवरेज","mr":"जलनिःसारण व मलनिःसारण"},"category_coverage":["drainage_sewerage"],"synthetic":true}
+{"id":"street_lighting","code":"LIGHTING","name":"Street Lighting","name_i18n":{"en":"Street Lighting","hi":"स्ट्रीट लाइटिंग","mr":"पथदिवे"},"category_coverage":["street_lighting"],"synthetic":true}
+{"id":"parks_horticulture","code":"PARKS","name":"Parks & Horticulture","name_i18n":{"en":"Parks & Horticulture","hi":"उद्यान एवं वृक्ष","mr":"उद्याने व वृक्ष"},"category_coverage":["parks_trees"],"synthetic":true}
+{"id":"public_health","code":"HEALTH","name":"Public Health","name_i18n":{"en":"Public Health","hi":"जन स्वास्थ्य","mr":"सार्वजनिक आरोग्य"},"category_coverage":["public_health"],"synthetic":true}
+{"id":"traffic_enforcement","code":"TRAFFIC","name":"Traffic & Encroachment","name_i18n":{"en":"Traffic & Encroachment","hi":"यातायात एवं अतिक्रमण","mr":"वाहतूक व अतिक्रमण"},"category_coverage":["traffic_encroachment"],"synthetic":true}

@@ -1,0 +1,815 @@
+{
+ "duplicate_groups_merged": [
+  {
+   "case_id": "7d3f5b4f-dae4-5cb9-910a-3a22dbd4a7df",
+   "signal_ids": [
+    "308430ae-fccd-5896-b453-2cff93c6767c",
+    "57387e3a-7d95-5a99-9a78-08b0314009f9",
+    "ddf85860-bae0-5da8-a50c-313b3c5f0844"
+   ],
+   "subcategory": "fallen_tree"
+  },
+  {
+   "case_id": "2d5f5982-306d-5ad4-ba03-e29670179990",
+   "signal_ids": [
+    "52371f76-b395-55fc-b4c4-470b5e2f9e43",
+    "04833da6-b904-5836-9c91-f2fdabccb3ad",
+    "52925107-a41b-5a10-9e9d-2e317a2c7baa",
+    "626a5326-66e6-5e99-a616-2203a3c92b56"
+   ],
+   "subcategory": "illegal_dumping"
+  },
+  {
+   "case_id": "7b51eba1-6d12-5f4f-a8c9-6a529f27b35c",
+   "signal_ids": [
+    "7ec66b70-64fd-5f85-981c-225e5fc68329",
+    "da76c1fb-81a9-5db1-8633-454f23bf29e0",
+    "66c84803-070d-501e-8607-53e42e16decb",
+    "0f74c6e1-cb65-5b7c-ada8-73d7becb20ce"
+   ],
+   "subcategory": "pothole"
+  },
+  {
+   "case_id": "27c483a4-62f5-5f6f-a2cb-79de9e42a1a8",
+   "signal_ids": [
+    "e73ea206-143d-548a-b119-481a7f6c156c",
+    "846652b7-546e-534a-b312-7336afdf3cbb",
+    "4bbe54db-aafb-5948-a092-d7912dcee0b5",
+    "92f45f3c-b34c-535f-aa18-971a3b13d4d6"
+   ],
+   "subcategory": "low_water_pressure"
+  },
+  {
+   "case_id": "b3124f25-5c79-55f5-87d8-c5ff5d5a6222",
+   "signal_ids": [
+    "acb82f3b-c7ca-5da1-9b66-f68a91922325",
+    "a032194f-e543-551f-8a0a-890f53f72c5f",
+    "8f02e18d-9721-50a4-8d34-b47194e694ad"
+   ],
+   "subcategory": "pipe_leakage"
+  },
+  {
+   "case_id": "3ffcd845-051c-5ff9-87ed-b294698894c1",
+   "signal_ids": [
+    "660a066b-f347-515f-b22c-e6b05c8ff5c2",
+    "394d343e-7fa3-502d-ab46-6d608554a5a8"
+   ],
+   "subcategory": "blocked_drain"
+  },
+  {
+   "case_id": "416a65fe-b541-561f-b235-ff6def1fa23b",
+   "signal_ids": [
+    "93b58a0d-d28b-5bce-ba1f-7dc632a7521c",
+    "ae00642e-a8d4-5e8f-802e-64a4ee015427",
+    "2ef016b1-b89d-5f86-93b2-917f570d3cae",
+    "e4c65b11-63ad-53e1-a247-4ac9982e1756"
+   ],
+   "subcategory": "road_cave_in"
+  },
+  {
+   "case_id": "e08f106d-f125-5332-8032-a4274f174914",
+   "signal_ids": [
+    "f3d75e76-69ba-5f6a-86cb-a2b05d9b2dc6",
+    "93ca9e26-a63e-5015-b430-156a979c5b00"
+   ],
+   "subcategory": "illegal_dumping"
+  },
+  {
+   "case_id": "6e1610cc-6ef7-513d-bc72-322c0736cdd1",
+   "signal_ids": [
+    "fcb4c8e8-e4d7-5a1d-84f6-7c53960503d1",
+    "b00bffc0-d110-5f8a-9335-bfd62d2234de"
+   ],
+   "subcategory": "pipe_leakage"
+  },
+  {
+   "case_id": "a2d18263-24cb-5b5f-b51d-386458bef1b1",
+   "signal_ids": [
+    "b17beacc-046a-55fc-ae59-5a1a64912776",
+    "00142270-81c1-5fc1-a3f2-b17750060edf"
+   ],
+   "subcategory": "light_not_working"
+  },
+  {
+   "case_id": "41beebe9-d582-53a0-a32f-7842667446f3",
+   "signal_ids": [
+    "4c9a471d-b8e2-56d7-bf25-7ab19d208ece",
+    "d9f9d201-0f75-51c9-b158-6c74cf8dbe95",
+    "a09f53f0-c149-5650-a749-b4b5f124d1a0",
+    "58205e07-a654-557c-9825-4eb3fe56a089"
+   ],
+   "subcategory": "fallen_tree"
+  },
+  {
+   "case_id": "75629b8e-09a6-58fb-b109-72f2120e2a2c",
+   "signal_ids": [
+    "7410fa62-ad6b-519a-ad77-b1f7c483e71a",
+    "d3bc2d73-20a1-542c-92c0-bace0f469bbd",
+    "4008cdd7-4d18-5885-a1b0-e84a3ac56542"
+   ],
+   "subcategory": "light_not_working"
+  },
+  {
+   "case_id": "94b61d4a-436c-5acb-91af-bc3464251ef6",
+   "signal_ids": [
+    "1ed2d39b-0662-5e58-9d9c-d46f755a089b",
+    "56162e87-299b-5acc-b358-a03f2aa177f9"
+   ],
+   "subcategory": "flickering_light"
+  },
+  {
+   "case_id": "4f11c5ff-e0ab-57a5-bd33-571efa6888a3",
+   "signal_ids": [
+    "3c289ada-0326-5cec-ab4c-4e9e7345d6ab",
+    "fefa38e8-4977-5df5-8726-af2426eaba0a",
+    "57f05dc9-8d43-526e-b58f-3c09b10e9bd2"
+   ],
+   "subcategory": "garbage_overflow"
+  },
+  {
+   "case_id": "6472b950-f0fd-5fe7-8346-1980b776a5af",
+   "signal_ids": [
+    "6423cf41-3732-5448-a5e1-3d92924ba7d5",
+    "8e58bb5f-0c52-5d5d-af06-d6c61a351d26",
+    "dade096e-f537-51ca-8a76-92db8ed79af8",
+    "5e78d4a1-bf85-512f-b1ba-ba213bfbb564"
+   ],
+   "subcategory": "overgrown_vegetation"
+  },
+  {
+   "case_id": "a2b7a43c-ba20-5443-8871-ceb5b38f4c65",
+   "signal_ids": [
+    "fd8d301f-4997-56aa-9167-da0d5e4a38f1",
+    "ad36a9ec-a7a2-5ec0-ab77-6d7e8d76dff0",
+    "082b18d4-7ad1-52d0-a9e1-d05a312165af"
+   ],
+   "subcategory": "missing_manhole_cover"
+  },
+  {
+   "case_id": "0e9f2a63-a6e1-585f-a756-8797f2c7f979",
+   "signal_ids": [
+    "ae7b41da-3ea0-500a-a5ee-1d0bcfec70f0",
+    "2d490fc3-7a65-5cbd-935b-ccb027f2c9dd",
+    "662f7bcc-fdba-58f0-971f-6a38605f9b18",
+    "74693d05-1f0c-5786-b5e8-800e85315add"
+   ],
+   "subcategory": "no_water_supply"
+  },
+  {
+   "case_id": "993d28ff-3840-5f94-8577-25a1f7762031",
+   "signal_ids": [
+    "be99e5bb-bd08-5272-9eaf-7a5b28e221cf",
+    "bd98d2fe-49c7-5bae-882f-a8f598a6ad53",
+    "2e3318a5-826a-50b4-a77e-cbe4da143d23",
+    "469eb204-c154-5872-a57a-04d1c241a366"
+   ],
+   "subcategory": "light_not_working"
+  },
+  {
+   "case_id": "63b275ac-a40f-5527-aa70-ba2c5ec851cb",
+   "signal_ids": [
+    "7d68b986-0e7f-5f1b-b7b3-656c97e424ba",
+    "b954d1c0-651a-5045-a0fc-5e5a77a65c2e",
+    "55a5cfc6-9fd7-569c-8d45-6e3d746eb77b",
+    "6993ab1b-df18-532c-9303-89650a5e6108"
+   ],
+   "subcategory": "light_not_working"
+  },
+  {
+   "case_id": "38a43224-3ed4-5895-ac21-8b2671a6c37a",
+   "signal_ids": [
+    "f00f1f37-2333-51a4-85cb-5dc6648aab74",
+    "f3efe80f-0c7b-59d7-95ac-18fea5036f45",
+    "a0454b2a-58d9-594b-9c1c-ab6efda294af"
+   ],
+   "subcategory": "road_cave_in"
+  },
+  {
+   "case_id": "2bc95db7-2017-5798-9f1a-d947ddc79e75",
+   "signal_ids": [
+    "6a62e605-63c2-5dea-86c6-4aed8e745a3d",
+    "8849948d-3d1a-5e49-88b7-e257b96ca546",
+    "60df75fb-ed0c-5d67-80aa-bbb4d3fcfa7d"
+   ],
+   "subcategory": "footpath_encroachment"
+  },
+  {
+   "case_id": "114973c1-0a31-5bfb-9e21-60a9dd9ba22d",
+   "signal_ids": [
+    "aa64a86e-733d-51a3-b004-a9f1987e7b43",
+    "a2c3a3e6-cdb7-5a0b-9b82-6ed829eb4ca3",
+    "10e6b514-95ba-5829-a964-cf659469c8b2"
+   ],
+   "subcategory": "sewage_overflow"
+  },
+  {
+   "case_id": "cf631d5e-dd8b-57ee-8c58-a372e9a0e116",
+   "signal_ids": [
+    "92714d38-e9cf-575d-a59c-66884915cb7c",
+    "8980db80-2297-549e-91d5-debc1cf9b6be",
+    "977120c6-a7f3-58ad-bb96-3e522f95a97f",
+    "af8d38cc-5cc1-56eb-bb12-4d3684f3d3cf"
+   ],
+   "subcategory": "flickering_light"
+  },
+  {
+   "case_id": "7f4b8fc2-4de8-5fc7-b27b-f801d7f94a58",
+   "signal_ids": [
+    "3ebb02bf-0e80-577f-b6e2-0991a323f9d0",
+    "93aaff55-e8bc-573b-bf02-58ed1cac4ef7"
+   ],
+   "subcategory": "illegal_dumping"
+  },
+  {
+   "case_id": "d5493681-cf0a-530b-b3c1-63cf93707c10",
+   "signal_ids": [
+    "0c0b0edf-2010-5803-a72a-fe85e3812657",
+    "548afb20-c813-5efd-892b-c22a5510d6cb",
+    "8e86f943-b522-53f1-8a43-cb5c8f896a6a"
+   ],
+   "subcategory": "damaged_footpath"
+  }
+ ],
+ "possible_duplicate_pairs": [
+  {
+   "case_a": "b1799ba4-92a9-5272-b0dc-f4f52b73343b",
+   "case_b": "8feb1502-ee87-5389-b39d-bee1c8328b1f",
+   "distance_m": 26.1
+  },
+  {
+   "case_a": "b1799ba4-92a9-5272-b0dc-f4f52b73343b",
+   "case_b": "ebb9d002-69db-5e21-acba-3d738a4cd314",
+   "distance_m": 4.0
+  },
+  {
+   "case_a": "1de72498-cb98-5964-9499-e499b830634e",
+   "case_b": "9baae1d6-2532-5e0c-a2f3-d0e67beab875",
+   "distance_m": 40.0
+  },
+  {
+   "case_a": "a3ebd9f3-2cd7-528e-956e-1d7134ba8a72",
+   "case_b": "b932709f-c896-556d-a5d3-84cf466d2764",
+   "distance_m": 36.6
+  },
+  {
+   "case_a": "85539ab6-774a-549f-ba74-2295e113f4fb",
+   "case_b": "66104aca-eb0f-58f9-ae33-7c21bd7c668b",
+   "distance_m": 4.7
+  },
+  {
+   "case_a": "25a11c91-7a61-57f6-b1d2-7a00da534391",
+   "case_b": "800b716d-c9bc-53e6-b3b0-c12d64ca047f",
+   "distance_m": 2.8
+  },
+  {
+   "case_a": "9581e4e9-f3ac-5cc6-9043-e68e2a693d58",
+   "case_b": "43dc8341-fcb0-539e-94e1-c39a7d22a890",
+   "distance_m": 22.7
+  },
+  {
+   "case_a": "9581e4e9-f3ac-5cc6-9043-e68e2a693d58",
+   "case_b": "06f8e6c6-3a84-5c60-ad50-3293607c4840",
+   "distance_m": 22.9
+  },
+  {
+   "case_a": "794030c1-5fba-58e4-be0e-79df3b4fa840",
+   "case_b": "c208a6e6-0f1f-5c40-8910-fb500fb8e112",
+   "distance_m": 13.4
+  },
+  {
+   "case_a": "42c69405-369f-54e7-8732-2134bff35961",
+   "case_b": "caa26bdb-2c75-5127-9851-f6e88af6308e",
+   "distance_m": 12.9
+  },
+  {
+   "case_a": "42c69405-369f-54e7-8732-2134bff35961",
+   "case_b": "90f23997-74c6-57d9-9551-60d808581e8e",
+   "distance_m": 7.1
+  },
+  {
+   "case_a": "0fb666da-2f62-5bac-934c-6262750fa859",
+   "case_b": "f493bfac-f78f-5f42-8b58-61a7b0a4cb5b",
+   "distance_m": 26.1
+  },
+  {
+   "case_a": "0fb666da-2f62-5bac-934c-6262750fa859",
+   "case_b": "aeff9f32-d19c-58db-bb17-821628b730c4",
+   "distance_m": 24.3
+  },
+  {
+   "case_a": "289680ea-d21f-5453-9419-f50608205339",
+   "case_b": "085ed8ee-47d2-519a-b8ef-cc2606f1358b",
+   "distance_m": 2.3
+  },
+  {
+   "case_a": "10f28dbc-31a6-5a81-bf08-4fa3b1c6fcb7",
+   "case_b": "ca16188a-b624-5891-86f2-ee18e5c3fbfe",
+   "distance_m": 31.9
+  },
+  {
+   "case_a": "10f28dbc-31a6-5a81-bf08-4fa3b1c6fcb7",
+   "case_b": "c924a4bf-7f0c-5d1a-8c72-0d4cb99a9cf2",
+   "distance_m": 1.2
+  },
+  {
+   "case_a": "723d8028-cdd7-5601-ace2-f485b3800481",
+   "case_b": "5624f3ac-402e-5abe-a123-18d4b31b696b",
+   "distance_m": 26.5
+  },
+  {
+   "case_a": "be8816b0-c88c-5ff5-99b4-cf2e51e5495a",
+   "case_b": "e1ba37ff-43f7-5d1e-9b55-baa4eb5ef262",
+   "distance_m": 15.6
+  },
+  {
+   "case_a": "be8816b0-c88c-5ff5-99b4-cf2e51e5495a",
+   "case_b": "c334afc7-5cac-5c97-99b0-b334894e5aca",
+   "distance_m": 12.8
+  },
+  {
+   "case_a": "c3262e0d-f572-5f3e-8fe8-6a49edfbdeb5",
+   "case_b": "5d2ddc13-1633-50ce-adf4-d4ac04bfe27d",
+   "distance_m": 15.4
+  },
+  {
+   "case_a": "e1e2b4d9-b2e5-5527-9e61-b17b4e3d857b",
+   "case_b": "1075de91-4b7c-59cd-978a-b64bd71c6046",
+   "distance_m": 13.7
+  },
+  {
+   "case_a": "cdf38b6d-44fd-5577-88e0-0b785e273c44",
+   "case_b": "156895eb-dba2-5d91-93fc-2e1e19fc445e",
+   "distance_m": 24.8
+  },
+  {
+   "case_a": "0520d265-ec1d-56b7-98de-6d1113002d55",
+   "case_b": "a94daaea-1c2d-5879-893a-ce0ee342ca09",
+   "distance_m": 16.5
+  },
+  {
+   "case_a": "0520d265-ec1d-56b7-98de-6d1113002d55",
+   "case_b": "cfc65b07-2577-5150-b5a3-bf9821590460",
+   "distance_m": 19.9
+  },
+  {
+   "case_a": "b92c055d-b78e-5488-8777-66c677d6ad7b",
+   "case_b": "16393c70-ccc2-5abe-9a4a-01d75099e091",
+   "distance_m": 11.6
+  },
+  {
+   "case_a": "b92c055d-b78e-5488-8777-66c677d6ad7b",
+   "case_b": "04235d13-67fb-511e-b07e-e2003ca5a236",
+   "distance_m": 22.1
+  }
+ ],
+ "near_distinct_pairs": [
+  {
+   "case_a": "aac57898-8be2-5258-a39a-da9adc85e784",
+   "case_b": "6db07736-5aee-5be9-a1b9-446b256e34a4",
+   "distance_m": 128.5
+  },
+  {
+   "case_a": "2ef48973-c882-51be-9091-05f93688f747",
+   "case_b": "8e6a4df5-0665-53dc-a48e-38b0c3d4e982",
+   "distance_m": 92.3
+  },
+  {
+   "case_a": "5404187c-6088-5f07-a65c-8374884e5574",
+   "case_b": "72accb18-6e9c-534c-ae71-0d1b52a7d32f",
+   "distance_m": 148.5
+  },
+  {
+   "case_a": "1e4794db-0a75-5c17-a0a4-c2a08df69872",
+   "case_b": "ec7065c1-6b7d-574d-a8a7-f1c44d70ccd9",
+   "distance_m": 149.0
+  },
+  {
+   "case_a": "3be13ce6-8026-5ec3-9d66-1ae6c21d8769",
+   "case_b": "6f09d326-8032-5c93-915f-a4128535ec0b",
+   "distance_m": 74.1
+  },
+  {
+   "case_a": "ba9f7b47-733b-59b0-a50f-34e84affecbb",
+   "case_b": "5f235e74-b510-5c22-97f1-5cdd8de7d518",
+   "distance_m": 106.7
+  },
+  {
+   "case_a": "04fc5347-30ed-5547-92cb-bc03ef8f294d",
+   "case_b": "c708dea6-5334-5497-838b-9b0b9321f1ef",
+   "distance_m": 92.4
+  },
+  {
+   "case_a": "47337334-e175-5743-882e-0840128fa01f",
+   "case_b": "cfe1ced9-2ad7-5519-98b7-a16a32a9921d",
+   "distance_m": 119.1
+  },
+  {
+   "case_a": "93e7247d-8607-51ff-b862-841bf6d30ab0",
+   "case_b": "423f76a0-63eb-5493-8aa8-ac5529a9a971",
+   "distance_m": 85.0
+  },
+  {
+   "case_a": "c02ff226-0f51-59dc-9948-03b296befb07",
+   "case_b": "cf36b0f0-b589-5587-bbb0-12c27137f4b6",
+   "distance_m": 142.4
+  },
+  {
+   "case_a": "c1b00480-f949-5135-ae4b-0b865483ab91",
+   "case_b": "067f6691-9391-5b10-9b4a-c652df68d79c",
+   "distance_m": 143.1
+  },
+  {
+   "case_a": "4dccf29e-83cf-554b-982a-0d7ccd181d3e",
+   "case_b": "ce8fb595-a0c6-5b94-8162-854ffe1b3b91",
+   "distance_m": 92.0
+  },
+  {
+   "case_a": "75edcbc0-5287-506f-991d-4867e34a454e",
+   "case_b": "b4397b32-6fd2-5827-b4e8-ebf985f8b3b3",
+   "distance_m": 91.9
+  },
+  {
+   "case_a": "a1e9bd37-12b2-51cb-8c75-1945b1362298",
+   "case_b": "e1301797-4d96-54f2-9509-97e7aa918cfb",
+   "distance_m": 76.2
+  },
+  {
+   "case_a": "92b2b3bc-024a-562f-b6fb-8bc148097131",
+   "case_b": "0becdb4b-37ff-5890-8e56-7635e2c2874c",
+   "distance_m": 136.2
+  },
+  {
+   "case_a": "ece3a989-8531-522c-a22d-1b5720fb0dd6",
+   "case_b": "333e2b22-62bc-5487-b92d-3443b8504e56",
+   "distance_m": 123.2
+  },
+  {
+   "case_a": "f62d180b-e92f-5807-9599-b740d44f9647",
+   "case_b": "eabcfe02-f863-5b0c-87eb-4047b8a1877b",
+   "distance_m": 100.2
+  },
+  {
+   "case_a": "d99baa13-9b4f-52dc-a597-23464fdebdc4",
+   "case_b": "8db90838-f45a-59cb-aa2a-3af19c85c9ff",
+   "distance_m": 118.2
+  }
+ ],
+ "recurring_sites": [
+  {
+   "site_id": "RS01",
+   "subcategory": "pipe_leakage",
+   "center": {
+    "latitude": 19.075992,
+    "longitude": 72.92569
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "2fadd504-c991-5942-b0ae-72c79f4c0270",
+    "edb30111-f355-5a0f-a3cf-d4d3b891d00f",
+    "5edde6e5-4de0-5ca2-b9e0-66ba790c7714",
+    "32305312-f967-5f5e-a844-4b0580b56c90"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS02",
+   "subcategory": "pothole",
+   "center": {
+    "latitude": 19.112052,
+    "longitude": 72.925744
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "e3a03b72-e703-5668-94c7-b802bd980b91",
+    "6807ee90-9509-5755-9603-3c87bc6bcf13",
+    "dce02a97-5b67-56db-bdac-78f7dc86b5f8",
+    "b462e666-21ce-5f68-beac-4dac9de1d680",
+    "19d89a2f-6b85-5309-82cb-6b2589bb53b9"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS03",
+   "subcategory": "blocked_drain",
+   "center": {
+    "latitude": 19.074491,
+    "longitude": 72.921729
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "438e0911-8a7d-518a-97cf-fd48095ba0ad",
+    "8841283a-485d-5897-b93e-2dfb9bb27f56",
+    "b645cb4b-ec20-5ec3-a5f8-39fd23c8ac4f",
+    "fadbe2ef-1cf6-53e4-89e6-04c77a8585a1",
+    "8c41ccad-c0ba-577b-8360-f3ef6d7d289e",
+    "c2840598-6ab4-50ab-8766-5aed75ceac17"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS04",
+   "subcategory": "light_not_working",
+   "center": {
+    "latitude": 19.088004,
+    "longitude": 72.913683
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "39aa207c-3788-5a53-a154-666f4a7c83aa",
+    "0e82a2db-c25a-5827-be01-4cbc83ce1449",
+    "9ea318be-b448-5c84-8819-f32e360af5ad",
+    "9256527c-a3d9-5cd5-bc60-12b6854fe192",
+    "ca4ab286-dd4c-5c79-8eea-f786b20dfd83",
+    "4800c9dd-7a8e-57c3-a9bb-4ae9339e6484"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS05",
+   "subcategory": "garbage_overflow",
+   "center": {
+    "latitude": 19.076008,
+    "longitude": 72.925659
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "a6597305-d38e-58e8-a969-001704858b77",
+    "b765830f-7ae2-5f84-a0b6-7fce6f913ddf",
+    "126ad0d8-20a7-5d8d-a987-4d9c7fb08513",
+    "9aae6c0c-6afb-51d8-8b78-85bdead227b7",
+    "524c1b80-fa39-561a-8d62-28f383de203b"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS06",
+   "subcategory": "sewage_overflow",
+   "center": {
+    "latitude": 19.100003,
+    "longitude": 72.889805
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "d08974b0-7028-5839-a1f3-7732f1002e07",
+    "1b5787d3-9871-5cfa-9ad6-5f0a25535601",
+    "10765e09-bb3d-5fcd-9898-ed603409a8a7",
+    "2f58ca56-a050-5e61-a432-0df5c10e9bf9",
+    "e756e719-45d7-5c6a-b63b-de87c905477e"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS07",
+   "subcategory": "missing_manhole_cover",
+   "center": {
+    "latitude": 19.100007,
+    "longitude": 72.913752
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "f527e5ad-9b3a-5a20-b5c0-841e66c3fc3a",
+    "6e02f831-a705-55e2-bb89-da93f0fe7c68",
+    "9c930527-deb5-559b-8d1d-77deed3442f7",
+    "cfafe70c-d688-5208-907e-054741f501cf",
+    "42385532-000b-58c7-88e0-59a04a57ce8d",
+    "d438eccb-bab1-5ebe-a8eb-1c95cfc49dfe"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS08",
+   "subcategory": "flickering_light",
+   "center": {
+    "latitude": 19.097875,
+    "longitude": 72.901872
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "70c6531b-78f0-50e8-8558-d9de736b6e73",
+    "a5ee2e39-178b-5e78-a019-dca481e58725",
+    "4a369258-2113-5750-8a92-c88aa85f4f99",
+    "11a390b3-b739-58b0-a540-9fc6b16ee93b",
+    "f518a0bd-4d50-5407-98f2-69a5761b4795"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS09",
+   "subcategory": "low_water_pressure",
+   "center": {
+    "latitude": 19.079142,
+    "longitude": 72.929652
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "f5678e1a-3632-5556-9a54-d5491a812223",
+    "28e080d8-f0b5-5727-94c7-f52945ee076d",
+    "23637e79-bbdf-5210-a5fe-c535a3f8f5e5",
+    "2363aaba-f8b9-50ea-8271-4cebe16eb53f",
+    "201a49ad-fbc4-5129-8524-7bd56d8f6a7d",
+    "2257746f-8dd0-593a-97dc-744c305b6ba0"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS10",
+   "subcategory": "damaged_footpath",
+   "center": {
+    "latitude": 19.098345,
+    "longitude": 72.895476
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "e731f124-c90c-553b-8586-ba00e565d887",
+    "6da96d25-0168-50df-b568-ae211d6e486e",
+    "62dab2fb-c9c3-571e-9c3c-0b7ead871f0f",
+    "1d185d9c-a6a4-5c26-b278-06e4c65887d8"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS11",
+   "subcategory": "road_cave_in",
+   "center": {
+    "latitude": 19.100271,
+    "longitude": 72.88964
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "371c39eb-6a88-5a19-baeb-945150b7a9fb",
+    "994a25e2-57f0-5325-a50b-2901459f98c9",
+    "ba25ea9d-9053-574e-b9ec-77f59da7fa6b",
+    "cfd7bb8f-ab9e-59ea-b29e-d4cb0c26bb21",
+    "ca14db63-f761-575c-9e6f-5199f98ca63f"
+   ],
+   "window_days": 240
+  },
+  {
+   "site_id": "RS12",
+   "subcategory": "mosquito_breeding",
+   "center": {
+    "latitude": 19.100165,
+    "longitude": 72.901759
+   },
+   "radius_m": 150,
+   "case_ids": [
+    "b1e85c0a-015f-5813-8e73-634e8bf3f487",
+    "e53ea431-f965-55f4-a044-d34472d3c99e",
+    "7c77dedf-7ebe-5533-9137-12a92d3ec7b9",
+    "3dadad3e-c08c-52c0-9656-d94d363beff1"
+   ],
+   "window_days": 240
+  }
+ ],
+ "hotspots": [
+  {
+   "hotspot_id": "HS01",
+   "subcategory": "garbage_overflow",
+   "ward_id": "19d8fe26-9361-5941-a7e3-9dbe224150be",
+   "center": {
+    "latitude": 19.082,
+    "longitude": 72.9137
+   },
+   "recent_days": 14,
+   "case_ids": [
+    "ba59c749-a845-5ae6-8224-fbde4fb0068b",
+    "3a29a7cb-39d6-5570-bf0a-94e288421de6",
+    "d76bd91a-e6ed-52be-8e05-809d21f56c47",
+    "5e179cb1-b59c-5e71-aef0-d34a318f8c96",
+    "8a4bf6f1-ac50-56f6-85ad-e43552f5b702",
+    "598f7f00-5bbe-5d3e-a7e2-8e1970f1b6e4",
+    "7bf7bce4-f8ea-5b91-ab1d-2e974466bdcd",
+    "8319adf7-b898-56a4-a069-316b91e1b1fb",
+    "e979b835-03ef-510c-a4b4-66a093ee303f",
+    "5cec3a1e-240f-54a5-8ddd-d03fc401251d",
+    "27c2c9f7-a823-5649-b295-33dd6f75cf5d",
+    "9f13bd0a-836a-5391-ae09-48ebba69f733",
+    "b36c938e-69c5-5172-b41e-bf09cab5d781",
+    "c8c99055-9122-533f-bb95-3246e1510aa8",
+    "fde8245d-2a49-5ed8-beec-d0cd8dc49a7e",
+    "74fb6075-f899-5f23-8d1f-5f4af550b4e6",
+    "96c7e89b-7446-5182-8280-2338d215374a"
+   ]
+  },
+  {
+   "hotspot_id": "HS02",
+   "subcategory": "pipe_leakage",
+   "ward_id": "c0bbaba6-7805-53e4-a3b9-a88a8dba7435",
+   "center": {
+    "latitude": 19.1,
+    "longitude": 72.8897
+   },
+   "recent_days": 14,
+   "case_ids": [
+    "2a32a03f-64a0-5764-99e2-e330ff3a9e56",
+    "5adba4f7-ca1e-505e-bdb5-f37ccd11a398",
+    "d0511459-0d5b-5ffa-8b44-953702165a7f",
+    "633e9743-9aac-5b66-9a3d-53639979f590",
+    "3e98978a-8fe9-5e6b-a84e-6d0698c938b8",
+    "0685addb-b847-5b0b-8ad6-8725721f6b66",
+    "629c0829-a902-53b2-b380-7db96c105090",
+    "d621efb3-122c-52b6-b862-6abd23b1754e",
+    "14b64562-6f47-568d-94f7-a13e7fa5baea",
+    "d3282cee-73f4-506b-bf04-24e19d463dcd",
+    "57f2a6cc-e59d-55ef-9d8f-630adea2e9a1",
+    "7bff3a85-61c0-5588-9332-da61f504d865",
+    "ac95d28d-e17b-51ab-b989-f5bba82ea9bd",
+    "3b1e2125-8ad5-5741-b8c2-664cc367cb8b",
+    "1699fd38-004a-5fca-8797-01d11ff85473",
+    "c83c0fec-8151-5fe8-b7d0-5aff70afb1f3"
+   ]
+  },
+  {
+   "hotspot_id": "HS03",
+   "subcategory": "mosquito_breeding",
+   "ward_id": "417b5376-d5d8-5925-965b-9ed9a63b1c72",
+   "center": {
+    "latitude": 19.082,
+    "longitude": 72.8897
+   },
+   "recent_days": 14,
+   "case_ids": [
+    "137e40e0-0916-5882-9107-15a71999c605",
+    "ddc56ce9-3e19-5292-94fc-9c5c91e77858",
+    "2cd456e5-5ccf-535c-902b-104917079dae",
+    "efc541fd-f4ac-5e07-abd6-d79528702d3d",
+    "6dae862a-6412-58c7-b0a3-583c8c4ff678",
+    "67f52b3f-5046-5d4f-9c4e-e9f42963f2ca",
+    "ae2adf97-9286-5cab-bf68-76862ddf3398",
+    "89df8d6d-4517-5dd8-80af-b50e249d128f",
+    "377e4321-01b7-58af-a451-562925ffed30",
+    "748a960c-1712-500c-9c1a-5b84c3b0f11c",
+    "980bb6f5-84fa-5661-9bf4-ef656d4f395c",
+    "2a184ca7-ebde-54fe-9b7f-5d0aef1553bb",
+    "53c9869e-c173-590d-895f-df623f5b7aab",
+    "c221763e-5fdf-5df7-a196-ebf0f576f511"
+   ]
+  }
+ ],
+ "incident_cases": {
+  "bd9e2de0-9190-5753-b504-1277229f9079": [
+   "0adbd07b-efea-53e5-b63b-a290b605829d",
+   "01926db9-f3c4-5c7f-87a1-c390d84ca7e3",
+   "1c19e378-a4d9-51a4-887f-2046d6e1b799",
+   "4bc9cadd-3468-536e-ae01-7a75ace11a39",
+   "290498af-9171-5cf5-b7d4-3ffaeb292b1c",
+   "8666794e-9c63-5df6-be6b-03f95ef97d3d",
+   "b77a2ac3-f6e0-53de-863d-68919f96910d",
+   "0ea864ce-b46d-5f9d-ad8d-fc4fbccbfc3e",
+   "bab7a33f-08d3-51c8-a9b6-27c8e87e0fd6",
+   "d3863cb5-b2da-5c5e-bd00-f0f220c05c02",
+   "ef20c39c-f9ae-57ee-a648-ca3f7b36cee0",
+   "b2aa44c4-f0f0-53af-9ff9-ceea19ec2fd6"
+  ],
+  "3ab32920-941a-5b70-aa23-8dc879b1e0e0": [
+   "4405659d-2e55-5945-9cd4-0137779869da",
+   "f0decc40-4a68-57bd-9eae-a831b802b921",
+   "ec04c492-c507-5657-b839-48b6469db809",
+   "2bf44f70-1627-5dde-939c-eeb4aaf42d14",
+   "7bfd5731-1392-5af3-a6b9-cc01e042dd3d",
+   "90e0bfe0-bc52-5b29-a4b2-641060d79fb0",
+   "469fd41a-32a8-50bc-97e3-7c2662c48797",
+   "26ddbb76-5983-533a-97fe-306f51515dde",
+   "ce4e401b-ec9a-5c68-af3a-c98585efa4d3",
+   "9bac9eb7-ccb7-58be-aadd-299ee6cfa21d"
+  ],
+  "68b54360-b241-5a72-91d4-f20a3306edc1": [
+   "e25be40c-3e1c-553b-bb0a-576a73370728",
+   "c9422f10-99b3-5b09-a48e-f191d83f1d7b",
+   "4126e2c8-ee70-5afd-8740-15f01d8cc7a1",
+   "8c7eb43e-f145-5bac-a59b-1ea7fd09a244",
+   "315bcaa8-597f-55ad-be2d-4bc437fe8bd6",
+   "def384e9-de2e-507d-9b4d-0427147cfc46",
+   "bff673bd-703d-56a8-9160-6cc5d171d178",
+   "ba50ad57-cd0f-5f2c-898f-18cada1a3872",
+   "274e67b0-c6e6-5cf9-bd8c-c4e88536bfa5",
+   "f81b72fb-acac-5acd-bf9a-9b6210a48b33",
+   "3789de8d-8c70-5d2c-8706-491bb36234b0",
+   "5cf4649f-e794-5f68-83ac-80e5333ff07c"
+  ],
+  "7e6157eb-c9fd-5dbf-a00b-d7972b74aff9": [
+   "a91545a2-eff5-5049-aff6-ac25659274ee",
+   "c164a7d9-b6b6-5f7f-a8bf-919bfff0fa37",
+   "6175989e-f87e-52d0-917a-992d2f9a02ec",
+   "00890507-6ef9-5909-b5c4-39c43a801c8b",
+   "f1c26f83-b33c-57b4-98ac-acf7bde0b2f8",
+   "d5b92835-57d5-502e-a856-d3de977d4a7a",
+   "6319a735-125f-5134-9e25-bb3cbcecfe06",
+   "852b43c1-4842-56f7-8c92-c3255c5c6f4a",
+   "2fbba78e-9044-59d5-9d3d-c03f18a903f7",
+   "12862f4b-2057-5557-86c5-dd5720a75b55",
+   "1e9e5063-cb87-5946-997e-3884a68fea6b",
+   "13edaff0-6984-5149-8d3a-748fd4306c55"
+  ],
+  "afed14f5-8c7c-544b-ab09-73810706d3c7": [
+   "de6b75d3-6c1a-551e-9d59-3c7a7875b61f",
+   "0de28cea-d60c-5f6c-9963-504b77d29175",
+   "8c012f06-48a8-5a79-bb18-3ca69d419e7d",
+   "eaa86260-75db-5755-bc1b-52231a169f5f",
+   "e8b0e4bb-c59f-52d4-a02e-66fe71941b16",
+   "82f0ecf9-5f33-5318-b69c-56f63c9bed4f",
+   "6a73b677-d751-5f46-a31c-1ac7eb5a3309",
+   "e4e633a0-8d15-589c-bc51-a239cbc11e18"
+  ]
+ }
+}
