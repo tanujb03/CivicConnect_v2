@@ -44,6 +44,9 @@ licence status and the workflow. Reports always state their provenance and what 
 ## Demo city (design §58) — synthetic
 `ai/evaluation/datasets/demo_city_v1/` is the seeded **synthetic** city the demos run on: 10 wards, 8 departments, 560 Civic Cases with multilingual reports, duplicate groups, recurring problems, hotspots, SLA violations, reopened cases and active incidents, plus planted ground truth. Everything is labelled synthetic (`DEMO-` ids, `"synthetic": true`). Build/verify with `python -m ai.training.src.build_demo_city`, evaluate with `python -m ai.evaluation.eval_demo_city`. See its `README.md`.
 
+## Road-damage detector (the project's trained image model)
+Until 2026-10-02 there was **no** image model: photos only went to the LLM provider (zero-shot) and, without a provider, came back `IMAGE_NOT_ANALYZED`. Notebook `06` trains a YOLO detector for `D40` pothole and the cracks `D00/D10/D20` on real road photos, evaluates it on held-out groups and on Maharashtra photos, and exports ONNX. The backend loads it through `AI_VISION_ONNX_PATH` (`backend/ai_gateway/vision.py`): detections appear as additive `image_analysis` on `POST /cases/intake/analyze`, and when no other AI answered with confidence the detection becomes a low-confidence proposal the citizen must confirm. Run it with `SMOKE = True` first (10–15 min), then overnight. Data prep, id decoding and metrics code: `training/src/vision/`.
+
 ## Quick start
 ```bash
 pip install -e "ai[training,dev]"
@@ -66,7 +69,8 @@ Kaggle: see `training/README.md`. Backend: see `INTEGRATION_HANDOFF.md`. Taxonom
 | Fusion (calibrated, lexical) | AUC 0.984, gate recall 1.0 | distance dominates on synthetic pairs; lexical semantic weight is ~0 → provider embeddings needed |
 | Fusion (uncalibrated prior) | AUC 0.930 | for comparison |
 | Provider intake / embeddings / transcription | **not run** | needs credentials + validated model IDs |
-| B1 encoder | **not run** | needs Kaggle (GPU/Internet) |
+| B1 encoder (frozen encoder + head on short synthetic lines) | **not run; deprioritised** | superseded by the data-diversity plan below |
+| **Road-damage detector (YOLO, trained image model)** | **pipeline built and tested; Kaggle training not yet run** | notebook `06_road_damage_detector_kaggle.ipynb`: RDD2020 (VOC) + RDD2022 (ids decoded from evidence) + BharatPotHole, group-safe splits, per-country metrics, Maharashtra domain check, ONNX export for the backend |
 
 ## Test status (last run: 339 passed, 3 skipped, ~60 s)
 | Category | Tests | Status |

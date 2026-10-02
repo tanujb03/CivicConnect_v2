@@ -10,6 +10,7 @@ from backend.core.security import get_current_user
 
 from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
 from .service import Actor, AIGateway
+from .vision import build_from_env as build_vision
 
 _gateway: AIGateway | None = None
 _lock = threading.Lock()
@@ -22,7 +23,7 @@ def build_default_gateway() -> AIGateway:
     executor = DemoCityToolExecutor(repo)
     ai = AIService.from_env(tool_executor=executor)
     return AIGateway(ai=ai, repo=repo, evidence=MemoryEvidenceResolver(), analyses=MemoryAnalysisStore(), audit=EventStreamAuditSink(),
-                     clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor))
+                     clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor), vision=build_vision())
 
 
 def configure_gateway(gateway: AIGateway | None) -> None:

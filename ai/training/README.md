@@ -8,6 +8,7 @@ Everything here is **synthetic-data** work (see `../evaluation/datasets/DATASET_
 | `03_fusion_calibration_kaggle.ipynb` | AI-2 combined-score calibration (lexical; optional provider-embedding mode) | none | Off (On + secret for embedding mode) | <1 min | Needed for calibrated fusion |
 | `04_real_data_prepare_evaluate_kaggle.ipynb` | Real public data: profile → prepare → pairs → real-data evaluation (terms-gated; aggregates-only bundle) | none | On (Socrata) or attached dataset | minutes | No — run after datasets are chosen |
 | `05_kaggle_real_data_profile_evaluate.ipynb` | Indian datasets read **in place** from `/kaggle/input`: BMC (synthetic) + Mumbai/Nashik, RDD2022/2020 India, BharatPotHole — profile → audits → readiness; aggregates-only bundle | none | Off is fine | minutes | Run per attached dataset |
+| `06_road_damage_detector_kaggle.ipynb` | **Trains the image model**: YOLO road-damage detector (D40 pothole + D00/D10/D20 cracks) on RDD2020 + RDD2022 + BharatPotHole read in place; group-safe splits, per-country metrics, Maharashtra domain check, ONNX export + model card | **GPU (T4/P100)** | **On** (repo clone, `ultralytics`, pretrained weights) | smoke 10–15 min; real run overnight (`TRAIN_HOURS`) | `SMOKE = True` first, then `False` + Save & Run All |
 | `02_b1_encoder_experiment_kaggle.ipynb` | **B1** (optional): frozen multilingual encoder + LogReg vs B0 | GPU T4/P100 | **On** (downloads encoder) | ≈5–10 min | **No** |
 
 ## 1 · Get the code onto Kaggle (pick one)

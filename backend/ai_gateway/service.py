@@ -24,7 +24,8 @@ from .contracts import (
     AnalyticsExplainRequest, AnalyticsExplainResponse, CopilotQueryRequest, CopilotQueryResponse, FusionAnalyzeResponse, IntakeAnalyzeRequest, IntakeAnalyzeResponse,
     ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
-from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver
+from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver, ImageAnalyzer
+from .vision import summarize
 
 log = logging.getLogger("civicconnect.ai_gateway")
 
@@ -57,9 +58,10 @@ def _utcnow() -> datetime:
 
 class AIGateway:
     def __init__(self, ai: AIService, repo: CaseRepository, evidence: EvidenceResolver, analyses: AIAnalysisStore, audit: AuditSink,
-                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None):
+                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None, vision: ImageAnalyzer | None = None):
         self.ai, self.repo, self.evidence, self.analyses, self.audit, self.clock = ai, repo, evidence, analyses, audit, clock
         self.facts = facts
+        self.vision = vision
 
     # ------------------------------------------------------------------------------------------ helpers
     @staticmethod
@@ -115,15 +117,50 @@ class AIGateway:
             res = self.ai.analyze_intake(IntakeRequest(text=req.text, evidence=evidence, language_hint=req.language_hint, location=loc))
         except (ValidationError, InputLimitExceeded, ValueError) as e:
             raise self._input_error(e) from e
-        p = res.proposal
-        code, canon = self._dept_out(p.suggested_department)
-        analysis_id = self._persist("intake", None, actor, res, res.confidence)
-        return IntakeAnalyzeResponse(
-            proposal={**p.model_dump(mode="json", exclude={"suggested_department", "location"}),
-                      "location": p.location.model_dump(mode="json") if p.location else None,
-                      "suggested_department": code, "suggested_department_id": canon},
-            confidence=res.confidence, warnings=res.warnings, requires_confirmation=True,
-            alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=self._meta(res), analysis_id=analysis_id)
+        proposal = res.proposal.model_dump(mode="json", exclude={"suggested_department", "location"})
+        proposal["location"] = res.proposal.location.model_dump(mode="json") if res.proposal.location else None
+        warnings, confidence, meta = list(res.warnings), res.confidence, self._meta(res)
+        dept = res.proposal.suggested_department
+        analyses = self._analyze_images(evidence, warnings)
+        best = summarize(analyses)
+        if best:
+            no_ai = res.ai_metadata.source == "none"
+            weak = proposal["category"] == "other" or res.confidence < float(self.ai.policy.intake.get("low_confidence_threshold", 0.55))
+            if no_ai or weak:       # nothing else answered with confidence: the local image model PROPOSES (the citizen still confirms)
+                proposal.update(category=best["category"], subcategory=best["subcategory"], title=f"{best['label'].capitalize()} in photo")
+                proposal["severity"] = self._rule_severity(best["category"], best["subcategory"])
+                dept = self.ai.taxonomy.department_for(best["category"], best["subcategory"])
+                confidence = round(min(0.8, best["confidence"]), 4)
+                proposal["reasons"] = [*proposal.get("reasons", []), f"Local road-damage model: {best['label']} detected ({best['confidence']:.2f})"][:8]
+                warnings.append(W.make("LOCAL_VISION_USED", f"{best['label']} detected in the photo by the local model; no stronger AI answer was available"))
+                meta = {**meta, "local_vision": {"used_for_proposal": True, "model": analyses[0].model}}
+            elif best["confidence"] >= 0.7 and proposal["category"] != best["category"]:
+                warnings.append(W.make("VISION_DISAGREES", f"local image model sees {best['label']} (roads) but the proposal says {proposal['category']}: please check the photo"))
+        code, canon = self._dept_out(dept)
+        proposal.update(suggested_department=code, suggested_department_id=canon)
+        images = [a.as_dict() for a in analyses]
+        analysis_id = self._persist("intake", None, actor, res, confidence, {"image_analysis": images} if images else None)
+        return IntakeAnalyzeResponse(proposal=proposal, confidence=confidence, warnings=warnings, requires_confirmation=True,
+                                     alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=meta, analysis_id=analysis_id, image_analysis=images)
+
+    def _analyze_images(self, evidence: list, warnings: list[str]) -> list:
+        out = []
+        if self.vision is None:
+            return out
+        for ev in evidence:
+            try:
+                a = self.vision.analyze(ev)
+            except Exception as e:        # the local model is an optional extra: its failure must never fail an intake
+                warnings.append(W.make("IMAGE_MODEL_FAILED", f"local image model failed on {ev.evidence_id}: {type(e).__name__}"))
+                log.warning("local vision failed: %s", type(e).__name__)
+                continue
+            if a is not None:
+                out.append(a)
+        return out
+
+    def _rule_severity(self, category: str, subcategory: str | None) -> str:
+        from ai.inference.triage.rules import rule_severity
+        return rule_severity(self.ai.taxonomy, self.ai.triage.rules, category, subcategory, None).severity
 
     # ------------------------------------------------------------------------------------------ 51A.7 fusion
     @staticmethod
