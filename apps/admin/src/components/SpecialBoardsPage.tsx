@@ -103,7 +103,7 @@ const SpecialBoardsPage: React.FC<SpecialBoardsPageProps> = ({ userRole }) => {
   };
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen">
+    <div className="p-6 min-h-screen page-enter">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-civic-text-primary mb-2">Special Boards</h2>
         <p className="text-civic-text-secondary">Manage ignored, disputed, and overdue issues requiring special attention</p>

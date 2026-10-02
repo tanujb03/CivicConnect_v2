@@ -140,7 +140,7 @@ const UserManagementPage: React.FC = () => {
   );
 
   return (
-    <div className="p-6 bg-civic-bg min-h-screen">
+    <div className="p-6 min-h-screen page-enter">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-civic-text-primary mb-2">User Management</h2>
         <p className="text-civic-text-secondary">Manage citizen accounts and administrative users</p>

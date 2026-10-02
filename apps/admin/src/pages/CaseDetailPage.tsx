@@ -113,7 +113,7 @@ const CaseDetailPage: React.FC = () => {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 bg-civic-bg min-h-screen space-y-6">
+    <div className="p-6 min-h-screen page-enter space-y-6">
 
       {/* Back + header */}
       <div className="flex items-start justify-between">
