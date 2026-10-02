@@ -601,7 +601,7 @@ def run_all(cfg: RunConfig, ids: tuple[str, ...] = ORDER) -> dict:
                "datasets": {i: {"status": r["status"], "priority": r["card"]["priority"], "evidence_class": r["evidence_class"], "licence_status": r["card"]["licence_status"],
                                 "real_world_claim_allowed": r["real_world_claim_allowed"], "next_steps": r["next_steps"],
                                 "can_run_real_holdout": (r.get("real_holdout_readiness") or {}).get("can_run_real_holdout")} for i, r in results.items()},
-               "reminder": "BMC is third-party SYNTHETIC data (never real-world evidence); image datasets are real but every licence is UNVERIFIED here: no publishable claim."}
+               "reminder": "BMC is third-party SYNTHETIC data (never real-world evidence); image datasets are real; per-card licence status is in each report (BharatPotHole is UNVERIFIED; RDD2020 is non-commercial only): no publishable claim without enough held-out rows."}
     _write_json(cfg.out / "SUMMARY.json", summary)
     repo = cfg.meta or {}
     L = ["# CivicConnect Kaggle real-data run — summary", "",

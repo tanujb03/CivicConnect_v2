@@ -10,6 +10,7 @@ from ai.training.src.data_sources.card_schema import SourceCard, check_terms, li
 from ai.training.src.data_sources.errors import TermsNotAccepted
 from ai.training.src.data_sources.mapping import MAPPINGS_DIR, DepartmentMapping, MappingTable
 
+OWNER_VERIFIED_2026_10_02 = {"bmc_mumbai", "rdd2020", "rdd2022", "mumbai_nashik_road_surface"}
 INDIAN = ("bmc_mumbai", "rdd2020", "rdd2022", "bharatpothole", "mumbai_nashik_road_surface", "idd")
 SUPPORTED_IMAGE = ("rdd2020", "rdd2022", "bharatpothole", "mumbai_nashik_road_surface")
 
@@ -24,9 +25,15 @@ def test_all_requested_indian_datasets_have_cards_with_the_requested_priority():
 
 
 @pytest.mark.parametrize("sid", INDIAN)
-def test_no_indian_card_claims_a_verified_licence_or_a_reviewed_status(sid):
+def test_licence_status_follows_the_recorded_evidence_and_no_card_claims_a_reviewed_status(sid):
     c = load_card(sid)
-    assert c.license.status == "UNVERIFIED" and not c.license_verified
+    if sid in OWNER_VERIFIED_2026_10_02:
+        # the owner reviewed the research agent's quoted findings and instructed on 2026-10-02 to treat these as verified: the card must say so and quote the page
+        assert c.license.status == "VERIFIED_PRIMARY" and c.license_verified and c.license.verified_on == "2026-10-02"
+        assert any(e.reliability == "primary" and "instructed on 2026-10-02" in e.note and "Licence" in e.note or "Competition Data is additionally released" in e.note
+                   for e in c.license.evidence)
+    else:
+        assert c.license.status == "UNVERIFIED" and not c.license_verified        # BharatPotHole (no dataset licence found) and IDD (future)
     assert c.review_status == "DRAFT_NEEDS_HUMAN_REVIEW" and c.redistribution_in_git == "never"
     assert "NOT be committed" in c.terms_summary()
 
@@ -45,9 +52,9 @@ def test_bmc_card_records_that_the_dataset_is_synthetic_third_party_and_never_of
     assert c.landing_url.endswith("/competitions/mumbai-nagar-seva-bmc-civic-complaint-resolution-2018-2024/data")
     assert c.identity_status == "CONFIRMED_BY_USER" and c.priority == "primary"
     assert "SYNTHETIC DATA (third-party generated)" in c.terms_summary() and "ORIGIN UNVERIFIED" not in c.terms_summary()
-    # the Rules' CC BY 4.0 statement was quoted by the owner's research agent (2026-10-02) and relayed: recorded as secondary evidence, licence stays UNVERIFIED
-    assert "CC BY 4.0" in c.license.name and "relayed" in c.license.name and c.license.status == "UNVERIFIED"
-    assert any("Competition Data is additionally released under" in e.note and e.reliability == "secondary" for e in c.license.evidence)
+    # the Rules' CC BY 4.0 statement was read by the owner's research agent and accepted by the owner as verified on 2026-10-02
+    assert "CC BY 4.0" in c.license.name and c.license.status == "VERIFIED_PRIMARY" and c.license_verified
+    assert any("Competition Data is additionally released under" in e.note and e.reliability == "primary" for e in c.license.evidence)
 
 
 def test_bmc_card_declares_supported_and_unsupported_tasks_honestly():
@@ -99,14 +106,13 @@ def test_rdd2020_is_a_separate_card_with_its_own_noncommercial_licence_report():
     assert "India" in b.subset_used
 
 
-def test_mumbai_nashik_is_the_confirmed_dataset_with_a_reported_but_unverified_cc_by_licence():
+def test_mumbai_nashik_is_the_confirmed_dataset_with_a_verified_cc_by_licence():
     c = load_card("mumbai_nashik_road_surface")
     assert c.identity_status == "CONFIRMED_BY_USER" and c.landing_url == "https://data.mendeley.com/datasets/tj2m7zz4rg/2" and "Version 2" in c.version_note
     assert "8,484" in c.version_note and "13 videos" in c.version_note and "NOT established" in c.version_note
-    assert "CC BY 4.0" in c.license.name and "UNVERIFIED" in c.license.name
-    assert c.license.status == "UNVERIFIED" and not c.license_verified
-    assert not any(e.reliability == "primary" for e in c.license.evidence)            # relayed, not read by this tooling
-    assert any("relayed" in e.note.lower() or "reports" in e.note.lower() for e in c.license.evidence)
+    assert "CC BY 4.0" in c.license.name and "Version 2" in c.license.name
+    assert c.license.status == "VERIFIED_PRIMARY" and c.license_verified
+    assert any(e.reliability == "primary" and "Licence — CC BY 4.0." in e.note for e in c.license.evidence)
     assert "not added" in json.dumps(c.model_dump()).lower() and "Indian Roads Dataset" in json.dumps(c.model_dump())
     assert "private Kaggle Dataset" in c.data_access["method"]
 
@@ -129,15 +135,18 @@ def test_terms_gate_applies_to_every_indian_dataset():
         c = load_card(sid)
         with pytest.raises(TermsNotAccepted):
             check_terms(c, accepted=[], ack_unverified=True)
-        with pytest.raises(TermsNotAccepted):
-            check_terms(c, accepted=[sid], ack_unverified=False)
+        if c.license_verified:
+            check_terms(c, accepted=[sid], ack_unverified=False)           # a verified licence needs the terms acceptance only
+        else:
+            with pytest.raises(TermsNotAccepted):
+                check_terms(c, accepted=[sid], ack_unverified=False)
         check_terms(c, accepted=[sid], ack_unverified=True)
 
 
 def test_cli_card_prints_the_origin_warning_and_idd_prepare_is_refused(capsys, tmp_path):
     assert cli.main(["card", "bmc_mumbai"]) == 0
     out = capsys.readouterr().out
-    assert "SYNTHETIC DATA (third-party generated)" in out and "UNVERIFIED" in out
+    assert "SYNTHETIC DATA (third-party generated)" in out and "VERIFIED_PRIMARY" in out
     assert cli.main(["card", "mumbai_nashik_road_surface"]) == 0 and "CC BY 4.0" in capsys.readouterr().out
     assert cli.main(["cards"]) == 0
     listing = capsys.readouterr().out

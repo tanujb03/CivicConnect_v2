@@ -144,7 +144,7 @@ def test_prepare_rdd_writes_references_not_images(tmp_path):
     recs = [ImageRecord.model_validate(r) for r in read_jsonl(tmp_path / "out" / "records.jsonl")]
     assert m["images_per_country"]["India"] == 3 and m["boxes_per_class"] == {"D40": 2, "D00": 1, "D44": 1, "D20": 1, "D10": 1}
     assert {r.split_hint for r in recs if r.country == "Japan"} == {"holdout"} and {r.split_hint for r in recs if r.country == "India"} == {"train"}
-    assert m["license_verified"] is False and m["license_conflicts"] and "BY-SA" in m["redistribution"]
+    assert m["license_verified"] is True and m["license_conflicts"] and "BY-SA" in m["redistribution"]
     assert not list((tmp_path / "out").glob("*.jpg")) and m["images_with_no_boxes"] == 1
     assert m["image_label_counts"]["roads/pothole"] == 2
 

@@ -7,7 +7,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 
 
 ## Mumbai Nagar Seva — BMC Civic Complaint Resolution 2018–2024 (Kaggle competition data; SYNTHETICALLY GENERATED)
-`bmc_mumbai` · priority **primary** · licence **UNVERIFIED** · origin **SYNTHETIC_PER_COMPETITION** · identity **CONFIRMED_BY_USER**
+`bmc_mumbai` · priority **primary** · licence **VERIFIED_PRIMARY** · origin **SYNTHETIC_PER_COMPETITION** · identity **CONFIRMED_BY_USER**
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|
@@ -54,7 +54,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 - `visual_pothole_eval`: Positive-only expected; hold out whole videos/sequences.
 
 ## Road surface images with seasons — Nashik and Mumbai, Maharashtra (Mendeley Data tj2m7zz4rg, version 2)
-`mumbai_nashik_road_surface` · priority **secondary** · licence **UNVERIFIED** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_BY_USER**
+`mumbai_nashik_road_surface` · priority **secondary** · licence **VERIFIED_PRIMARY** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_BY_USER**
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|
@@ -63,7 +63,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 - `visual_road_surface_eval`: Category-level only; speed breakers/paved/unpaved/water are out_of_scope; identity of the dataset needs your confirmation.
 
 ## RDD2020 — Road Damage Dataset (India, Japan, Czech Republic)
-`rdd2020` · priority **secondary** · licence **UNVERIFIED** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_PUBLISHED_REFERENCE**
+`rdd2020` · priority **secondary** · licence **VERIFIED_PRIMARY** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_PUBLISHED_REFERENCE**
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|
@@ -72,7 +72,7 @@ Status: `supported` · `conditional` (needs the stated columns/confirmations) ·
 - `visual_pothole_eval`: India subset; NonCommercial licence reported.
 
 ## RDD2022 — multi-national Road Damage Dataset (CRDDC'2022)
-`rdd2022` · priority **secondary** · licence **UNVERIFIED** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_PUBLISHED_REFERENCE**
+`rdd2022` · priority **secondary** · licence **VERIFIED_PRIMARY** · origin **PUBLISHER_IDENTIFIED** · identity **CONFIRMED_PUBLISHED_REFERENCE**
 
 | task | capability | status | allowed inputs | targets | forbidden | labels | taxonomy mapping | track | in eval harness |
 |---|---|---|---|---|---|---|---|---|---|

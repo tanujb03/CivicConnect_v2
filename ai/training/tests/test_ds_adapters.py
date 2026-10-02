@@ -179,7 +179,7 @@ def test_rdd_adapter_produces_image_references_with_mapped_boxes(tmp_path):
     assert ad.stats["degenerate_boxes"] == 1 and ad.stats["unknown_classes"] == 1 and ad.stats["invalid_xml"] == 1
     assert ad.coverage.to_dict()["counts"] == {"category_only": 3, "exact": 2, "unmapped": 1}
     p = r.provenance
-    assert (p.kind, p.label_origin, p.license_verified) == ("real_public", "human_annotated", False)
+    assert (p.kind, p.label_origin, p.license_verified) == ("real_public", "human_annotated", True)
 
 
 def test_rdd_ids_are_unique_across_countries_and_paths_are_relative(tmp_path):

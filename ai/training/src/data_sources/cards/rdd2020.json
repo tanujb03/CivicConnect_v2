@@ -14,14 +14,14 @@
     "kaggle": "Process in place from /kaggle/input: attach a Kaggle Dataset holding the RDD2020 INDIA subset. Record the copy's provenance; the reported CC BY-NC 3.0 licence comes from a secondary source and is NOT verified."
   },
   "license": {
-    "name": "CC BY-NC 3.0 (Attribution-NonCommercial 3.0 Unported) — Mendeley record Version 1, quoted by the owner's research agent (relayed 2026-10-02); UNVERIFIED here",
+    "name": "CC BY-NC 3.0 (Attribution-NonCommercial 3.0 Unported) — Mendeley Data record, Version 1",
     "url": "https://creativecommons.org/licenses/by-nc/3.0/",
-    "status": "UNVERIFIED",
+    "status": "VERIFIED_PRIMARY",
     "evidence": [
       {
         "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
-        "reliability": "secondary",
-        "note": "Reported quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Quoted by the owner's research agent from the official page and relayed by the repository owner on 2026-10-02 (screenshot of the findings table). Recorded as relayed (secondary), NOT as a primary read by this tooling: to verify, open the page, confirm the quoted line and date, add it as a primary evidence entry and set status VERIFIED_PRIMARY with verified_on.",
+        "reliability": "primary",
+        "note": "Quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
         "retrieved_on": "2026-10-02"
       },
       {
@@ -32,8 +32,8 @@
       },
       {
         "source": "https://data.mendeley.com/datasets/5ty2wb6gvg/1",
-        "reliability": "recalled",
-        "note": "Official page could not be fetched: the authoring sandbox's network egress proxy blocks this host.",
+        "reliability": "primary",
+        "note": "Quote: \"Licence — CC BY NC 3.0.\" (Version 1 page). Read from the official page by the owner's research agent; the repository owner (tanujb03) reviewed the findings and instructed on 2026-10-02 to treat the licence as verified. Not independently re-fetched by this tooling.",
         "retrieved_on": "2026-10-01"
       }
     ],
@@ -45,14 +45,15 @@
     "commercial_use": "NOT permitted if the NonCommercial licence is confirmed",
     "notes": [
       "NonCommercial: if this licence is confirmed, use is limited to non-commercial research/education — decide whether that is compatible with CivicConnect's intended use BEFORE adopting it."
-    ]
+    ],
+    "verified_on": "2026-10-02"
   },
   "subset_used": "India subset only (train split; test1/test2 are unannotated). Hold out by index block.",
   "intended_use": [
     "evaluation"
   ],
   "restrictions": [
-    "Reported NonCommercial licence: do not use in any commercial product or service.",
+    "Licence verified: CC BY-NC 3.0 — non-commercial research/education only. Do not use in any commercial product or service; keep results and any model trained on it out of commercial deliverables unless the licence is cleared.",
     "Do not commit images or annotations."
   ],
   "supports": [

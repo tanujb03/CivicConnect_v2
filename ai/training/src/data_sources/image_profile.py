@@ -68,6 +68,22 @@ def _looks_yolo(raw: bytes) -> bool:
     return bool(lines) and all(_YOLO_LINE.match(ln.strip()) for ln in lines)
 
 
+def _yolo_class_id_histogram(txts: list[str], read, max_files: int = 2000) -> dict:
+    """Facts for a dataset whose YOLO labels carry numeric class ids but no class-names file: WHICH ids occur and how often (evenly spaced sample of the
+    label files). It does not say what the ids mean: the names must come from the dataset's own documentation."""
+    step = max(1, len(txts) // max_files)
+    ids: Counter = Counter()
+    sampled = 0
+    for rel in txts[::step][:max_files]:
+        sampled += 1
+        for line in read(rel, 20_000).decode("utf-8", errors="ignore").splitlines():
+            tok = line.split(None, 1)[0] if line.strip() else ""
+            if tok.lstrip("-").isdigit():
+                ids[int(tok)] += 1
+    return {"label_files_sampled": sampled, "label_files_total": len(txts), "class_id_counts": dict(sorted(ids.items())),
+            "note": "ids only: the meaning of each id must come from the dataset's own class list; it is never guessed."}
+
+
 def profile_image_dataset(root: Path, *, sample: int = 12) -> dict:
     """Facts about what is actually under ``root`` (a real directory tree). See :func:`profile_entries`."""
     root = Path(root)
@@ -108,6 +124,7 @@ def profile_entries(entries: list[tuple[str, int]], read, root_name: str, *, sam
     parents: Counter = Counter()
     split_images: Counter = Counter()
     country_images: Counter = Counter()
+    country_in_names: Counter = Counter()
     images, xmls, txts, jsons, videos, class_files, archives = [], [], [], [], [], [], []
     for rel, size in entries:
         pp = PurePosixPath(rel)
@@ -129,6 +146,10 @@ def profile_entries(entries: list[tuple[str, int]], read, root_name: str, *, sam
                 if hit:
                     country_images[hit] += 1
                     break
+            else:   # no country in the directories: some re-uploads encode it in the file name instead (e.g. India_000123.jpg, China_Drone_000008.jpg)
+                hit = next((c for c in COUNTRY_WORDS if c in pp.stem.lower()), None)
+                if hit:
+                    country_in_names[hit] += 1
         elif e == ".xml":
             xmls.append(rel)
         elif e == ".txt":
@@ -151,6 +172,7 @@ def profile_entries(entries: list[tuple[str, int]], read, root_name: str, *, sam
     voc_files = [x for x in xmls[:5] if _looks_voc(read(x))]
     yolo_files = [x for x in txts[:40] if _looks_yolo(read(x))]
     voc_like, yolo_like = bool(voc_files), bool(yolo_files)
+    yolo_ids = _yolo_class_id_histogram(txts, read) if yolo_like else None
     candidates = [f for f, ok in (("voc", voc_like), ("yolo", yolo_like), ("coco", bool(coco)), ("folder", len(parents) >= 2)) if ok]
     img_stems = Counter(PurePosixPath(r).stem for r in images)
     ann_stems = {PurePosixPath(p).stem for p in xmls} | {PurePosixPath(p).stem for p in txts}
@@ -190,7 +212,9 @@ def profile_entries(entries: list[tuple[str, int]], read, root_name: str, *, sam
             "annotation_artifacts": {"xml": len(xmls), "txt": len(txts), "json": len(jsons)},
             "annotation_content_sniffed": {"voc_xml_like_of_first_5": len(voc_files), "yolo_txt_like_of_first_40": len(yolo_files)},
             "coco_style_json": coco, "class_name_files": class_files, "class_name_previews": previews,
-            "split_directories_images": dict(split_images), "country_markers_images": dict(country_images), "archives": archives[:20],
+            "yolo_class_id_histogram_sample": yolo_ids,
+            "split_directories_images": dict(split_images), "country_markers_images": dict(country_images), "country_markers_in_filenames": dict(country_in_names),
+            "archives": archives[:20],
             "videos": videos[:20], "n_videos": len(videos), "numbered_filename_share": round(numbered / max(len(names), 1), 3),
             "images_with_same_stem_annotation": covered, "images_without_same_stem_annotation": len(images) - covered,
             "duplicate_image_stems": sum(1 for c in img_stems.values() if c > 1), "sample_relative_paths": images[:sample],

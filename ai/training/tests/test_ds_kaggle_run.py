@@ -94,8 +94,12 @@ def test_bmc_requires_terms_and_licence_acknowledgement_before_preparing(tmp_pat
     assert r["status"] == "NEEDS_TERMS" and "--accept-terms bmc_mumbai" in stage(r, "terms_gate")["detail"] and "SYNTHETIC DATA" in r["terms_summary"]
     assert not list((tmp_path / "work").rglob("records.jsonl"))
     r2 = kr.run_dataset(cfg_for(tmp_path, root, ack_unverified_license=False), "bmc_mumbai")
-    assert r2["status"] == "NEEDS_TERMS" and "ACK_UNVERIFIED_LICENSE" in " ".join(r2["next_steps"])
-    assert stage(r2, "profile_and_role_validation")["status"] == "ok"        # profiling needs no terms: it only reads in place
+    assert r2["status"] == "OK" and r2["card"]["licence_status"] == "VERIFIED_PRIMARY"      # a verified licence needs only the terms acceptance
+    # an UNVERIFIED licence (BharatPotHole: no dataset licence found) additionally needs the explicit acknowledgement
+    root_b = make_fake_kaggle_input(tmp_path / "in_b", bmc=False, rdd2022=False, bharat=True)
+    r3 = kr.run_dataset(cfg_for(tmp_path / "b", root_b, ack_unverified_license=False, image={"bharatpothole": {"format": "yolo", "class_names_file": "classes.txt"}}), "bharatpothole")
+    assert r3["status"] == "NEEDS_TERMS" and "ACK_UNVERIFIED_LICENSE" in " ".join(r3["next_steps"])
+    assert stage(r3, "profile_images")["status"] == "ok"                      # profiling needs no terms: it only reads in place
 
 
 def test_bmc_ambiguous_columns_need_a_role_map_and_a_role_map_resolves_them(tmp_path):
@@ -259,12 +263,12 @@ def test_rdd2022_voc_first_run_end_to_end_with_licence_conflict_and_claim_blocke
     root = make_fake_kaggle_input(tmp_path / "in", bmc=False)
     cfg = cfg_for(tmp_path, root, image=VOC_CFG)
     res = kr.run_dataset(cfg, "rdd2022")
-    assert res["status"] == "OK" and res["card"]["licence_status"] == "UNVERIFIED" and res["card"]["licence_conflicts"]
+    assert res["status"] == "OK" and res["card"]["licence_status"] == "VERIFIED_PRIMARY" and res["card"]["licence_conflicts"]
     assert list(stage(res, "card_provenance")["detail"]["execution_source"]) == ["https://www.kaggle.com/datasets/aliabdelmenam/rdd-2022"]
     rd = res["real_holdout_readiness"]
     assert rd["annotated_holdout_images"] > 0 and rd["publishable_evaluation_enabled"] is False
     cb = " ".join(rd["claim_blockers"])
-    assert "licence not verified" in cb and "< 200" in cb
+    assert "licence not verified" not in cb and "< 200" in cb          # the licence is accepted as verified; the sample-size blocker remains
     files = stage(res, "image_file_and_duplicate_audit")["detail"]
     assert files["formats_by_magic_bytes"] == {"jpeg": 40} and files["near_duplicates"]["status"] == "ok"
     assert stage(res, "provider_vision_evaluation")["status"] == "not_requested"
@@ -350,7 +354,7 @@ def test_mumbai_nashik_needs_an_explicit_format_then_maps_only_what_the_labels_s
     assert list(stage(r1, "card_provenance")["detail"]["execution_source"]) == ["https://data.mendeley.com/datasets/tj2m7zz4rg/2"]
     cfg = cfg_for(tmp_path / "b", root, image={"mumbai_nashik_road_surface": {"format": "folder", "group_by": "dir", "holdout_fraction": 0.5, "holdout_seed": 4}})
     r2 = kr.run_dataset(cfg, "mumbai_nashik_road_surface")
-    assert r2["status"] == "OK" and r2["card"]["identity_status"] == "CONFIRMED_BY_USER" and r2["card"]["licence_verified"] is False
+    assert r2["status"] == "OK" and r2["card"]["identity_status"] == "CONFIRMED_BY_USER" and r2["card"]["licence_verified"] is True
     ann = stage(r2, "annotation_audit")["detail"]
     assert ann["image_level_mapped_label_counts"].get("roads/pothole") == 4
     assert set(ann["image_level_mapped_label_counts"]) <= {"roads/pothole", "(none mapped)"}          # paved/unpaved/speed breaker are NOT forced into the taxonomy
