@@ -3,9 +3,384 @@
 @import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 /* Google Fonts Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* Tailwind Directives (only once) */
+/* Tailwind Directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   CivicConnect Citizen App — Premium Design System
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #f0faf2;
+    color: #1a2e1a;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(26, 138, 58, 0.2);
+    border-radius: 100px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 138, 58, 0.35);
+  }
+}
+
+@layer components {
+  /* ─── Glassmorphism Cards ──────────────────────────────────── */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-lg rounded-2xl border border-white/50 shadow-glass;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    @apply shadow-glass-lg;
+    transform: translateY(-2px);
+  }
+
+  .glass-card-dark {
+    @apply bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-glass;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ─── Premium Gradient Backgrounds ─────────────────────────── */
+  .civic-gradient {
+    background: linear-gradient(145deg, #0d4a1a 0%, #1a7a2e 35%, #2da04a 70%, #6cc77a 100%);
+  }
+
+  .civic-gradient-subtle {
+    background: linear-gradient(180deg, #f0faf2 0%, #e0f5e5 50%, #d0f0d5 100%);
+  }
+
+  .civic-gradient-radial {
+    background: radial-gradient(ellipse at top, #1a7a2e 0%, #0d4a1a 70%);
+  }
+
+  .civic-mesh-bg {
+    background-color: #0d4a1a;
+    background-image: 
+      radial-gradient(at 20% 30%, rgba(39, 169, 74, 0.3) 0px, transparent 50%),
+      radial-gradient(at 80% 70%, rgba(108, 199, 122, 0.2) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(26, 122, 46, 0.15) 0px, transparent 50%);
+  }
+
+  .header-civic {
+    background: linear-gradient(145deg, #0d4a1a 0%, #1a6b2e 50%, #1f8a3a 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .header-civic::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(108,199,122,0.12) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+
+  /* ─── Premium Buttons ──────────────────────────────────────── */
+  .btn-civic {
+    @apply relative overflow-hidden px-6 py-3 rounded-xl font-semibold text-white;
+    background: linear-gradient(145deg, #1a7a2e, #27a94a);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(26, 138, 58, 0.3);
+  }
+
+  .btn-civic:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 25px rgba(26, 138, 58, 0.4);
+  }
+
+  .btn-civic:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(26, 138, 58, 0.3);
+  }
+
+  .btn-civic::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(145deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .btn-civic-outline {
+    @apply px-6 py-3 rounded-xl font-semibold border-2 border-emerald-600 text-emerald-700 bg-transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-civic-outline:hover {
+    @apply bg-emerald-600 text-white;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 25px rgba(26, 138, 58, 0.25);
+  }
+
+  .btn-civic-ghost {
+    @apply px-6 py-3 rounded-xl font-semibold text-emerald-700 bg-emerald-50/50;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-civic-ghost:hover {
+    @apply bg-emerald-100;
+    transform: translateY(-1px);
+  }
+
+  /* ─── Status Badges ────────────────────────────────────────── */
+  .status-pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+    transition: all 0.2s ease;
+  }
+
+  .status-submitted {
+    @apply status-pill bg-blue-50 text-blue-700 border border-blue-200/60;
+  }
+
+  .status-in-progress {
+    @apply status-pill bg-amber-50 text-amber-700 border border-amber-200/60;
+  }
+
+  .status-resolved {
+    @apply status-pill bg-emerald-50 text-emerald-700 border border-emerald-200/60;
+  }
+
+  .status-urgent {
+    @apply status-pill bg-red-50 text-red-700 border border-red-200/60;
+  }
+
+  /* ─── Premium Input Fields ─────────────────────────────────── */
+  .input-civic {
+    @apply w-full px-4 py-3.5 bg-white/90 backdrop-blur-sm border border-emerald-200/60 rounded-xl;
+    @apply text-gray-800 placeholder-gray-400;
+    @apply focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 focus:bg-white;
+    @apply outline-none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .input-civic:hover {
+    @apply border-emerald-300;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ─── Section Headers ──────────────────────────────────────── */
+  .section-title {
+    @apply text-lg font-bold text-gray-900 tracking-tight;
+    position: relative;
+    display: inline-block;
+  }
+
+  .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 32px;
+    height: 3px;
+    border-radius: 100px;
+    background: linear-gradient(90deg, #27a94a, #6cc77a);
+  }
+
+  /* ─── Animated Gradient Text ───────────────────────────────── */
+  .text-gradient {
+    background: linear-gradient(135deg, #1a7a2e 0%, #27a94a 50%, #6cc77a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ─── Premium Navigation Bar ───────────────────────────────── */
+  .nav-bottom {
+    @apply fixed bottom-0 left-0 right-0 z-50;
+    @apply bg-white/90 backdrop-blur-xl border-t border-emerald-100/50;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .nav-item.active {
+    @apply text-emerald-700;
+  }
+
+  .nav-item.active .nav-icon {
+    @apply text-emerald-600;
+    filter: drop-shadow(0 0 6px rgba(39, 169, 74, 0.3));
+  }
+
+  .nav-item:not(.active) {
+    @apply text-gray-400;
+  }
+
+  .nav-item:not(.active):hover {
+    @apply text-gray-600;
+  }
+
+  .nav-main-btn {
+    @apply relative w-14 h-14 -mt-7 rounded-2xl flex items-center justify-center text-white;
+    background: linear-gradient(145deg, #1a7a2e, #27a94a);
+    box-shadow: 0 8px 25px rgba(26, 138, 58, 0.35);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .nav-main-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(26, 138, 58, 0.45);
+  }
+
+  .nav-main-btn:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ─── Floating Action Elements ─────────────────────────────── */
+  .fab {
+    @apply fixed z-40 w-14 h-14 rounded-2xl flex items-center justify-center text-white;
+    background: linear-gradient(145deg, #1a7a2e, #27a94a);
+    box-shadow: 0 8px 30px rgba(26, 138, 58, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fab:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 40px rgba(26, 138, 58, 0.4);
+  }
+
+  /* ─── Card Hover Lift ──────────────────────────────────────── */
+  .hover-lift {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ─── Skeleton Loading ─────────────────────────────────────── */
+  .skeleton {
+    @apply bg-gray-200/60 rounded-lg animate-pulse;
+  }
+
+  .skeleton-text {
+    @apply h-4 bg-gray-200/60 rounded-md animate-pulse;
+  }
+
+  /* ─── Shimmer Effect ───────────────────────────────────────── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* ─── Decorative Circles ───────────────────────────────────── */
+  .deco-circle {
+    @apply absolute rounded-full;
+    background: radial-gradient(circle, rgba(39, 169, 74, 0.15) 0%, transparent 70%);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* ─── Premium Header ───────────────────────────────────────── */
+  .header-civic {
+    background: linear-gradient(145deg, #0d4a1a 0%, #1a7a2e 40%, #239a3e 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-civic::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(108, 199, 122, 0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .header-civic::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text shadow utilities */
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Backdrop glass */
+  .backdrop-glass {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
