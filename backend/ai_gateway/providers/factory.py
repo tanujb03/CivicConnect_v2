@@ -61,6 +61,13 @@ def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatC
                                    timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")))
 
 
+def build_backends_from_env(env: Mapping[str, str] | None = None) -> dict[str, ChatCompletionsProvider]:
+    """Every keyed backend, by name (the live-check CLI uses this to list models and test each one on its own)."""
+    env = dict(os.environ if env is None else env)
+    models = _models(env)
+    return {n: b for n in ORDER if (b := _backend(n, env, models)) is not None}
+
+
 def build_provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider | None:
     """None when no backend has a key (the AI layer then runs in its documented degraded mode)."""
     env = dict(os.environ if env is None else env)

@@ -95,6 +95,21 @@ class ChatCompletionsProvider:
         log.warning("provider call failed: %s", last)
         raise last  # type: ignore[misc]
 
+    def list_models(self) -> list[str]:
+        """Model ids this key can use (GET /models). Used by the live-check CLI so you can copy valid ids from your own account."""
+        self._throttle()
+        try:
+            resp = self._client.get(self._base + "/models", headers={"Authorization": f"Bearer {self._key}", **self._extra})
+        except httpx.HTTPError as e:
+            raise ProviderUnavailable(f"{self.name}: transport error {type(e).__name__}") from e
+        if resp.status_code >= 400:
+            raise ProviderUnavailable(f"{self.name}: HTTP {resp.status_code}", status_code=resp.status_code)
+        try:
+            rows = resp.json().get("data") or resp.json().get("models") or []
+        except ValueError as e:
+            raise ProviderResponseInvalid(f"{self.name}: non-JSON model list") from e
+        return sorted({str(r.get("id") or r.get("name", "")).removeprefix("models/") for r in rows if isinstance(r, dict)} - {""})
+
     # ------------------------------------------------------------------------------------------ content
     @staticmethod
     def _user_content(parts: Sequence[InputPart]) -> list[dict[str, Any]]:

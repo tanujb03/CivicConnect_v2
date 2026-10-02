@@ -210,3 +210,39 @@ def test_intake_endpoint_works_with_a_free_openai_compatible_backend():
     b = r.json()
     assert r.status_code == 200 and b["proposal"]["category"] == "roads" and b["ai_metadata"]["source"] == "provider" and b["ai_metadata"]["provider"] == "gemini"
     assert seen["body"]["model"] == "gem-x" and "citizen text" in seen["body"]["messages"][0]["content"].lower() or seen["body"]["messages"]
+
+
+# ------------------------------------------------------------------------------------------------ .env loading + model listing + live-check CLI
+def test_env_file_loader_exports_only_missing_variables_and_treats_comment_values_as_empty(tmp_path):
+    from backend.ai_gateway.envfile import load_env_file, parse
+    f = tmp_path / ".env"
+    f.write_text('GEMINI_API_KEY=abc\nAI_INTAKE_MODEL=   # pick from the list\nexport GROQ_API_KEY="q q"\nKEEP=file\n', encoding="utf-8")
+    assert parse(f.read_text()) == {"GEMINI_API_KEY": "abc", "AI_INTAKE_MODEL": "", "GROQ_API_KEY": "q q", "KEEP": "file"}
+    env = {"KEEP": "real"}
+    assert sorted(load_env_file([f], env)) == ["GEMINI_API_KEY", "GROQ_API_KEY"] and env["KEEP"] == "real" and "AI_INTAKE_MODEL" not in env
+    assert load_env_file([tmp_path / "missing"], {}) == []
+
+
+def test_settings_do_not_crash_on_extra_variables_in_dotenv(tmp_path, monkeypatch):
+    from backend.core.config import Settings
+    (tmp_path / ".env").write_text("GEMINI_API_KEY=x\nPOSTGRES_DB=demo\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert Settings().POSTGRES_DB == "demo"
+
+
+def test_list_models_normalises_ids():
+    p = provider(lambda r: httpx.Response(200, json={"data": [{"id": "models/gem-a"}, {"id": "gem-b"}, {"nope": 1}]}))
+    assert p.list_models() == ["gem-a", "gem-b"]
+    with pytest.raises(ProviderUnavailable):
+        provider(lambda r: httpx.Response(403)).list_models()
+
+
+def test_live_check_cli_requires_keys_and_never_prints_them(capsys, monkeypatch, tmp_path):
+    from backend.ai_gateway.providers import live_check
+    for k in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "CLOUDFLARE_API_TOKEN", "OPENAI_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(live_check, "load_env_file", lambda: [])
+    assert live_check.main([]) == 2 and "No backend has a key" in capsys.readouterr().out
+    monkeypatch.setenv("GEMINI_API_KEY", "SECRET-VALUE-XYZ")
+    assert live_check.main([]) == 2 and "SECRET-VALUE-XYZ" not in capsys.readouterr().out          # key but no model ids

@@ -9,6 +9,7 @@ from ai.inference.service import AIService
 from backend.core.security import get_current_user
 
 from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
+from .envfile import load_env_file
 from .providers import build_provider_from_env
 from .service import Actor, AIGateway
 from .vision import build_from_env as build_vision
@@ -20,6 +21,7 @@ _lock = threading.Lock()
 def build_ai_service(executor) -> AIService:
     """``AIService.from_env`` loads the local classifier / fusion weights (and an OpenAI Responses provider if configured); a free/alternative backend (Gemini, Groq,
     OpenRouter, Cloudflare, or OpenAI via chat completions) configured through ``providers.build_provider_from_env`` takes precedence."""
+    load_env_file()          # AI keys / model ids from a local .env (real environment variables win)
     base = AIService.from_env(tool_executor=executor)
     provider = build_provider_from_env()
     if provider is None:
