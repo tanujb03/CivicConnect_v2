@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, FileText, Camera, Users, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
@@ -8,54 +9,56 @@ const BottomNavigation: React.FC = () => {
 
   const tabs = [
     { id: 'home', label: 'Home', icon: Home, path: '/dashboard' },
-    { id: 'reports', label: 'My Reports', icon: FileText, path: '/my-reports' },
+    { id: 'reports', label: 'Reports', icon: FileText, path: '/my-reports' },
     { id: 'report', label: 'Report', icon: Camera, path: '/report', isMain: true },
     { id: 'community', label: 'Community', icon: Users, path: '/community' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/profile' }
+    { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
-      <div className="flex justify-around items-center relative">
+    <div className="nav-bottom safe-area-bottom">
+      <div className="flex justify-around items-center px-2 py-2 relative">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           const IconComponent = tab.icon;
 
-         // ... (imports and component setup)
-
           if (tab.isMain) {
             return (
-              <button
+              <motion.button
                 key={tab.id}
                 onClick={() => navigate(tab.path)}
-                // CHANGE: Applied the new gradient and sizing
-                className="w-16 h-16 bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 -mt-8 z-50 flex items-center justify-center"
+                whileTap={{ scale: 0.9 }}
+                className="nav-main-btn"
               >
-                <IconComponent className="w-7 h-7" />
-              </button>
+                <IconComponent className="w-6 h-6" />
+                {/* Pulse ring */}
+                <span className="absolute inset-0 rounded-2xl animate-pulse-glow" />
+              </motion.button>
             );
           }
 
-       return (
-  <button
-    key={tab.id}
-    onClick={() => navigate(tab.path)}
-    // CHANGE 1: Added `relative` for positioning and adjusted padding
-    className={`relative flex flex-col items-center space-y-1 pt-3 pb-2 px-3 rounded-lg transition-colors ${
-      isActive ? 'text-[#1A531A]' : 'text-[#6B7280] hover:text-[#1A531A]'
-    }`}
-  >
-    {/* CHANGE 2: Added this new div for the indicator line */}
-    {isActive && (
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-gray-800 rounded-full"></div>
-    )}
-    
-    <IconComponent className="w-5 h-5" />
-    <span className="text-xs font-medium">{tab.label}</span>
-  </button>
-);
-          
-// ... (rest of the component)
+          return (
+            <motion.button
+              key={tab.id}
+              onClick={() => navigate(tab.path)}
+              whileTap={{ scale: 0.9 }}
+              className={`nav-item relative ${isActive ? 'active' : ''}`}
+            >
+              {/* Active indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId="nav-indicator"
+                  className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full"
+                  style={{ background: 'linear-gradient(90deg, #1a7a2e, #27a94a)' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <IconComponent className={`nav-icon w-5 h-5 transition-all duration-300 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`} />
+              <span className={`text-[10px] font-semibold transition-colors duration-300 ${isActive ? 'text-emerald-700' : 'text-gray-400'}`}>
+                {tab.label}
+              </span>
+            </motion.button>
+          );
         })}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Camera, MapPin, TrendingUp, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
+import { Bell, Camera, MapPin, TrendingUp, CheckCircle, Clock, ArrowLeft, ChevronRight, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import BottomNavigation from './BottomNavigation';
@@ -14,11 +14,21 @@ import L from 'leaflet';
 import { DepartmentIcon } from './DepartmentIcon';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } },
+};
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useApp();
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [isMapFullscreen, setIsMapFullscreen] = useState(false); // Fullscreen map state
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   const departments = ['all', 'roads', 'sanitation', 'water', 'lighting'];
 
@@ -29,7 +39,6 @@ const Dashboard: React.FC = () => {
       : issues.filter((issue) => issue.category === selectedDepartment);
 
   const getMarkerIcon = (status: string) => {
-    // Define darker, pointed SVG markers
     const redSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#B91C1C" width="30px" height="42px"><path d="M12 0C7.31 0 3.5 3.81 3.5 8.5c0 5.25 8.5 15.5 8.5 15.5s8.5-10.25 8.5-15.5C20.5 3.81 16.69 0 12 0zm0 12.5a4 4 0 110-8 4 4 0 010 8z"/></svg>`;
     const yellowSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#D97706" width="30px" height="42px"><path d="M12 0C7.31 0 3.5 3.81 3.5 8.5c0 5.25 8.5 15.5 8.5 15.5s8.5-10.25 8.5-15.5C20.5 3.81 16.69 0 12 0zm0 12.5a4 4 0 110-8 4 4 0 010 8z"/></svg>`;
     const greenSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#15803D" width="30px" height="42px"><path d="M12 0C7.31 0 3.5 3.81 3.5 8.5c0 5.25 8.5 15.5 8.5 15.5s8.5-10.25 8.5-15.5C20.5 3.81 16.69 0 12 0zm0 12.5a4 4 0 110-8 4 4 0 010 8z"/></svg>`;
@@ -45,113 +54,134 @@ const Dashboard: React.FC = () => {
   };
 
   // Mock News
-  const mockNews: { id: number; title: string; description: string; image: string; }[] = [
+  const mockNews = [
     { id: 1, title: 'City Council Approves New Park Project', description: 'The council has approved a new park project aiming to increase green spaces for residents.', image: 'https://thatssotampa.com/wp-content/uploads/2022/10/BonnetSprings.jpg' },
     { id: 2, title: 'Community Clean-Up Event Scheduled', description: 'Join us for a community clean-up this Saturday at 9 AM. Volunteers are welcome!', image: 'https://tse4.mm.bing.net/th/id/OIP.xHj38LN-gpeIhWzFX7AwKAHaE8?pid=ImgDet&w=194&h=129&c=7&dpr=1.7&o=7&rm=3' },
-    { id: 3, title: 'New Traffic Regulations Implemented', description: 'New traffic regulations are now in effect to improve traffic flow and safety. Please review the changes.', image: 'https://images.pexels.com/photos/3972755/pexels-photo-3972755.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    { id: 3, title: 'New Traffic Regulations Implemented', description: 'New traffic regulations are now in effect to improve traffic flow and safety.', image: 'https://images.pexels.com/photos/3972755/pexels-photo-3972755.jpeg?auto=compress&cs=tinysrgb&w=600' },
     { id: 4, title: 'Public Library Expansion Underway', description: 'Construction has begun on the new wing of the central library, expected to open next year.', image: 'https://cdn.fodors.com/wp-content/uploads/2017/09/Public-Libraries-Free-Library-of-Philadelphia-2.jpg' },
     { id: 5, title: 'Annual Water Quality Report Released', description: 'The city has released its annual water quality report, confirming that drinking water is safe.', image: 'https://tse2.mm.bing.net/th/id/OIP.PwpMvv8KnOTBPOOzsA37fwAAAA?rs=1&pid=ImgDetMain&o=7&rm=3' },
-    { id: 6, title: 'Road Safety Campaign Launched', description: 'A new campaign aims to increase awareness about pedestrian and cyclist safety on city streets.', image: 'https://th.bing.com/th/id/R.3af6df04e9a2c2fe7ddeb25041d66130?rik=BduDFj%2b%2fGhVlVQ&riu=http%3a%2f%2fblog.trucksuvidha.com%2fwp-content%2fuploads%2f2019%2f02%2fsafety-road-1024x681.jpg&ehk=YJV%2bfDpx4ucrNjnSVMPqWTY%2fE7ifQH%2fUbzgigHCimqI%3d&risl=&pid=ImgRaw&r=0' },
-    { id: 7, title: 'Sanitation Department Upgrades Fleet', description: 'New, eco-friendly trucks have been added to the city\'s sanitation fleet.', image: 'https://tse1.mm.bing.net/th/id/OIP.fTdJf3Pe7FMcC4MrGjygyAHaE8?rs=1&pid=ImgDetMain&o=7&rm=3' },
-    { id: 8, title: 'Summer Youth Program Registration Open', description: 'Registration for the city\'s summer youth programs is now open for all residents.', image: 'https://as2.ftcdn.net/v2/jpg/04/62/71/27/1000_F_462712750_KQF8xgjMXaeYNzUOoj6v8UaBR9I8kgLT.jpg' },
-    { id: 9, title: 'New Streetlights Installed on Main St', description: 'Energy-efficient LED streetlights have been installed along Main Street to improve visibility.', image: 'https://th.bing.com/th/id/OIP.fLXyF7W0vR-w_9IYi8rW-gHaEk?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3' },
-    { id: 10, title: 'Recycling Program Expansion Announced', description: 'The curbside recycling program will be expanded to include more types of plastics and glass.', image: 'https://www.rubicon.com/wp-content/uploads/2021/06/cartoon-bin-recycling.png' },
-    { id: 11, title: 'Pothole Repair Blitz Planned for Next Week', description: 'Public works crews will conduct a city-wide pothole repair blitz starting Monday.', image: 'https://tse3.mm.bing.net/th/id/OIP.bXqBiZPTSzjK97WAQxbZigHaFj?rs=1&pid=ImgDetMain&o=7&rm=3' },
-    { id: 12, title: 'City Museum Offers Free Admission Day', description: 'The city history museum will offer free admission to all visitors this coming Sunday.', image: 'https://tse3.mm.bing.net/th/id/OIP.aKVERLH8t144-qyHejdiIQHaFj?rs=1&pid=ImgDetMain&o=7&rm=3' },
-    { id: 13, title: 'New Public Transit Routes Added', description: 'Two new bus routes have been added to serve the north and west sides of the city.', image: 'https://live.staticflickr.com/65535/47981143758_56db29bba9.jpg' },
-    { id: 14, title: 'Farmers Market Season Kicks Off', description: 'The downtown farmers market is now open every Saturday from 8 AM to 1 PM.', image: 'https://images.pexels.com/photos/2252584/pexels-photo-2252584.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { id: 15, title: 'Fire Department Hosts Open House', description: 'Meet your local firefighters and learn about fire safety at the open house event next weekend.', image: 'https://th.bing.com/th/id/R.7f25edbe12672d7d322871c175d94fb3?rik=jIgr2fBzQNeOXQ&riu=http%3a%2f%2fclevelandtn.gov%2fImageRepository%2fDocument%3fdocumentId%3d2094&ehk=SGI4iNOJ2lbVTYMnDbl7EnyA6ojH4wwMMrNgfVTAop8%3d&risl=&pid=ImgRaw&r=0' },
+    { id: 6, title: 'Road Safety Campaign Launched', description: 'A new campaign aims to increase awareness about pedestrian and cyclist safety.', image: 'https://th.bing.com/th/id/R.3af6df04e9a2c2fe7ddeb25041d66130?rik=BduDFj%2b%2fGhVlVQ&riu=http%3a%2f%2fblog.trucksuvidha.com%2fwp-content%2fuploads%2f2019%2f02%2fsafety-road-1024x681.jpg&ehk=YJV%2bfDpx4ucrNjnSVMPqWTY%2fE7ifQH%2fUbzgigHCimqI%3d&risl=&pid=ImgRaw&r=0' },
   ];
 
-  // Mock Stats
   const mockStats = {
     totalIssues: issues.length,
     resolvedIssues: issues.filter((i) => i.status === 'resolved').length,
     avgResponseTime: '2d 5h',
   };
 
+  const statCards = [
+    { label: 'Total Issues', value: mockStats.totalIssues, icon: TrendingUp, color: 'from-blue-500 to-blue-600', bgLight: 'bg-blue-50' },
+    { label: 'Resolved', value: mockStats.resolvedIssues, icon: CheckCircle, color: 'from-emerald-500 to-emerald-600', bgLight: 'bg-emerald-50' },
+    { label: 'Avg Response', value: mockStats.avgResponseTime, icon: Clock, color: 'from-amber-500 to-amber-600', bgLight: 'bg-amber-50' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-100 pb-28 relative">
+    <div className="min-h-screen bg-gradient-to-b from-[#f0faf2] via-white to-[#e8f8ec] pb-28 relative">
       {!isMapFullscreen && (
         <>
-          {/* Top Bar */}
-           <div className="bg-gradient-to-b from-[#1A531A] to-[#7CAE0C] text-white p-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
-          <img
-            src={logo}
-            alt="CivicConnect Logo"
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div>
-          <p className="text-sm opacity-90">CivicConnect</p>
-          <p className="font-semibold">Citizen Dashboard</p>
-        </div>
-      </div>
-      <div className="flex items-center space-x-2">
-        <MapPin className="w-4 h-4" />
-        <span className="text-sm">Ranchi, Jharkhand</span>
-      </div>
-      <div className="flex items-center space-x-3">
-        <button
-          onClick={() => navigate('/notifications')}
-          className="relative p-2 hover:bg-white/10 rounded-full transition-colors"
-        >
-          <Bell className="w-5 h-5" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-        </button>
-        <div className="w-8 h-8 rounded-full overflow-hidden">
-          <img
-            src={
-              state.user?.avatar ||
-              'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
-            }
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
+          {/* ─── Premium Header ──────────────────────────────────── */}
+          <div className="header-civic text-white px-5 pt-5 pb-6 relative">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-lg bg-white/10 p-0.5">
+                  <img src={logo} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-white/50 font-medium tracking-wider uppercase">CivicConnect</p>
+                  <p className="font-bold text-[16px] tracking-tight">Citizen Dashboard</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/10">
+                  <MapPin className="w-3 h-3 text-white/70" />
+                  <span className="text-xs text-white/80 font-medium">Ranchi</span>
+                </div>
+                <button
+                  onClick={() => navigate('/notifications')}
+                  className="relative p-2.5 hover:bg-white/10 rounded-xl transition-all duration-300"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-emerald-800 animate-pulse" />
+                </button>
+                <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
+                  <img
+                    src={state.user?.avatar || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ─── Stats Cards in Header ──────────────────────────── */}
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-3 gap-3"
+            >
+              {statCards.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    variants={fadeUp}
+                    className="bg-white/10 backdrop-blur-sm rounded-2xl p-3.5 text-center border border-white/10 hover:bg-white/15 transition-all duration-300 cursor-default group"
+                  >
+                    <div className="flex items-center justify-center mb-1.5">
+                      <Icon className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="text-xl font-extrabold tracking-tight">{s.value}</div>
+                    <div className="text-[10px] text-white/60 font-medium mt-0.5 uppercase tracking-wider">{s.label}</div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </div>
         </>
       )}
 
-      <div className="p-4 space-y-6">
-        {/* Map Card */}
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="px-5 pt-6 space-y-6"
+      >
+        {/* ─── Map Section ──────────────────────────────────────── */}
         {!isMapFullscreen && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-slate-50 rounded-xl shadow-sm overflow-hidden relative"
-          >
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-800 mb-3">Issues Near You</h3>
-            </div>
-
-            {/* Department Filters */}
-            <div className="flex space-x-2 px-4 pb-2 overflow-x-auto scrollbar-hide">
-              {departments.map((dept) => (
+          <motion.div variants={fadeUp} className="glass-card overflow-hidden">
+            <div className="p-4 pb-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-gray-900 text-[15px]">Issues Near You</h3>
                 <button
-                  key={dept}
-                  onClick={() => setSelectedDepartment(dept)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
-                    selectedDepartment === dept
-                      ? 'bg-[#1A531A] text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  onClick={() => setIsMapFullscreen(true)}
+                  className="text-xs text-emerald-600 font-semibold hover:text-emerald-700 flex items-center gap-0.5 transition-colors"
                 >
-                  {dept !== 'all' && <DepartmentIcon category={dept as any} size="sm" />}
-                  <span className="text-sm capitalize">{dept === 'all' ? 'All Issues' : dept}</span>
+                  Expand <ChevronRight className="w-3.5 h-3.5" />
                 </button>
-              ))}
+              </div>
+
+              {/* Department Filter Pills */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                {departments.map((dept) => (
+                  <button
+                    key={dept}
+                    onClick={() => setSelectedDepartment(dept)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-300 ${
+                      selectedDepartment === dept
+                        ? 'bg-emerald-600 text-white shadow-civic'
+                        : 'bg-gray-100/80 text-gray-600 hover:bg-gray-200/80'
+                    }`}
+                  >
+                    {dept !== 'all' && <DepartmentIcon category={dept as any} size="sm" />}
+                    <span className="capitalize">{dept === 'all' ? 'All Issues' : dept}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div
-              className="h-64 w-full relative z-0 cursor-pointer"
-              onClick={() => setIsMapFullscreen(true)}
-            >
+            <div className="h-56 w-full relative z-0 cursor-pointer" onClick={() => setIsMapFullscreen(true)}>
               <MapContainer
                 center={[23.3441, 85.3096]}
                 zoom={13}
@@ -165,9 +195,7 @@ const Dashboard: React.FC = () => {
                   <Marker
                     key={issue.id || idx}
                     position={[issue.location.lat, issue.location.lng]}
-                    eventHandlers={{
-                      click: () => navigate(`/issue/${issue.id}`),
-                    }}
+                    eventHandlers={{ click: () => navigate(`/issue/${issue.id}`) }}
                     icon={new L.Icon({
                       iconUrl: getMarkerIcon(issue.status),
                       iconSize: [30, 42],
@@ -175,140 +203,106 @@ const Dashboard: React.FC = () => {
                       shadowUrl: markerShadow,
                     })}
                   >
-                    <Popup>
-                      <b>{issue.title}</b>
-                      <br />
-                      Status: {issue.status}
-                    </Popup>
+                    <Popup><b>{issue.title}</b><br />Status: {issue.status}</Popup>
                   </Marker>
                 ))}
               </MapContainer>
             </div>
-            
-            <div className="p-4 border-t bg-gray-50">
-              <p className="text-sm text-gray-600">
-                Showing {filteredIssues.length} issues • Click markers for details
+
+            <div className="px-4 py-3 bg-gradient-to-r from-emerald-50/50 to-transparent border-t border-emerald-100/30">
+              <p className="text-xs text-gray-500 font-medium">
+                📍 Showing <span className="text-emerald-700 font-bold">{filteredIssues.length}</span> issues • Tap markers for details
               </p>
             </div>
           </motion.div>
         )}
 
-        {/* Report Issue Card */}
+        {/* ─── Report Issue CTA ─────────────────────────────────── */}
         {!isMapFullscreen && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            onClick={() => navigate('/report')}
-            className="bg-white rounded-xl shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-center space-x-4">
-              <div className="w-16 h-16 bg-[#E8F5E9] rounded-full flex items-center justify-center">
-                <Camera className="w-8 h-8 text-[#1A531A]" />
+          <motion.div variants={fadeUp}>
+            <button
+              onClick={() => navigate('/report')}
+              className="group w-full glass-card p-5 hover:shadow-civic transition-all duration-400 hover:border-emerald-200 text-left"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 relative"
+                     style={{ background: 'linear-gradient(145deg, #1a7a2e, #27a94a)' }}>
+                  <Camera className="w-7 h-7 text-white" />
+                  <span className="absolute inset-0 rounded-2xl animate-pulse-glow" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 text-[15px]">Report an Issue</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Take a photo and report civic problems instantly</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" />
               </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-gray-800">Report an Issue</h3>
-                <p className="text-sm text-gray-600 mt-1">Take a photo and report civic problems</p>
-              </div>
-            </div>
+            </button>
           </motion.div>
         )}
 
-        {/* Civic News */}
+        {/* ─── Civic News Carousel ──────────────────────────────── */}
         {!isMapFullscreen && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-3"
-          >
-            <h3 className="font-bold text-lg text-gray-800 px-1">Civic News</h3>
-            
-            <div className="flex space-x-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-              {mockNews.map((news) => (
-                <div
+          <motion.div variants={fadeUp} className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-emerald-600" />
+                <h3 className="font-bold text-gray-900 text-[15px]">Civic News</h3>
+              </div>
+              <span className="text-xs text-emerald-600 font-semibold">View All →</span>
+            </div>
+
+            <div className="flex gap-4 overflow-x-auto pb-3 -mx-5 px-5 scrollbar-hide snap-x snap-mandatory">
+              {mockNews.map((news, i) => (
+                <motion.div
                   key={news.id}
-                  className="flex-shrink-0 w-[280px] bg-white rounded-xl shadow-sm overflow-hidden" 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 + i * 0.05 }}
+                  className="snap-start flex-shrink-0 w-[260px] glass-card overflow-hidden group cursor-pointer"
                 >
-                  <img
-                    src={news.image}
-                    alt={news.title}
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="p-3">
-                    <h4 className="font-semibold text-base text-gray-900 leading-tight">{news.title}</h4>
-                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">{news.description}</p>
+                  <div className="h-32 overflow-hidden relative">
+                    <img
+                      src={news.image}
+                      alt={news.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                   </div>
-                </div>
+                  <div className="p-3.5">
+                    <h4 className="font-bold text-[13px] text-gray-900 leading-tight line-clamp-2">{news.title}</h4>
+                    <p className="text-[11px] text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{news.description}</p>
+                  </div>
+                </motion.div>
               ))}
             </div>
           </motion.div>
         )}
+      </motion.div>
 
-        {/* Quick Stats */}
-        {!isMapFullscreen && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-3"
-          >
-            <h3 className="font-semibold text-gray-800">Quick Stats</h3>
-            <div className="flex space-x-4 overflow-x-auto pb-2">
-              <div className="flex-shrink-0 bg-white rounded-xl shadow-sm p-4 w-40">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-gray-800">{mockStats.totalIssues}</p>
-                    <p className="text-sm text-gray-600">Total Issues</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-shrink-0 bg-white rounded-xl shadow-sm p-4 w-40">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-[#1A531A]" />
-                  <div>
-                    <p className="text-2xl font-bold text-gray-800">{mockStats.resolvedIssues}</p>
-                    <p className="text-sm text-gray-600">Resolved</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-shrink-0 bg-white rounded-xl shadow-sm p-4 w-40">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5 text-orange-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-gray-800">{mockStats.avgResponseTime}</p>
-                    <p className="text-sm text-gray-600">Avg Response</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      {/* Fullscreen Map Modal */}
+      {/* ─── Fullscreen Map Modal ──────────────────────────────── */}
       {isMapFullscreen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 bg-gray-900 flex flex-col"
+        >
+          <div className="flex items-center p-4 bg-gray-900/90 backdrop-blur-lg border-b border-white/10">
             <button
               onClick={() => setIsMapFullscreen(false)}
-              className="text-white p-2 rounded-full hover:bg-white/20 transition"
+              className="text-white p-2 rounded-xl hover:bg-white/10 transition-all"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
-            <span className="text-white ml-2 font-semibold">Full Screen Map</span>
+            <span className="text-white ml-3 font-semibold text-[15px]">City Map</span>
+            <span className="ml-auto text-xs text-white/50 font-medium">{filteredIssues.length} issues</span>
           </div>
           <div className="flex-1">
             <MapContainer
-              key="fullscreen-map" 
+              key="fullscreen-map"
               center={[23.3441, 85.3096]}
               zoom={13}
               style={{ height: '100%', width: '100%' }}
             >
-              {/* CHANGE: Updated to OpenStreetMap */}
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -317,9 +311,7 @@ const Dashboard: React.FC = () => {
                 <Marker
                   key={issue.id || idx}
                   position={[issue.location.lat, issue.location.lng]}
-                  eventHandlers={{
-                    click: () => navigate(`/issue/${issue.id}`),
-                  }}
+                  eventHandlers={{ click: () => navigate(`/issue/${issue.id}`) }}
                   icon={new L.Icon({
                     iconUrl: getMarkerIcon(issue.status),
                     iconSize: [30, 42],
@@ -327,16 +319,12 @@ const Dashboard: React.FC = () => {
                     shadowUrl: markerShadow,
                   })}
                 >
-                  <Popup>
-                    <b>{issue.title}</b>
-                    <br />
-                    Status: {issue.status}
-                  </Popup>
+                  <Popup><b>{issue.title}</b><br />Status: {issue.status}</Popup>
                 </Marker>
               ))}
             </MapContainer>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Bottom Navigation */}
