@@ -1,0 +1,74 @@
+{
+  "schema": "civic-fusion-weights/1",
+  "version": "0.1.0+b22811b6",
+  "status": "calibrated_synthetic",
+  "semantic_trained_on": "lexical",
+  "synthetic_data": true,
+  "trained_on": {
+    "kind": "synthetic",
+    "sources": {
+      "synthetic_civic": {
+        "n": 4000,
+        "license_verified": true,
+        "kind": "synthetic"
+      }
+    }
+  },
+  "bias": -13.601669,
+  "semantic": 0.421274,
+  "geospatial": 7.903118,
+  "temporal": 1.501159,
+  "category": 7.277169,
+  "features": [
+    "semantic",
+    "geospatial",
+    "temporal",
+    "category"
+  ],
+  "fusion_policy_version": "1.0.0-draft",
+  "metrics": {
+    "n_train_gated": 3398,
+    "n_val_gated": 849,
+    "val_positive_rate": 0.47,
+    "val_auc_roc": 0.9879,
+    "val_at_policy_duplicate_threshold": {
+      "threshold": 0.8,
+      "precision": 0.9799,
+      "recall": 0.8571,
+      "f1": 0.9144,
+      "tp": 342,
+      "fp": 7,
+      "fn": 57
+    },
+    "val_best_f1_threshold": {
+      "threshold": 0.49,
+      "precision": 0.953,
+      "recall": 0.9649,
+      "f1": 0.9589,
+      "tp": 385,
+      "fp": 19,
+      "fn": 14
+    },
+    "brier": 0.0433,
+    "val_logloss": 0.1757,
+    "l2": 0.001,
+    "semantic_weight_note": null
+  },
+  "limitations": [
+    "Fitted on SYNTHETIC pairs whose duplicate/non-duplicate construction encodes our own assumptions.",
+    "Weights are constrained non-negative (each signal is monotone); L2 strength chosen by validation log-loss.",
+    "Lexical semantic signal is mono-lingual: cross-language duplicates need embeddings (re-fit with --semantic-mode provider).",
+    "Thresholds in fusion_policy.v1.json are not tuned on real data unless status is calibrated_real; treat scores as ranking aids requiring human confirmation."
+  ],
+  "created_at": "2026-10-02T18:35:28+00:00",
+  "git_sha": "14f7686235e5fcf7c1a026a3718a267f0bfd08b5",
+  "runtime": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v51-x86_64-with-glibc2.39",
+    "kaggle": false,
+    "numpy": "2.4.6",
+    "sklearn": "1.9.1",
+    "scipy": "1.17.1",
+    "pydantic": "2.13.4"
+  }
+}

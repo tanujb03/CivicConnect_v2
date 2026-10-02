@@ -56,7 +56,7 @@ def test_kaggle_in_place_notebook_never_downloads_copies_or_calls_a_provider_by_
                  "https://www.kaggle.com/datasets/surbhisaswatimohanty/bharatpothole"):
         assert link in head, link
     assert 'DATASETS = ["bmc_mumbai", "mumbai_nashik_road_surface", "rdd2022", "rdd2020", "bharatpothole"]' in code
-    assert "CIVIC_GIT_URL" in code and "CIVIC_GIT_REF" in code and "claude/epic-fermat-3qlw5c" in code and "EXECUTING REPO" in code and "**REPO_INFO" in code
+    assert "CIVIC_GIT_URL" in code and "CIVIC_GIT_REF" in code and "tanuj" in code and "EXECUTING REPO" in code and "**REPO_INFO" in code
     assert "never an implicit `main`" in nb.cells[1].source and "STALE" in code
     assert "kr.run_all(" in code and "kr.plan(" in code and "kr.bundle(" in code
     for forbidden in ("kaggle datasets download", "kaggle competitions download", "figshare", "socrata", "urlretrieve", "requests.get", "wget", "curl"):

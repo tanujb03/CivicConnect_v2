@@ -1,10 +1,10 @@
 {
   "disclaimer": "Read the provenance and claims blocks first. Synthetic results are a regression/ablation signal, NOT real-world accuracy; real-data results are scoped to the named dataset, holdout and (draft) taxonomy mapping.",
-  "created_at": "2026-10-01T12:16:21+00:00",
+  "created_at": "2026-10-02T18:36:06+00:00",
   "track": "synthetic",
   "task": "fusion",
   "system": "lexical",
-  "artifact": "fusion_weights@0.1.0+addecff1",
+  "artifact": "fusion_weights@0.1.0+b22811b6",
   "datasets": {
     "fusion_eval_pairs.v1.jsonl": "503f4ddc08aa5e23"
   },
@@ -22,6 +22,7 @@
         "version": "synthetic-civic/1.0",
         "license_id": "project-owned",
         "license_verified": true,
+        "origin_verified": true,
         "mapping_id": null,
         "mapping_version": null,
         "label_origins": {
@@ -48,43 +49,43 @@
     "n_gated_in": 255,
     "gate_recall_of_true_duplicates": 1.0,
     "negatives_removed_by_gate": 45,
-    "auc_roc": 0.9841,
+    "auc_roc": 0.9836,
     "at_possible_duplicate_threshold": {
       "threshold": 0.8,
-      "precision": 0.9604,
-      "recall": 0.8083,
-      "f1": 0.8778,
-      "tp": 97,
-      "fp": 4,
-      "fn": 23
+      "precision": 0.9519,
+      "recall": 0.825,
+      "f1": 0.8839,
+      "tp": 99,
+      "fp": 5,
+      "fn": 21
     },
     "weights_status": "calibrated_synthetic",
     "semantic_trained_on": "lexical",
     "semantic_source": "lexical",
     "same_language": {
       "n": 177,
-      "recall": 0.8554,
-      "precision": 0.9595
+      "recall": 0.8916,
+      "precision": 0.9487
     },
     "cross_language": {
       "n": 78,
-      "recall": 0.7027,
-      "precision": 0.963
+      "recall": 0.6757,
+      "precision": 0.9615
     },
     "by_pair_type": {
       "distinct_near": {
         "n": 75,
-        "mean_score": 0.1638,
-        "flagged_possible_duplicate": 0.0533
+        "mean_score": 0.183,
+        "flagged_possible_duplicate": 0.0667
       },
       "duplicate": {
         "n": 120,
-        "mean_score": 0.8525,
-        "flagged_possible_duplicate": 0.8083
+        "mean_score": 0.8648,
+        "flagged_possible_duplicate": 0.825
       },
       "related_category": {
         "n": 60,
-        "mean_score": 0.069,
+        "mean_score": 0.07,
         "flagged_possible_duplicate": 0.0
       }
     },

@@ -153,7 +153,10 @@ class CityBuilder:
         lang = lang or self.rng.choices(list(LANG_WEIGHTS), weights=list(LANG_WEIGHTS.values()))[0]
         fam = self.rng.randrange(F.N_FAMILIES) if fam is None else fam
         place = F.PLACES[place_idx] if place_idx is not None else None
-        r = render_report(sub, lang, fam, place, self.rng, split_famidx_pool=list(range(F.N_FAMILIES)))
+        # text rendering draws a variable number of random numbers (noise is per character); give it a private stream so that editing a phrase
+        # (e.g. a native-speaker correction) cannot shift the city's layout, timing or planted ground truth
+        text_rng = random.Random(self.rng.getrandbits(64))
+        r = render_report(sub, lang, fam, place, text_rng, split_famidx_pool=list(range(F.N_FAMILIES)))
         r["lang_code"], r["family_id"], r["family_index"] = lang, f"{sub}:{lang}:{fam}", fam
         return r
 
@@ -317,17 +320,26 @@ class CityBuilder:
             self.truth["recurring_sites"].append({"site_id": f"RS{s + 1:02d}", "subcategory": sub, "center": {"latitude": lat0, "longitude": lon0}, "radius_m": 150, "case_ids": ids,
                                                   "window_days": 240})
 
+    @staticmethod
+    def _grid_center(lat: float, lon: float, cell_m: float = 350.0) -> tuple[float, float]:
+        """Centre of the reference analytics' grid cell containing the point (same cell maths as ``analytics_reference.hotspots``), so a planted cluster is not split
+        by a cell boundary. The truth is a spatial cluster; this only keeps the deterministic grid method from missing it through an unlucky boundary."""
+        lat_step = cell_m / 111_320.0
+        lat_c = round(lat / lat_step) * lat_step
+        lon_step = lat_step / max(math.cos(math.radians(lat_c)), 0.1)
+        return round(lat_c, 6), round(round(lon / lon_step) * lon_step, 6)
+
     def plant_hotspots(self) -> None:
         specs = [("garbage_overflow", 3), ("pipe_leakage", 6), ("mosquito_breeding", 1)]
         for h, (sub, ward_i) in enumerate(specs):
             w = self.wards[ward_i]
-            lat0, lon0 = w["centroid"]["latitude"], w["centroid"]["longitude"]
+            lat0, lon0 = self._grid_center(w["centroid"]["latitude"], w["centroid"]["longitude"])
             ids = []
             for _ in range(self.rng.randint(13, 18)):
-                la, lo = offset_point(lat0, lon0, abs(self.rng.gauss(0, 140)), self.rng.uniform(0, 2 * math.pi))
+                la, lo = offset_point(lat0, lon0, abs(self.rng.gauss(0, 90)), self.rng.uniform(0, 2 * math.pi))
                 ids.append(self.add_case(sub, self._when(13, 0.2), la, lo, None, scenario="emerging_hotspot")["id"])
             for _ in range(2):    # thin baseline in the same area earlier: the surge must stand out
-                la, lo = offset_point(lat0, lon0, abs(self.rng.gauss(0, 140)), self.rng.uniform(0, 2 * math.pi))
+                la, lo = offset_point(lat0, lon0, abs(self.rng.gauss(0, 90)), self.rng.uniform(0, 2 * math.pi))
                 self.add_case(sub, self._when(200, 30), la, lo, None, scenario="hotspot_baseline")
             self.truth["hotspots"].append({"hotspot_id": f"HS{h + 1:02d}", "subcategory": sub, "ward_id": w["id"], "center": {"latitude": lat0, "longitude": lon0}, "recent_days": 14, "case_ids": ids})
 

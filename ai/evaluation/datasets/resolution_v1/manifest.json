@@ -8,14 +8,14 @@
  "derived_from": "demo_city_v1",
  "rows": 240,
  "archetypes": {
-  "fixed_confirmed": 88,
-  "fixed_pending": 51,
-  "fixed_sparse": 18,
-  "no_after_evidence": 20,
-  "partial_reported": 12,
-  "unfixed_reported": 19,
-  "unfixed_silent_no_signal": 15,
-  "unfixed_silent_notes": 17
+  "fixed_confirmed": 69,
+  "fixed_pending": 61,
+  "fixed_sparse": 16,
+  "no_after_evidence": 17,
+  "partial_reported": 16,
+  "unfixed_reported": 33,
+  "unfixed_silent_no_signal": 12,
+  "unfixed_silent_notes": 16
  },
  "archetype_spec": [
   {
@@ -67,6 +67,6 @@
    "detectable_by": "images_only"
   }
  ],
- "truly_unresolved": 63,
- "scenarios_sha256": "e5eb5d0723c06b0acac6e8c35c408cf13e217f56f1dd889cfed98812a2fb222e"
+ "truly_unresolved": 77,
+ "scenarios_sha256": "f7053bdd50a7348cb3bd75bd48525fad0d31c714b5dd7868763008caa08a3445"
 }

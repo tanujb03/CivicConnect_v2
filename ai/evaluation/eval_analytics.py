@@ -71,11 +71,14 @@ def evaluate(d: dict) -> dict:
     planted_rec = {s["subcategory"].replace("_", " ") for s in gt["recurring_sites"]}
     growth = {i["subcategory"] for i in subcategory_growth(d["cases"], NOW)["items"]}
     planted_hot_raw = {h["subcategory"] for h in gt["hotspots"]}
+    by_id = {c["id"]: c for c in d["cases"]}
+    incident_subs = {by_id[cid]["subcategory"] for ids in gt["incident_cases"].values() for cid in ids if cid in by_id}   # planted incidents also raise their categories
     active = [i for i in d["incidents"] if i["status"] == "ACTIVE"]
     facts_block = {
         "hotspot_recall": round(sum(f"hotspot: {s}" in text for s in planted_hot) / len(planted_hot), 4),
         "growth_recall_of_planted_hotspot_subcategories": round(len(growth & planted_hot_raw) / len(planted_hot_raw), 4),
-        "growth_unexplained_subcategories": sorted(growth - planted_hot_raw),
+        "growth_explained_by_planted_incidents": sorted((growth - planted_hot_raw) & incident_subs),
+        "growth_unexplained_subcategories": sorted(growth - planted_hot_raw - incident_subs),
         "recurring_sites_recall_in_facts": round(sum(f"recurring problem: {s}" in text for s in planted_rec) / len(planted_rec), 4),
         "recurring_note": "Facts list only the top 5 recurring sites, so recall below 1.0 is a display cap, not a detection failure (see demo-city recovery).",
         "active_incident_recall": round(sum(any(i["id"] == f.ref_id for f in city.facts) for i in active) / len(active), 4),

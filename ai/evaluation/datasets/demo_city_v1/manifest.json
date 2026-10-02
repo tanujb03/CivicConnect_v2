@@ -12,13 +12,13 @@
  "design_section": "§58 Demo Dataset",
  "files": {
   "case_relations.jsonl": {
-   "bytes": 6678,
-   "sha256": "6e74f4c1701b841fbc007d0806bc453366389d76ab25776db5edecf1a4e030d5",
-   "rows": 26
+   "bytes": 6937,
+   "sha256": "5e89ff63e91dd42392ecd6af1387debaf9aa4ced3a4cf79a050e49c3b022fcb3",
+   "rows": 27
   },
   "cases.jsonl": {
-   "bytes": 504373,
-   "sha256": "6121c0f71d342d3143b955275f9d21b001285fd4ba3a8b01eb3c542ed5279dc3",
+   "bytes": 503940,
+   "sha256": "3f3ecd53fc3a638771b9a44c821d05b88034fea6bb8690aca4a8a10de95d71b8",
    "rows": 560
   },
   "departments.jsonl": {
@@ -27,8 +27,8 @@
    "rows": 8
   },
   "ground_truth.json": {
-   "bytes": 23260,
-   "sha256": "900034283226c8cf8aab1b6ca0c5eb3c7b7a727f8e0ccf61705637111e66c89b"
+   "bytes": 23119,
+   "sha256": "63b00d75ac1abc8e19ec4bb09358da46af134ad17792cb12108bcc4e60f7d439"
   },
   "incidents.jsonl": {
    "bytes": 4302,
@@ -36,14 +36,14 @@
    "rows": 5
   },
   "report_signals.jsonl": {
-   "bytes": 318551,
-   "sha256": "6fcccfc4efcfa307a7da4401f88c97c513e142d586f86118fee23b0383ff2c57",
-   "rows": 614
+   "bytes": 316288,
+   "sha256": "de2a753ce95ae427c57f416cbea5bde2a9e4d19c7bb4cc13e955c453a871bf3e",
+   "rows": 609
   },
   "status_events.jsonl": {
-   "bytes": 960562,
-   "sha256": "cfa3ab8ea961daf69ba37016f3dd621204fe012251bb69a34aeede4d8c5ac392",
-   "rows": 4830
+   "bytes": 977266,
+   "sha256": "9ca7048403e85a39ff40ea202fabd8cff7d659da140b23d1412aca2b5a8565b9",
+   "rows": 4913
   },
   "users.jsonl": {
    "bytes": 15189,
@@ -51,9 +51,9 @@
    "rows": 96
   },
   "verifications.jsonl": {
-   "bytes": 98148,
-   "sha256": "b43a620e6baf97da75e9eb3d9395bb3ea0c24b2fe1a76c8fc4cb287ff974416a",
-   "rows": 400
+   "bytes": 101022,
+   "sha256": "54b9c92b2f8f0e9c87ba8d78c30199f0cc4c0b4fd95520418897a2e035449dae",
+   "rows": 412
   },
   "wards.jsonl": {
    "bytes": 3993,
@@ -61,9 +61,9 @@
    "rows": 10
   },
   "work_orders.jsonl": {
-   "bytes": 164436,
-   "sha256": "4757cacd968d965a6ff31523d79c00518a9802350dda37b6058135a399c4f50c",
-   "rows": 469
+   "bytes": 171595,
+   "sha256": "f7fddb8c8ccfec4c04399a6300147e28ae5427bb1e70b4a7ea58865a4a3aa930",
+   "rows": 490
   }
  },
  "counts": {
@@ -71,24 +71,24 @@
   "departments": 8,
   "users": 96,
   "cases": 560,
-  "report_signals": 614,
+  "report_signals": 609,
   "categories": 8,
   "merged_duplicate_groups": 25,
-  "possible_duplicate_pairs": 26,
+  "possible_duplicate_pairs": 27,
   "recurring_sites": 12,
-  "sla_breached": 198,
-  "resolved": 358,
-  "reopened": 42,
-  "currently_reopened": 11,
-  "rejected": 24,
-  "open": 178,
+  "sla_breached": 224,
+  "resolved": 357,
+  "reopened": 55,
+  "currently_reopened": 16,
+  "rejected": 14,
+  "open": 189,
   "active_incidents": 3,
   "incidents": 5,
   "multilingual_signals": {
-   "en": 236,
-   "hi": 147,
-   "mr": 101,
-   "hi-Latn": 130
+   "en": 242,
+   "hi": 148,
+   "mr": 98,
+   "hi-Latn": 121
   }
  },
  "minimums_required": {
@@ -109,9 +109,9 @@
    "planted": 12,
    "recovered": 12,
    "recall": 1.0,
-   "detected": 23,
+   "detected": 25,
    "detected_that_are_planted": 12,
-   "detected_but_from_other_planted_structures": 11,
+   "detected_but_from_other_planted_structures": 13,
    "unexplained_by_any_planted_structure": 0
   },
   "hotspots": {

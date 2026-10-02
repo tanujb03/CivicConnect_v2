@@ -181,7 +181,7 @@ every image dataset ──▶ discover → profile-images (what is actually ther
 * **Outputs.** `/kaggle/working/civic_real/…`; the bundle is an **allowlist** of aggregate reports/manifests/profiles with a per-file size cap — prepared records, CSVs, images, videos and annotations can never enter it.
 
 ### Repository bootstrap (which code runs?)
-The notebook's first cell prefers, in order: `CIVIC_REPO` → the repo it sits in → an attached Kaggle Dataset containing `ai/` → `git` checkout of `CIVIC_GIT_URL` (default `https://github.com/tanujb03/CivicConnect_v2`) at `CIVIC_GIT_REF` (branch, tag or commit SHA; **default `claude/epic-fermat-3qlw5c`, never an implicit `main`**). A checkout lacking the notebook/framework is rejected as stale. The resolved URL/ref/commit are printed and stored in `SUMMARY.json`/`SUMMARY.md`. To pin exactly: set `CIVIC_GIT_REF` to the commit SHA given at hand-off (after the PR merges, `main` is also valid).
+The notebook's first cell prefers, in order: `CIVIC_REPO` → the repo it sits in → an attached Kaggle Dataset containing `ai/` → `git` checkout of `CIVIC_GIT_URL` (default `https://github.com/tanujb03/CivicConnect_v2`) at `CIVIC_GIT_REF` (branch, tag or commit SHA; **default `tanuj`, never an implicit `main`**). A checkout lacking the notebook/framework is rejected as stale. The resolved URL/ref/commit are printed and stored in `SUMMARY.json`/`SUMMARY.md`. To pin exactly: set `CIVIC_GIT_REF` to the commit SHA given at hand-off (after the PR merges, `main` is also valid).
 
 | dataset | attach in Kaggle | expected under `/kaggle/input/` |
 |---|---|---|

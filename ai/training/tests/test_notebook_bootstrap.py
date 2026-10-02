@@ -11,7 +11,7 @@ import pytest
 NB = Path(__file__).resolve().parents[1] / "notebooks" / "05_kaggle_real_data_profile_evaluate.ipynb"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REQUIRED = ["ai/inference/schemas.py", "ai/training/src/data_sources/kaggle_run.py", "ai/training/notebooks/05_kaggle_real_data_profile_evaluate.ipynb"]
-BRANCH = "claude/epic-fermat-3qlw5c"
+BRANCH = "tanuj"
 
 
 def bootstrap_source() -> str:

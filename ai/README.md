@@ -62,7 +62,7 @@ Kaggle: see `training/README.md`. Backend: see `INTEGRATION_HANDOFF.md`. Taxonom
 ## Current measured results (synthetic, held-out template families; see `evaluation/reports/`)
 | System | Result | Notes |
 |---|---|---|
-| B0 local intake | category 0.616, subcategory 0.556 (95% CI 0.489–0.620), macro-F1 0.530, ECE 0.068 | 5-fold family-grouped CV: category 0.669 ± 0.091, subcategory 0.572 ± 0.102 — **weak on unseen wording by design of the test**; fallback only |
+| B0 local intake | category 0.616, subcategory 0.546, macro-F1 0.522, ECE 0.063 (216 held-out rows; re-measured 2026-10-02 after the native-speaker phrase corrections) | 5-fold family-grouped CV: category 0.674 ± 0.079, subcategory 0.566 ± 0.100 — **weak on unseen wording by design of the test**; fallback only |
 | Fusion (calibrated, lexical) | AUC 0.984, gate recall 1.0 | distance dominates on synthetic pairs; lexical semantic weight is ~0 → provider embeddings needed |
 | Fusion (uncalibrated prior) | AUC 0.930 | for comparison |
 | Provider intake / embeddings / transcription | **not run** | needs credentials + validated model IDs |

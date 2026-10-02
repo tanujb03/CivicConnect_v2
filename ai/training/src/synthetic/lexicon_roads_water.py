@@ -4,6 +4,8 @@ SYNTHETIC DATA: all phrases are invented for model development. Hindi/Marathi
 text requires native-speaker review. ``FAMILIES[subcategory][language]`` is a list
 of exactly 5 core phrases; the family index (0-4) drives the held-out split.
 Languages: en, hi (Devanagari), mr (Devanagari), hl (romanised Hinglish).
+Hindi/Marathi review status: the repository owner (a Hindi/Marathi speaker) read the phrases on 2026-10-02 and cross-checked them with a second tool; nine
+wording corrections were applied. This is an informal review, NOT an independent professional/native-speaker audit.
 """
 FAMILIES: dict[str, dict[str, list[str]]] = {}
 
@@ -12,10 +14,10 @@ FAMILIES["pothole"] = {
         "the road is full of potholes after the rain", "huge crater in the middle of the lane, cars swerve to avoid it",
         "tarmac has broken and left a dangerous pit"],
  "hi": ["सड़क पर बड़ा गड्ढा हो गया है", "सड़क में गहरा गड्ढा है और बाइक फिसल रही हैं",
-        "बारिश के बाद पूरी सड़क गड्ढों से भर गई है", "सड़क के बीच में बहुत बड़ा गड्ढा है, गाड़ियाँ बचकर निकलती हैं",
+        "बारिश के बाद पूरी सड़क गड्ढों से भर गई है", "सड़क के बीच में बहुत बड़ा गड्ढा है, गाड़ियाँ उसे बचाकर निकलती हैं",
         "डामर उखड़ गया है और खतरनाक गड्ढा बन गया है"],
  "mr": ["रस्त्यावर मोठा खड्डा पडला आहे", "रस्त्यात खोल खड्डा आहे आणि दुचाकी घसरत आहेत",
-        "पावसानंतर संपूर्ण रस्ता खड्ड्यांनी भरला आहे", "रस्त्याच्या मधोमध मोठा खड्डा आहे, गाड्या वाचवत जातात",
+        "पावसानंतर संपूर्ण रस्ता खड्ड्यांनी भरला आहे", "रस्त्याच्या मधोमध मोठा खड्डा आहे, गाड्या चुकवून जातात",
         "डांबर उखडले असून धोकादायक खड्डा तयार झाला आहे"],
  "hl": ["sadak par bada gadda ho gaya hai", "road mein gehra gadda hai aur bikes slip ho rahi hain",
         "barish ke baad poori sadak gaddon se bhar gayi hai", "road ke beech mein bahut bada gadda hai, gaadiyan bachke nikalti hain",
@@ -26,10 +28,10 @@ FAMILIES["road_cave_in"] = {
         "road surface is sinking near the pipeline and cracking badly", "a large depression has appeared and the road is giving way",
         "the street has subsided and traffic cannot pass safely"],
  "hi": ["सड़क धँस गई है और बड़ा सिंकहोल बन गया है", "सड़क का एक हिस्सा अचानक जमीन में बैठ गया",
-        "पाइपलाइन के पास सड़क धँस रही है और बुरी तरह फट गई है", "बड़ा गड्ढा बैठ गया है और सड़क दब रही है",
+        "पाइपलाइन के पास सड़क धँस रही है और बुरी तरह फट गई है", "बड़ा धँसाव हुआ है और सड़क धँस रही है",
         "गली की सड़क नीचे बैठ गई है, गाड़ियाँ सुरक्षित नहीं निकल सकतीं"],
  "mr": ["रस्ता खचला असून मोठा सिंकहोल तयार झाला आहे", "रस्त्याचा काही भाग अचानक जमिनीत खचला",
-        "पाईपलाईनजवळ रस्ता खचत आहे आणि खूप तडे गेले आहेत", "मोठा खळगा तयार झाला असून रस्ता दबत आहे",
+        "पाईपलाईनजवळ रस्ता खचत आहे आणि खूप तडे गेले आहेत", "मोठा धसाव झाला असून रस्ता खचत आहे",
         "गल्लीतील रस्ता खाली बसला आहे, वाहने सुरक्षित जाऊ शकत नाहीत"],
  "hl": ["sadak dhans gayi hai aur bada sinkhole ban gaya hai", "road ka ek hissa achanak zameen mein baith gaya",
         "pipeline ke paas sadak dhans rahi hai aur buri tarah phat gayi hai", "bada gaddha baith gaya hai aur road dab rahi hai",
@@ -43,7 +45,7 @@ FAMILIES["damaged_footpath"] = {
         "फुटपाथ का स्लैब टूटकर बाहर निकला हुआ है", "सड़क किनारे का पैदल रास्ता पूरी तरह टूट गया है",
         "फुटपाथ से पेवर ब्लॉक गायब हैं"],
  "mr": ["पदपथाच्या फरशा तुटलेल्या आणि असमान आहेत", "पदपथ खराब असून वृद्ध लोक अडखळून पडतात",
-        "पदपथाचा स्लॅब तडकून बाहेर आला आहे", "रस्त्याकडेचा चालण्याचा मार्ग पूर्णपणे तुटला आहे",
+        "पदपथाचा स्लॅब तडकून बाहेर आला आहे", "रस्त्यालगतचा फुटपाथ पूर्णपणे तुटला आहे",
         "पदपथावरील पेव्हर ब्लॉक गायब आहेत"],
  "hl": ["footpath ki tiles tooti hui aur uneven hain", "footpath kharab hai aur buzurg log thokar khakar gir jaate hain",
         "footpath ka slab tootkar bahar nikla hua hai", "road ke kinare ka walkway poora toot gaya hai",
