@@ -1,6 +1,6 @@
 # AI → Backend hand-off (for Parth)
 
-Status: **Phase A complete (AI/model work + production adapter). Backend wiring not started.** Everything below is the contract between `ai/inference` and `backend/app/ai`. It implements the frozen design (§11–14, §37–40, §51A.5/7/8/15) and does not change any API.
+Status: **Phase A complete (AI/model work + production adapter). Backend wiring: AI gateway implemented against the synthetic demo city (§11); SQL-backed ports are Parth's remaining work.** Everything below is the contract between `ai/inference` and `backend/app/ai`. It implements the frozen design (§11–14, §37–40, §51A.5/7/8/15) and does not change any API.
 
 > **Gate:** do not seed the DB from `ai/inference/config/taxonomy.v1.json` until Tanuj + Parth have reviewed it (`TAXONOMY.md`).
 
@@ -93,7 +93,7 @@ Only invalid *input* raises: `pydantic.ValidationError` (→ 422), `InputLimitEx
 
 ## 10 · Checklist for Parth
 - [ ] Review + approve `taxonomy.v1.json` with Tanuj, then seed `Department`/category/SLA from it.
-- [ ] Decide department value in API responses: canonical ID (`water_supply`, what the AI emits) vs the 51A.8 literal (`WATER`).
+- [x] Department value in API responses: **decided in the gateway** — `department` / `suggested_department` = department *code* exactly as the 51A.8 example (`WATER`); canonical id in additive `department_id` / `suggested_department_id`; decision requests accept either. Change `_dept_out` in `backend/ai_gateway/service.py` if the team prefers otherwise.
 - [ ] Install/import `ai.inference`; construct `AIService.from_env()` once; add env vars above.
 - [ ] Evidence resolver: `evidence_id → EvidenceInput` (signed URL or bytes; transcript if available).
 - [ ] Fusion SQL using `candidate_query_params()`; pgvector column per `(embedding_model, dimension)`.
@@ -101,3 +101,20 @@ Only invalid *input* raises: `pydantic.ValidationError` (→ 422), `InputLimitEx
 - [ ] `ToolExecutor` for the copilot with RBAC + parameterised SQL.
 - [ ] Persist `AIAnalysis` from `ai_metadata`; AI-override `AuditEvent` on triage decision.
 - [ ] Redis `case.ai_requested` consumer calling the adapter; map exceptions → 4xx; surface `warnings`/`degraded` to clients.
+
+## 11 · Backend AI gateway (implemented — `backend/ai_gateway/`)
+Routes `POST /cases/intake/analyze`, `/cases/{id}/fusion/analyze`, `/cases/{id}/triage/analyze`, `/cases/{id}/triage/decision` and `POST /copilot/query` now speak the exact §51A shapes and go through `AIGateway` (the only place the backend meets `ai.inference`). Before this, the routes exposed the adapter's internal schemas: a contract-conformant intake body (`evidence_ids`) was a 422, the copilot took an `actor_context` from the request body (spoofable), fusion/triage required the *client* to send candidates/context, and nothing was persisted or audited.
+
+| Concern | Where |
+|---|---|
+| §51A request/response models (additive fields marked) | `contracts.py` |
+| Storage ports: `CaseRepository`, `EvidenceResolver`, `AIAnalysisStore`, `AuditSink`, `ToolExecutor` | `ports.py` |
+| §51A.18 roles (enforced in the gateway so queue workers share it), evidence resolution, candidate bounds from `candidate_query_params()`, triage context, `AIAnalysis` persistence, AI-override audit | `service.py` |
+| Demo implementations over the **synthetic demo city** (§58, `ai/evaluation/datasets/demo_city_v1`) + copilot `ToolExecutor` | `memory.py` |
+| Singleton + `get_actor` (token → `Actor`) + `configure_gateway(...)` | `deps.py` |
+
+**Roles** (§51A.18, JWT role vocabulary): intake — citizen, field_worker + staff; fusion / triage analyze / triage decision — staff (`operator, department_manager, ward_officer, city_admin, system_admin`); copilot — staff + `overlooker` (aggregates only: `search_cases` refused). `overlooker` is **not in `RoleEnum`** yet — add it (or map it) in `backend/models/user.py`. `operator`/`department_manager` are pinned to their own department; a department-scoped role that cannot be placed in a department is refused (deny by default).
+**Audit**: every decision writes `TRIAGE_DECISION_RECORDED`; a decision differing from the stored AI recommendation also writes `AI_RECOMMENDATION_OVERRIDDEN` (before = AI recommendation, after = decision + `overridden_fields`). `EventStreamAuditSink` keeps them in memory and best-effort propagates to the Redis `civic:audit` stream — replace with the `AuditEvent` table writer.
+**Errors**: `core/exceptions.py` now emits the §51A.1 envelope (`{error:{code,message,details,request_id}}`) for `CivicConnectException`, framework `HTTPException` and request-validation errors; the legacy `detail` key is kept alongside so existing clients/tests keep working.
+**Going to production**: implement the four ports with SQLAlchemy/PostGIS/pgvector/object storage, call `configure_gateway(AIGateway(AIService.from_env(tool_executor=<your executor>), repo, resolver, store, audit))` at startup. `AI_GATEWAY_DEMO_CITY_DIR` overrides the demo-city directory. Tests: `backend/tests/test_ai_gateway.py` (23) are the contract the SQL implementation must keep passing — point `install()` at your ports.
+**Demo caveat**: the default gateway's clock is pinned to the demo city's "now" (2026-10-01) so case ages are meaningful; it is a demo wiring, not a production default.
