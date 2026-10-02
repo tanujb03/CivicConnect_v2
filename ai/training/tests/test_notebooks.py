@@ -126,3 +126,15 @@ def test_notebook_executes_end_to_end_locally(name, env, tmp_path, monkeypatch):
         names = zipfile.ZipFile(work / "civic_real_aggregates.zip").namelist()
         assert "SUMMARY.md" in names and not any(n.endswith(("records.jsonl", ".jpg", ".csv")) for n in names)
         assert "bundle (aggregates only)" in out and "FOUND    bmc_mumbai" in out and "third_party_synthetic" in out
+
+
+def test_notebooks_01_to_04_clone_the_project_repo_by_default_on_kaggle():
+    """Regression: notebook 02 stopped with 'Cannot find the repo' on a fresh Kaggle session because cloning needed an env var nobody sets."""
+    import glob
+
+    import nbformat
+    for f in sorted(glob.glob(str(Path(__file__).resolve().parents[1] / "notebooks" / "0[1234]_*.ipynb"))):
+        nb = nbformat.read(f, as_version=4)
+        src = next(c.source for c in nb.cells if c.cell_type == "code" and "CIVIC_GIT_URL" in c.source)
+        assert 'os.environ.get("CIVIC_GIT_URL", "https://github.com/tanujb03/CivicConnect_v2")' in src, f
+        assert '"--branch", os.environ.get("CIVIC_GIT_REF", "tanuj")' in src and "turn Internet ON" in src, f
