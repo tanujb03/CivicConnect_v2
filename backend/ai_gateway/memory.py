@@ -18,10 +18,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from ai.evaluation.analytics_facts import build_fact_set
 from ai.evaluation.analytics_reference import haversine_m, hotspots, recurring_sites
 from ai.inference.errors import ToolPermissionDenied
 from ai.inference.copilot.tools import ToolResult
-from ai.inference.schemas import ActorContext, Citation, CopilotScope, EvidenceInput
+from ai.inference.schemas import ActorContext, AnalyticsFactSet, Citation, CopilotScope, EvidenceInput
 
 from .ports import CaseSnapshot
 
@@ -249,6 +250,10 @@ class DemoCityToolExecutor:
                 "ward": (self.city.wards.get(c["ward_id"]) or {}).get("label"), "department_id": c.get("department_id"),
                 "created_at": c["created_at"], "support_count": c["support_count"], "sla_breached": c["sla_breached"], "synthetic": True}
 
+    def scoped_cases(self, *, ward_id: str | None, department_id: str | None, actor: ActorContext) -> list[dict]:
+        """Cases the actor may see inside the requested ward/department (department-scoped roles are pinned; unknown department => ToolPermissionDenied)."""
+        return self._filtered(_Window(ward_id=ward_id, department_id=department_id), CopilotScope(), actor)
+
     # -- tools ------------------------------------------------------------------------------------------------
     def execute(self, tool: str, arguments: BaseModel, *, scope: CopilotScope, actor: ActorContext) -> ToolResult:
         role = normalize_role(actor.role)
@@ -327,3 +332,19 @@ class _Window(BaseModel):
 
     ward_id: str | None = None
     department_id: str | None = None
+
+
+class DemoCityFactSource:
+    """AnalyticsFactSource over the demo city, scoped exactly like the copilot executor."""
+
+    def __init__(self, executor: DemoCityToolExecutor):
+        self.executor, self.city, self.now = executor, executor.city, executor.now
+
+    def facts(self, *, actor_id: str, role: str, ward_id: str | None, department_id: str | None) -> AnalyticsFactSet:
+        cases = self.executor.scoped_cases(ward_id=ward_id, department_id=department_id, actor=ActorContext(user_id=actor_id, role=role))
+        parts = ["Synthetic demo city"]
+        if ward_id:
+            parts.append(f"ward {(self.city.wards.get(ward_id) or {}).get('label', ward_id)}")
+        if department_id:
+            parts.append((self.city.departments.get(department_id) or {}).get("name", department_id))
+        return build_fact_set(cases, self.city.wards, self.city.departments, self.city.incidents, self.now, scope_label=", ".join(parts))

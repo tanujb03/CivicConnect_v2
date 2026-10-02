@@ -29,7 +29,7 @@ ai/
 | AI-2 fusion | deterministic gate (category/radius/window) → semantic (embeddings if available, else lexical) + geo + time + category → calibrated logistic score | weights only (synthetic pairs, non-negative) |
 | AI-3 triage | deterministic priority/SLA (§36); AI *recommends* severity (bounded, never lowers safety-critical) | no |
 | AI-4 resolution | provider multimodal comparison; **flag-only**, `autonomous_closure_allowed=False`. Deterministic baseline evaluated on synthetic scenarios (`evaluation/datasets/resolution_v1`, `eval_resolution.py`): it flags every citizen-reported failure but never reads note text or pixels; vision path **not evaluated** (no before/after images exist) | no |
-| AI-5 analytics | backend facts → validated explanation (numbers verified, template fallback) | no |
+| AI-5 analytics | backend facts → validated explanation (numbers verified, template fallback). Reference facts (hotspots, unusual growth, recurrence, SLA risk, geographic concentration, incidents) in `evaluation/analytics_facts.py`; guard rails evaluated with scripted providers (`eval_analytics.py`) — a real LLM's wording is **not** evaluated | no |
 | AI-6 copilot | whitelisted read-only tools, scope enforced, answer/citation grounding; no DB credentials | no |
 
 ## Hybrid data strategy (real public + synthetic)

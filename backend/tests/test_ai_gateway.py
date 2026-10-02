@@ -24,7 +24,7 @@ from backend.ai_gateway.ports import CaseSnapshot  # noqa: E402
 from backend.ai_gateway.service import SYSTEM_ACTOR, Actor  # noqa: E402
 from backend.core.exceptions import CivicConnectException  # noqa: E402
 from backend.ai_gateway.memory import (  # noqa: E402
-    DEMO_DIR, DEMO_NOW, DemoCityRepository, DemoCityToolExecutor, MemoryAnalysisStore, MemoryAuditSink, MemoryEvidenceResolver,
+    DEMO_DIR, DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, MemoryAnalysisStore, MemoryAuditSink, MemoryEvidenceResolver,
 )
 from backend.core.security import create_access_token  # noqa: E402
 from backend.main import app  # noqa: E402
@@ -42,8 +42,9 @@ class Env:
     def __init__(self, provider):
         self.repo = DemoCityRepository()
         self.evidence, self.analyses, self.audit = MemoryEvidenceResolver(), MemoryAnalysisStore(), MemoryAuditSink()
-        self.ai = AIService(provider=provider, tool_executor=DemoCityToolExecutor(self.repo))
-        self.gateway = AIGateway(self.ai, self.repo, self.evidence, self.analyses, self.audit, clock=lambda: DEMO_NOW)
+        executor = DemoCityToolExecutor(self.repo)
+        self.ai = AIService(provider=provider, tool_executor=executor)
+        self.gateway = AIGateway(self.ai, self.repo, self.evidence, self.analyses, self.audit, clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor))
 
 
 def install(provider=None):
@@ -353,6 +354,70 @@ class TestResolutionHook:
             assert e.value.status_code == 403, role
         for role in ("field_worker", "operator", "city_admin"):
             assert self.run(env, Actor("u", role)).autonomous_closure_allowed is False
+
+
+# --------------------------------------------------------------------------------------------- AI-5 analytics explanation (additive endpoint)
+class TestAnalyticsExplain:
+    def post(self, role="city_admin", sub="u-admin", **body):
+        return client.post("/api/v1/analytics/explain", headers=token(role, sub), json=body)
+
+    @staticmethod
+    def honest(fs_first=3):
+        def respond(parts):
+            lines = [ln for ln in parts[0].text.splitlines() if ln.startswith("[f")][:fs_first]
+            ids = [ln[1:ln.index("]")] for ln in lines]
+            return {"summary": "Top findings: " + "; ".join(ln.split("] ", 1)[1] for ln in lines) + ".",
+                    "highlights": [{"text": ln.split("] ", 1)[1], "fact_ids": [i]} for ln, i in zip(lines, ids)]}
+        return FakeProvider(structured={"analytics": respond})
+
+    def test_without_a_provider_returns_deterministic_grounded_template(self):
+        env = install(None)
+        r = self.post()
+        assert r.status_code == 200, r.text
+        b = r.json()
+        assert b["grounded"] is True and b["ai_metadata"]["source"] == "rules" and b["ai_metadata"]["degraded"] is True
+        assert b["facts"] and {h["fact_ids"][0] for h in b["highlights"]} <= {f["id"] for f in b["facts"]}
+        assert any(f["metric"].startswith("hotspot:") for f in b["facts"]) and "hotspot" in b["summary"]            # planted hotspots surface in the summary
+        assert {c["type"] for c in b["citations"]} <= {"ANALYTIC", "INCIDENT"}
+        assert env.analyses.latest(None, "analytics_explain") is not None
+
+    def test_grounded_model_prose_is_accepted(self):
+        install(self.honest())
+        b = self.post().json()
+        assert b["ai_metadata"]["source"] == "provider" and b["warnings"] == [] and b["summary"].startswith("Top findings")
+
+    def test_model_that_invents_numbers_is_replaced_by_the_template(self):
+        install(FakeProvider(structured={"analytics": {"summary": "Cases rose 47% and 913 are overdue.", "highlights": [{"text": "47% rise", "fact_ids": ["f01"]}]}}))
+        b = self.post().json()
+        assert b["ai_metadata"]["source"] == "rules" and any(w.startswith("EXPLANATION_UNGROUNDED_FALLBACK") for w in b["warnings"])
+        assert "47" not in b["summary"] and "913" not in b["summary"]
+
+    def test_scope_is_applied_to_the_facts(self):
+        env = install(None)
+        ward = env.repo.city.ward_by_label["W02"]
+        total = lambda b: next(f["value"] for f in b["facts"] if f["metric"] == "total cases in scope")   # noqa: E731
+        city, scoped = self.post().json(), self.post(scope={"ward_id": ward}).json()
+        assert total(city) == len(env.repo.city.cases) and total(scoped) == sum(c["ward_id"] == ward for c in env.repo.city.cases) < total(city)
+        assert scoped["summary"].startswith("Synthetic demo city, ward W02")
+
+    def test_roles(self):
+        env = install(None)
+        for role in ("citizen", "field_worker"):
+            assert self.post(role=role).status_code == 403, role
+        assert self.post(role="overlooker", sub="u-ovl").status_code == 200
+        assert client.post("/api/v1/analytics/explain", json={}).status_code == 401
+        mgr = next(u for u in env.repo.city.users.values() if u["role"] == "DEPARTMENT_MANAGER" and u["department_id"] == "water_supply")
+        b = self.post(role="department_manager", sub=mgr["id"]).json()
+        assert next(f["value"] for f in b["facts"] if f["metric"] == "total cases in scope") == sum(c["department_id"] == "water_supply" for c in env.repo.city.cases)
+        other = self.post(role="department_manager", sub=mgr["id"], scope={"department_id": "road_maintenance"})
+        assert other.status_code == 403 and other.json()["error"]["code"] == "AUTH_FORBIDDEN"
+        assert self.post(role="operator", sub="unknown-operator").status_code == 403            # department unknown => deny by default
+
+    def test_unconfigured_fact_source_is_a_503_envelope(self):
+        env = install(None)
+        env.gateway.facts = None
+        r = self.post()
+        assert r.status_code == 503 and r.json()["error"]["code"] == "ANALYTICS_UNAVAILABLE"
 
 
 # --------------------------------------------------------------------------------------------- error envelope everywhere (51A.1)

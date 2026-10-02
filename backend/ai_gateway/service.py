@@ -13,7 +13,7 @@ from typing import Any, Callable
 
 from pydantic import ValidationError
 
-from ai.inference.errors import InputLimitExceeded, ToolValidationError
+from ai.inference.errors import InputLimitExceeded, ToolPermissionDenied, ToolValidationError
 from ai.inference.schemas import (
     ActorContext, CopilotQuery, CopilotScope, FusionCase, FusionRequest, IntakeRequest, Location, ResolutionReviewRequest, TriageRequest, W,
 )
@@ -21,10 +21,10 @@ from ai.inference.service import AIService
 from backend.core.exceptions import CivicConnectException
 
 from .contracts import (
-    CopilotQueryRequest, CopilotQueryResponse, FusionAnalyzeResponse, IntakeAnalyzeRequest, IntakeAnalyzeResponse,
+    AnalyticsExplainRequest, AnalyticsExplainResponse, CopilotQueryRequest, CopilotQueryResponse, FusionAnalyzeResponse, IntakeAnalyzeRequest, IntakeAnalyzeResponse,
     ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
-from .ports import AIAnalysisStore, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver
+from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver
 
 log = logging.getLogger("civicconnect.ai_gateway")
 
@@ -35,6 +35,7 @@ CAPABILITY_ROLES: dict[str, frozenset[str]] = {
     "triage_analyze": STAFF_ROLES,
     "triage_decision": STAFF_ROLES,                                # "Triage decision": admin only
     "copilot": STAFF_ROLES | {"overlooker"},                       # "Run grounded copilot": admin, overlooker (scoped)
+    "analytics_explain": STAFF_ROLES | {"overlooker"},             # "View city analytics": admin, overlooker (aggregates only)
     "resolution_review": STAFF_ROLES | {"field_worker"},           # internal hook; citizen-triggered reviews run as SYSTEM_ACTOR
 }
 OVERRIDE_ACTION = "AI_RECOMMENDATION_OVERRIDDEN"
@@ -56,8 +57,9 @@ def _utcnow() -> datetime:
 
 class AIGateway:
     def __init__(self, ai: AIService, repo: CaseRepository, evidence: EvidenceResolver, analyses: AIAnalysisStore, audit: AuditSink,
-                 clock: Callable[[], datetime] = _utcnow):
+                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None):
         self.ai, self.repo, self.evidence, self.analyses, self.audit, self.clock = ai, repo, evidence, analyses, audit, clock
+        self.facts = facts
 
     # ------------------------------------------------------------------------------------------ helpers
     @staticmethod
@@ -234,3 +236,22 @@ class AIGateway:
             consistency=res.consistency, unresolved_condition_suspected=res.unresolved_condition_suspected,
             recommend_verification_request=res.recommend_verification_request, confidence=res.confidence, reasons=res.reasons,
             warnings=[*res.warnings, *warnings], ai_metadata=self._meta(res), analysis_id=analysis_id)
+
+    # ------------------------------------------------------------------------------------------ AI-5 analytics explanation (additive endpoint)
+    def explain_analytics(self, req: AnalyticsExplainRequest, actor: Actor) -> AnalyticsExplainResponse:
+        """Deterministic facts (role-scoped) -> ``ai.explain_analytics``, which accepts model prose only if every number and fact id is grounded."""
+        self._require(actor, "analytics_explain")
+        if self.facts is None:
+            raise CivicConnectException("ANALYTICS_UNAVAILABLE", "No analytics fact source is configured.", 503)
+        try:
+            facts = self.facts.facts(actor_id=actor.user_id, role=actor.role, ward_id=req.scope.ward_id, department_id=req.scope.department_id)
+        except ToolPermissionDenied as e:
+            raise CivicConnectException("AUTH_FORBIDDEN", "That analytics scope is not available to your role.", 403) from e
+        try:
+            res = self.ai.explain_analytics(facts)
+        except (ValidationError, ValueError) as e:
+            raise self._input_error(e) from e
+        analysis_id = self._persist("analytics_explain", None, actor, res, None, {"fact_count": len(facts.facts)})
+        return AnalyticsExplainResponse(
+            summary=res.summary, highlights=[h.model_dump(mode="json") for h in res.highlights], citations=[c.model_dump(mode="json") for c in res.citations],
+            facts=[f.model_dump(mode="json") for f in facts.facts], grounded=res.grounded, warnings=res.warnings, ai_metadata=self._meta(res), analysis_id=analysis_id)

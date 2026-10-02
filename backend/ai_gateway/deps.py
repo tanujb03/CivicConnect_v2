@@ -8,7 +8,7 @@ from fastapi import Depends
 from ai.inference.service import AIService
 from backend.core.security import get_current_user
 
-from .memory import DEMO_NOW, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
+from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
 from .service import Actor, AIGateway
 
 _gateway: AIGateway | None = None
@@ -19,9 +19,10 @@ def build_default_gateway() -> AIGateway:
     """Demo wiring: synthetic demo city + in-memory stores. AI provider/classifier/weights come from the environment (``AIService.from_env``);
     with none configured every endpoint still answers, in the documented degraded mode."""
     repo = DemoCityRepository()
-    ai = AIService.from_env(tool_executor=DemoCityToolExecutor(repo))
+    executor = DemoCityToolExecutor(repo)
+    ai = AIService.from_env(tool_executor=executor)
     return AIGateway(ai=ai, repo=repo, evidence=MemoryEvidenceResolver(), analyses=MemoryAnalysisStore(), audit=EventStreamAuditSink(),
-                     clock=lambda: DEMO_NOW)
+                     clock=lambda: DEMO_NOW, facts=DemoCityFactSource(executor))
 
 
 def configure_gateway(gateway: AIGateway | None) -> None:

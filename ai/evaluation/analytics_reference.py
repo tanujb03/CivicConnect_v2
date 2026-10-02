@@ -103,3 +103,66 @@ def hotspots(cases: Sequence[Case], now: datetime, *, recent_days: int = 14, bas
             out.append({"subcategory": sub, "cell": [ri, ci], "recent_cases": n, "baseline_cases": v["base"], "ratio_vs_baseline": round((n / recent_days) / base_rate, 2),
                         "center": {"latitude": round(sum(las) / n, 6), "longitude": round(sum(los) / n, 6)}, "case_ids": [c["id"] for c in v["recent"]]})
     return sorted(out, key=lambda h: -h["recent_cases"])
+
+
+RESOLVED_STATES = {"VERIFIED", "RESOLVED", "REJECTED"}
+
+
+def subcategory_growth(cases: Sequence[Case], now: datetime, *, recent_days: int = 14, baseline_days: int = 90, min_recent: int = 8,
+                       min_relative_ratio: float = 2.0) -> dict:
+    """Unusual category growth (§11 AI-5): a subcategory's recent daily rate vs its own baseline rate, DIVIDED by the whole city's same ratio so that
+    city-wide growth is not reported as category growth. Needs >= ``min_recent`` recent cases (baseline floor of 1 case per window)."""
+    from collections import Counter
+    recent_lo, base_lo = now - timedelta(days=recent_days), now - timedelta(days=recent_days + baseline_days)
+    rec, base = Counter(), Counter()
+    for c in cases:
+        sub = c.get("subcategory")
+        if not sub or sub == "unclassified":
+            continue
+        t = _ts(c)
+        if t >= recent_lo:
+            rec[sub] += 1
+        elif t >= base_lo:
+            base[sub] += 1
+    n_rec, n_base = sum(rec.values()), sum(base.values())
+    city_ratio = (n_rec / recent_days) / (max(n_base, 1) / baseline_days)
+    items = []
+    for sub, n in rec.items():
+        if n < min_recent:
+            continue
+        ratio = (n / recent_days) / (max(base[sub], 1) / baseline_days)
+        rel = ratio / city_ratio if city_ratio else 0.0
+        if rel >= min_relative_ratio:
+            items.append({"subcategory": sub, "recent_cases": n, "baseline_cases": base[sub], "relative_growth": round(rel, 2)})
+    return {"city_growth_ratio": round(city_ratio, 2), "items": sorted(items, key=lambda i: -i["relative_growth"])}
+
+
+def sla_risk(cases: Sequence[Case], now: datetime, *, horizon_hours: int = 24) -> dict:
+    """SLA-risk pattern (§11 AI-5): open cases already past their SLA deadline or due within ``horizon_hours``, overall and per department."""
+    from collections import Counter
+    horizon = now + timedelta(hours=horizon_hours)
+    open_, breached, due = [], [], []
+    for c in cases:
+        if c.get("status") in RESOLVED_STATES or not c.get("sla_deadline"):
+            continue
+        dl = datetime.fromisoformat(str(c["sla_deadline"]).replace("Z", "+00:00"))
+        open_.append(c)
+        if dl < now:
+            breached.append(c)
+        elif dl <= horizon:
+            due.append(c)
+    by_dep = Counter(c.get("department_id") or "unassigned" for c in breached)
+    return {"open": len(open_), "breached": len(breached), "due_within_horizon": len(due), "horizon_hours": horizon_hours,
+            "breached_by_department": [{"department_id": d, "breached": n} for d, n in sorted(by_dep.items(), key=lambda kv: (-kv[1], kv[0]))]}
+
+
+def geographic_concentration(cases: Sequence[Case], now: datetime, *, recent_days: int = 14, top_k: int = 3) -> dict:
+    """Geographic concentration (§11 AI-5): the share of recent cases that fall in the ``top_k`` wards."""
+    from collections import Counter
+    lo = now - timedelta(days=recent_days)
+    wards = Counter(c["ward_id"] for c in cases if c.get("ward_id") and _ts(c) >= lo)
+    total = sum(wards.values())
+    top = wards.most_common(top_k)
+    return {"recent_cases": total, "recent_days": recent_days, "top_k": top_k,
+            "top_wards": [{"ward_id": w, "cases": n, "share_pct": round(100 * n / total) if total else 0} for w, n in top],
+            "top_k_share_pct": round(100 * sum(n for _, n in top) / total) if total else 0}

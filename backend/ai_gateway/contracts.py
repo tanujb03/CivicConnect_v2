@@ -182,3 +182,31 @@ class ResolutionReviewOut(_Out):
     autonomous_closure_allowed: Literal[False] = False
     ai_metadata: dict[str, Any] | None = None
     analysis_id: str | None = None
+
+
+# ------------------------------------------------------------------ AI-5 analytics explanation (ADDITIVE endpoint, not in §51A)
+class AnalyticsScopeIn(_In):
+    ward_id: str | None = None
+    department_id: str | None = None
+
+
+class AnalyticsExplainRequest(_In):
+    scope: AnalyticsScopeIn = Field(default_factory=AnalyticsScopeIn)
+
+
+class AnalyticsHighlightOut(_Out):
+    text: str
+    fact_ids: list[str]
+
+
+class AnalyticsExplainResponse(_Out):
+    """Numbers come from ``facts`` (deterministic); ``summary``/``highlights`` only explain them and are verified against them (``grounded``)."""
+
+    summary: str
+    highlights: list[AnalyticsHighlightOut]
+    citations: list[CitationOut]
+    facts: list[dict[str, Any]]
+    grounded: bool
+    warnings: list[str] = Field(default_factory=list)
+    ai_metadata: dict[str, Any] | None = None
+    analysis_id: str | None = None

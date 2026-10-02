@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ai.inference.copilot.tools import ToolExecutor  # noqa: F401  (re-exported: the copilot's executor port is defined by the adapter)
-from ai.inference.schemas import EvidenceInput
+from ai.inference.schemas import AnalyticsFactSet, EvidenceInput
 
 
 @dataclass
@@ -56,3 +56,9 @@ class AIAnalysisStore(Protocol):
 class AuditSink(Protocol):
     def emit(self, *, actor_id: str, action: str, entity_type: str, entity_id: str, before: dict | None, after: dict | None) -> bool:
         """Write an AuditEvent; True when it was accepted."""
+
+
+class AnalyticsFactSource(Protocol):
+    def facts(self, *, actor_id: str, role: str, ward_id: str | None, department_id: str | None) -> AnalyticsFactSet:
+        """DETERMINISTIC, role-scoped, display-ready facts (SQL aggregation in production; see ``ai/evaluation/analytics_facts.py`` for the spec).
+        Raise ``ToolPermissionDenied`` when the actor may not see the requested scope."""

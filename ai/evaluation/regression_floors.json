@@ -18,5 +18,13 @@
     "verification_request_recall_of_unresolved_min": 1.0,
     "insufficient_evidence_correct_min": 1.0,
     "monotonic_violations_max": 0
+  },
+  "analytics_ai5": {
+    "_note": "Facts recovery and explanation guard rails on the synthetic demo city (scripted providers).",
+    "hotspot_recall_min": 1.0,
+    "growth_recall_min": 1.0,
+    "active_incident_recall_min": 1.0,
+    "hallucination_rejection_min": 1.0,
+    "ungrounded_numbers_max": 0
   }
 }
