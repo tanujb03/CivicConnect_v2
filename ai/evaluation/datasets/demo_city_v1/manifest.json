@@ -1,0 +1,130 @@
+{
+ "dataset": "demo_city",
+ "version": "1.0.0",
+ "synthetic": true,
+ "notice": "SYNTHETIC DEMO DATA (system design §58). Every record is fictional and labelled synthetic; wards, users, cases, reports, incidents and all numbers are invented to make Admin/Overlooker dashboards, fusion, triage and analytics demonstrable. Nothing here describes a real city, citizen or municipal performance. Hindi/Marathi/Hinglish text comes from the project's template generator and has not been reviewed by native speakers.",
+ "generator_version": "synthetic-city/1.0",
+ "seed": 20261001,
+ "requested_cases": 560,
+ "anchor_now": "2026-10-01T00:00:00+00:00",
+ "window_days": 240,
+ "taxonomy_version": "1.0.0-draft",
+ "design_section": "§58 Demo Dataset",
+ "files": {
+  "case_relations.jsonl": {
+   "bytes": 6678,
+   "sha256": "6e74f4c1701b841fbc007d0806bc453366389d76ab25776db5edecf1a4e030d5",
+   "rows": 26
+  },
+  "cases.jsonl": {
+   "bytes": 504373,
+   "sha256": "6121c0f71d342d3143b955275f9d21b001285fd4ba3a8b01eb3c542ed5279dc3",
+   "rows": 560
+  },
+  "departments.jsonl": {
+   "bytes": 2087,
+   "sha256": "360459eb732b62566eda5eef811590dc48f36395accb28264c1965809dbb91e8",
+   "rows": 8
+  },
+  "ground_truth.json": {
+   "bytes": 23260,
+   "sha256": "900034283226c8cf8aab1b6ca0c5eb3c7b7a727f8e0ccf61705637111e66c89b"
+  },
+  "incidents.jsonl": {
+   "bytes": 4302,
+   "sha256": "887c371da296c35c20737aeccc82ff8987982b1098146c727ee1392add3c7b7f",
+   "rows": 5
+  },
+  "report_signals.jsonl": {
+   "bytes": 318551,
+   "sha256": "6fcccfc4efcfa307a7da4401f88c97c513e142d586f86118fee23b0383ff2c57",
+   "rows": 614
+  },
+  "status_events.jsonl": {
+   "bytes": 960562,
+   "sha256": "cfa3ab8ea961daf69ba37016f3dd621204fe012251bb69a34aeede4d8c5ac392",
+   "rows": 4830
+  },
+  "users.jsonl": {
+   "bytes": 15189,
+   "sha256": "962f25314f12d6b43451e571f1857bb1fbfd79f269a0689a4d1ce3ac4424cbc4",
+   "rows": 96
+  },
+  "verifications.jsonl": {
+   "bytes": 98148,
+   "sha256": "b43a620e6baf97da75e9eb3d9395bb3ea0c24b2fe1a76c8fc4cb287ff974416a",
+   "rows": 400
+  },
+  "wards.jsonl": {
+   "bytes": 3993,
+   "sha256": "3d8d10afed9b17d803b1ae187cd983cfe682ec1f7a610018ee148e44249bb441",
+   "rows": 10
+  },
+  "work_orders.jsonl": {
+   "bytes": 164436,
+   "sha256": "4757cacd968d965a6ff31523d79c00518a9802350dda37b6058135a399c4f50c",
+   "rows": 469
+  }
+ },
+ "counts": {
+  "wards": 10,
+  "departments": 8,
+  "users": 96,
+  "cases": 560,
+  "report_signals": 614,
+  "categories": 8,
+  "merged_duplicate_groups": 25,
+  "possible_duplicate_pairs": 26,
+  "recurring_sites": 12,
+  "sla_breached": 198,
+  "resolved": 358,
+  "reopened": 42,
+  "currently_reopened": 11,
+  "rejected": 24,
+  "open": 178,
+  "active_incidents": 3,
+  "incidents": 5,
+  "multilingual_signals": {
+   "en": 236,
+   "hi": 147,
+   "mr": 101,
+   "hi-Latn": 130
+  }
+ },
+ "minimums_required": {
+  "wards": 10,
+  "departments": 8,
+  "cases": 500,
+  "categories": 8,
+  "merged_duplicate_groups": 20,
+  "possible_duplicate_pairs": 15,
+  "recurring_sites": 10,
+  "sla_breached": 30,
+  "resolved": 100,
+  "reopened": 20,
+  "active_incidents": 3
+ },
+ "ground_truth_recovery_by_reference_analytics": {
+  "recurring": {
+   "planted": 12,
+   "recovered": 12,
+   "recall": 1.0,
+   "detected": 23,
+   "detected_that_are_planted": 12,
+   "detected_but_from_other_planted_structures": 11,
+   "unexplained_by_any_planted_structure": 0
+  },
+  "hotspots": {
+   "planted": 3,
+   "recovered": 3,
+   "recall": 1.0,
+   "detected": 3
+  }
+ },
+ "limitations": [
+  "Priority/SLA come from the deterministic §36 rules in ai.inference, not a model.",
+  "Lifecycle durations, reopen rates and backlog are invented.",
+  "Reports use template-family text: B0-style classifiers evaluated on it are only held-out for rows with text_split_pool == 'test'.",
+  "No images/audio are included: AI-4 before/after evidence is NOT represented."
+ ]
+}

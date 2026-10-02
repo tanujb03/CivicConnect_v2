@@ -5,7 +5,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.api.v1.router import api_router
-from backend.core.exceptions import CivicConnectException, civicconnect_exception_handler
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from backend.core.exceptions import (
+    CivicConnectException, civicconnect_exception_handler, http_exception_handler, validation_exception_handler,
+)
 from backend.core.logging import setup_logging
 
 log = logging.getLogger("civicconnect.main")
@@ -55,6 +59,8 @@ async def add_request_id(request: Request, call_next):
 
 # Custom exception handler
 app.add_exception_handler(CivicConnectException, civicconnect_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Include v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)
