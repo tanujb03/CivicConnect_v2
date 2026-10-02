@@ -28,7 +28,7 @@ ai/
 | AI-1 intake | provider multimodal structured output → taxonomy validation → local B0 cross-check; **local B0 fallback** + manual-entry floor | B0 (TF-IDF char n-gram + logistic regression, numpy inference) |
 | AI-2 fusion | deterministic gate (category/radius/window) → semantic (embeddings if available, else lexical) + geo + time + category → calibrated logistic score | weights only (synthetic pairs, non-negative) |
 | AI-3 triage | deterministic priority/SLA (§36); AI *recommends* severity (bounded, never lowers safety-critical) | no |
-| AI-4 resolution | provider multimodal comparison; **flag-only**, `autonomous_closure_allowed=False` | no |
+| AI-4 resolution | provider multimodal comparison; **flag-only**, `autonomous_closure_allowed=False`. Deterministic baseline evaluated on synthetic scenarios (`evaluation/datasets/resolution_v1`, `eval_resolution.py`): it flags every citizen-reported failure but never reads note text or pixels; vision path **not evaluated** (no before/after images exist) | no |
 | AI-5 analytics | backend facts → validated explanation (numbers verified, template fallback) | no |
 | AI-6 copilot | whitelisted read-only tools, scope enforced, answer/citation grounding; no DB credentials | no |
 

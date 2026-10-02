@@ -19,6 +19,10 @@ from ai.inference.schemas import EvidenceInput  # noqa: E402
 from ai.inference.service import AIService  # noqa: E402
 from ai.inference.tests.conftest import INTAKE_OK  # noqa: E402
 from backend.ai_gateway import AIGateway, configure_gateway  # noqa: E402
+from backend.ai_gateway.contracts import ResolutionReviewIn  # noqa: E402
+from backend.ai_gateway.ports import CaseSnapshot  # noqa: E402
+from backend.ai_gateway.service import SYSTEM_ACTOR, Actor  # noqa: E402
+from backend.core.exceptions import CivicConnectException  # noqa: E402
 from backend.ai_gateway.memory import (  # noqa: E402
     DEMO_DIR, DEMO_NOW, DemoCityRepository, DemoCityToolExecutor, MemoryAnalysisStore, MemoryAuditSink, MemoryEvidenceResolver,
 )
@@ -278,6 +282,77 @@ class TestCopilot:
         install(copilot_provider(SEARCH))
         r = client.post("/api/v1/copilot/query", headers=token("city_admin"), json={"query": "x" * 1500})
         assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+# --------------------------------------------------------------------------------------------- AI-4 resolution hook (internal)
+def _png(eid):
+    return EvidenceInput(evidence_id=eid, media_type="IMAGE", mime_type="image/jpeg", data=b"x")
+
+
+def _resolution_provider(consistency="CONSISTENT", unresolved=False, conf=0.99):
+    return FakeProvider(structured={"resolution": {"consistency": consistency, "unresolved_condition_suspected": unresolved, "confidence": conf,
+                                                   "reasons": ["after photo looks fixed"]}})
+
+
+class TestResolutionHook:
+    CASE = "hook-case-1"
+
+    def setup(self, provider=None):
+        env = install(provider)
+        env.repo.register_case(CaseSnapshot(id=self.CASE, category="roads", subcategory="pothole", text="big pothole near the school", latitude=19.08,
+                                            longitude=72.88, created_at=DEMO_NOW, evidence_ids=["before-1"]))
+        env.evidence.register(_png("before-1"))
+        env.evidence.register(_png("after-1"))
+        return env
+
+    def run(self, env, actor=Actor("u-worker", "field_worker"), **kw):
+        return env.gateway.review_resolution(self.CASE, ResolutionReviewIn(notes="filled and compacted", resolution_evidence_ids=["after-1"], **kw), actor)
+
+    def test_flags_only_and_persisted(self):
+        env = self.setup()
+        r = self.run(env)
+        assert r.autonomous_closure_allowed is False and r.analysis_id == env.analyses.latest(self.CASE, "resolution")["id"]
+        stored = env.analyses.latest(self.CASE, "resolution")
+        assert stored["task_type"] == "resolution" and "filled and compacted" not in json.dumps(stored)       # notes text is not copied into the analysis record
+        assert env.audit.events == [] and env.repo.decisions == {}                                            # reviewing changes no case state
+
+    def test_citizen_negative_verification_is_flagged_even_if_the_model_says_fixed(self):
+        env = self.setup(_resolution_provider("CONSISTENT", False, 0.99))
+        r = self.run(env, SYSTEM_ACTOR, citizen_verification="STILL_OCCURRING", citizen_comment="water still leaking")
+        assert r.unresolved_condition_suspected and r.consistency == "INCONSISTENT" and r.recommend_verification_request
+
+    def test_model_can_add_a_flag(self):
+        env = self.setup(_resolution_provider("INCONSISTENT", True, 0.9))
+        r = self.run(env)
+        assert r.consistency == "INCONSISTENT" and r.unresolved_condition_suspected and r.ai_metadata["source"] == "provider+rules"
+
+    def test_no_provider_is_visible_degraded_baseline(self):
+        env = self.setup(None)
+        r = self.run(env)
+        assert r.ai_metadata["degraded"] is True and any(w.startswith("IMAGE_NOT_ANALYZED") for w in r.warnings)
+
+    def test_unknown_resolution_evidence_and_unknown_case(self):
+        env = self.setup()
+        with pytest.raises(CivicConnectException) as e:
+            env.gateway.review_resolution(self.CASE, ResolutionReviewIn(resolution_evidence_ids=["nope"]), SYSTEM_ACTOR)
+        assert e.value.code == "EVIDENCE_NOT_FOUND" and e.value.status_code == 404
+        with pytest.raises(CivicConnectException) as e:
+            env.gateway.review_resolution("missing", ResolutionReviewIn(), SYSTEM_ACTOR)
+        assert e.value.code == "CASE_NOT_FOUND"
+
+    def test_missing_original_evidence_is_reported_not_fatal(self):
+        env = self.setup()
+        env.repo._extra[self.CASE].evidence_ids = ["before-1", "lost"]
+        assert any(w.startswith("ORIGINAL_EVIDENCE_UNAVAILABLE") for w in self.run(env).warnings)
+
+    def test_roles(self):
+        env = self.setup()
+        for role in ("citizen", "overlooker"):
+            with pytest.raises(CivicConnectException) as e:
+                self.run(env, Actor("u", role))
+            assert e.value.status_code == 403, role
+        for role in ("field_worker", "operator", "city_admin"):
+            assert self.run(env, Actor("u", role)).autonomous_closure_allowed is False
 
 
 # --------------------------------------------------------------------------------------------- error envelope everywhere (51A.1)

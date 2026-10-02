@@ -29,6 +29,7 @@ class CaseSnapshot:
     department_id: str | None = None
     embedding: list[float] | None = None
     embedding_model: str | None = None
+    evidence_ids: list[str] = field(default_factory=list)   # ORIGINAL (before) evidence of the case
 
 
 class CaseRepository(Protocol):

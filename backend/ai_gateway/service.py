@@ -15,14 +15,14 @@ from pydantic import ValidationError
 
 from ai.inference.errors import InputLimitExceeded, ToolValidationError
 from ai.inference.schemas import (
-    ActorContext, CopilotQuery, CopilotScope, FusionCase, FusionRequest, IntakeRequest, Location, TriageRequest,
+    ActorContext, CopilotQuery, CopilotScope, FusionCase, FusionRequest, IntakeRequest, Location, ResolutionReviewRequest, TriageRequest, W,
 )
 from ai.inference.service import AIService
 from backend.core.exceptions import CivicConnectException
 
 from .contracts import (
     CopilotQueryRequest, CopilotQueryResponse, FusionAnalyzeResponse, IntakeAnalyzeRequest, IntakeAnalyzeResponse,
-    TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
+    ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
 from .ports import AIAnalysisStore, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver
 
@@ -35,6 +35,7 @@ CAPABILITY_ROLES: dict[str, frozenset[str]] = {
     "triage_analyze": STAFF_ROLES,
     "triage_decision": STAFF_ROLES,                                # "Triage decision": admin only
     "copilot": STAFF_ROLES | {"overlooker"},                       # "Run grounded copilot": admin, overlooker (scoped)
+    "resolution_review": STAFF_ROLES | {"field_worker"},           # internal hook; citizen-triggered reviews run as SYSTEM_ACTOR
 }
 OVERRIDE_ACTION = "AI_RECOMMENDATION_OVERRIDDEN"
 DECISION_ACTION = "TRIAGE_DECISION_RECORDED"
@@ -44,6 +45,9 @@ DECISION_ACTION = "TRIAGE_DECISION_RECORDED"
 class Actor:
     user_id: str
     role: str
+
+
+SYSTEM_ACTOR = Actor(user_id="system", role="system_admin")      # for queue workers / citizen-triggered hooks; never expose its output to a citizen
 
 
 def _utcnow() -> datetime:
@@ -202,3 +206,31 @@ class AIGateway:
         self._persist("copilot", None, actor, res, None, {"query_chars": len(req.query)}, exclude={"data", "answer"})
         return CopilotQueryResponse(answer=res.answer, data=res.data, citations=[c.model_dump(mode="json") for c in res.citations],
                                     warnings=res.warnings, tool_calls=[t.model_dump(mode="json") for t in res.tool_calls], ai_metadata=self._meta(res))
+
+    # ------------------------------------------------------------------------------------------ AI-4 resolution review (internal hook)
+    def review_resolution(self, case_id: str, req: ResolutionReviewIn, actor: Actor) -> ResolutionReviewOut:
+        """Called when a field worker completes a work order (§51A.9) and again when the citizen verifies (§51A.10). Raises flags only: it never
+        changes case state, never closes or reopens anything, and the caller must keep its output away from the citizen."""
+        self._require(actor, "resolution_review")
+        case = self._case(case_id)
+        warnings: list[str] = []
+        after = []
+        for eid in req.resolution_evidence_ids:
+            ev = self.evidence.resolve(eid, actor.user_id)
+            if ev is None:
+                raise CivicConnectException("EVIDENCE_NOT_FOUND", "Evidence not found or not available.", 404, {"evidence_id": eid})
+            after.append(ev)
+        before = [ev for ev in (self.evidence.resolve(eid, actor.user_id) for eid in case.evidence_ids) if ev is not None]
+        if len(before) < len(case.evidence_ids):
+            warnings.append(W.make("ORIGINAL_EVIDENCE_UNAVAILABLE", f"{len(case.evidence_ids) - len(before)} original evidence item(s) could not be loaded"))
+        try:
+            res = self.ai.review_resolution(ResolutionReviewRequest(
+                case_id=case.id, category=case.category, subcategory=case.subcategory, description=case.text, original_evidence=before,
+                resolution_evidence=after, field_notes=req.notes, citizen_verification=req.citizen_verification, citizen_comment=req.citizen_comment))
+        except (ValidationError, InputLimitExceeded, ValueError) as e:
+            raise self._input_error(e) from e
+        analysis_id = self._persist("resolution", case.id, actor, res, res.confidence)
+        return ResolutionReviewOut(
+            consistency=res.consistency, unresolved_condition_suspected=res.unresolved_condition_suspected,
+            recommend_verification_request=res.recommend_verification_request, confidence=res.confidence, reasons=res.reasons,
+            warnings=[*res.warnings, *warnings], ai_metadata=self._meta(res), analysis_id=analysis_id)

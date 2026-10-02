@@ -155,3 +155,30 @@ class CopilotQueryResponse(_Out):
     warnings: list[str] = Field(default_factory=list)
     tool_calls: list[dict[str, Any]] = Field(default_factory=list)      # additive (audit)
     ai_metadata: dict[str, Any] | None = None                           # additive
+
+
+# ------------------------------------------------------------------ AI-4 resolution review (INTERNAL hook: no §51A endpoint)
+VerificationResult = Literal["YES", "PARTIAL", "STILL_OCCURRING", "NO"]
+
+
+class ResolutionReviewIn(_In):
+    """What the work-order ``complete`` (§51A.9) / citizen ``verification`` (§51A.10) handlers pass to the gateway."""
+
+    notes: str | None = None
+    resolution_evidence_ids: list[str] = Field(default_factory=list)
+    citizen_verification: VerificationResult | None = None
+    citizen_comment: str | None = None
+
+
+class ResolutionReviewOut(_Out):
+    """FLAGS ONLY. ``autonomous_closure_allowed`` is always False; closing/reopening stays an authorised human or policy transition."""
+
+    consistency: Literal["CONSISTENT", "INCONSISTENT", "INSUFFICIENT_EVIDENCE"]
+    unresolved_condition_suspected: bool
+    recommend_verification_request: bool
+    confidence: float
+    reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    autonomous_closure_allowed: Literal[False] = False
+    ai_metadata: dict[str, Any] | None = None
+    analysis_id: str | None = None

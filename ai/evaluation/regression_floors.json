@@ -10,5 +10,13 @@
   "fusion_calibrated_lexical": {
     "auc_roc_min": 0.95,
     "gate_recall_of_true_duplicates_min": 0.98
+  },
+  "resolution_baseline": {
+    "_note": "Structural invariants of the deterministic AI-4 baseline on the synthetic scenarios; any change here is a behaviour change to review.",
+    "citizen_signal_flag_recall_min": 1.0,
+    "unresolved_flag_false_positive_rate_max": 0.0,
+    "verification_request_recall_of_unresolved_min": 1.0,
+    "insufficient_evidence_correct_min": 1.0,
+    "monotonic_violations_max": 0
   }
 }

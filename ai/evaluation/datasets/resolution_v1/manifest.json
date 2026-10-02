@@ -1,0 +1,72 @@
+{
+ "dataset": "resolution_scenarios",
+ "version": "resolution-scenarios/1",
+ "synthetic": true,
+ "notice": "SYNTHETIC. Planted AI-4 scenarios overlaid on the synthetic demo city. They contain NO images: photo presence is a flag, and real before/after resolution evidence does not exist anywhere in this project. Ground truth (`truly_unresolved`, `detectable_by`) is invented by construction. Hindi/Marathi notes are unreviewed.",
+ "seed": 20261002,
+ "requested": 240,
+ "derived_from": "demo_city_v1",
+ "rows": 240,
+ "archetypes": {
+  "fixed_confirmed": 88,
+  "fixed_pending": 51,
+  "fixed_sparse": 18,
+  "no_after_evidence": 20,
+  "partial_reported": 12,
+  "unfixed_reported": 19,
+  "unfixed_silent_no_signal": 15,
+  "unfixed_silent_notes": 17
+ },
+ "archetype_spec": [
+  {
+   "archetype": "fixed_confirmed",
+   "weight": 30,
+   "truly_unresolved": false,
+   "detectable_by": "none_needed"
+  },
+  {
+   "archetype": "fixed_pending",
+   "weight": 25,
+   "truly_unresolved": false,
+   "detectable_by": "none_needed"
+  },
+  {
+   "archetype": "fixed_sparse",
+   "weight": 8,
+   "truly_unresolved": false,
+   "detectable_by": "none_needed"
+  },
+  {
+   "archetype": "no_after_evidence",
+   "weight": 7,
+   "truly_unresolved": false,
+   "detectable_by": "none_needed"
+  },
+  {
+   "archetype": "unfixed_reported",
+   "weight": 12,
+   "truly_unresolved": true,
+   "detectable_by": "citizen_signal"
+  },
+  {
+   "archetype": "partial_reported",
+   "weight": 6,
+   "truly_unresolved": true,
+   "detectable_by": "citizen_signal"
+  },
+  {
+   "archetype": "unfixed_silent_notes",
+   "weight": 8,
+   "truly_unresolved": true,
+   "detectable_by": "notes_text"
+  },
+  {
+   "archetype": "unfixed_silent_no_signal",
+   "weight": 4,
+   "truly_unresolved": true,
+   "detectable_by": "images_only"
+  }
+ ],
+ "truly_unresolved": 63,
+ "scenarios_sha256": "e5eb5d0723c06b0acac6e8c35c408cf13e217f56f1dd889cfed98812a2fb222e"
+}
