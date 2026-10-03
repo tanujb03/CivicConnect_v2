@@ -50,11 +50,11 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: Optional[str] = None
     S3_REGION: str = "us-east-1"
 
-    # Which store the AI gateway reads cases from: "sql" (the database) or "demo" (the synthetic demo city, no database needed)
-    AI_GATEWAY_STORE: str = "demo"
+    # Which store the AI gateway reads cases from: "sql" (the database; the default, the API's SQL paths need it) or "demo" (the synthetic demo city, no database needed)
+    AI_GATEWAY_STORE: str = "sql"
 
     # .env also carries AI keys/model ids that are not backend settings. CIVIC_IGNORE_ENV_FILE=1 (set by the root conftest.py) makes the process ignore it, so a developer's
-    # .env (e.g. AI_GATEWAY_STORE=sql, real API keys) can never change what the tests do.
+    # .env (e.g. real API keys) can never change what the tests do.
     model_config = SettingsConfigDict(env_file=None if os.environ.get("CIVIC_IGNORE_ENV_FILE") else ".env", case_sensitive=True, extra="ignore")
 
     @property
