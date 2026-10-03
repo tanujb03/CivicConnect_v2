@@ -16,18 +16,52 @@ import threading
 import time
 from typing import Callable
 
+import redis as redis_lib
+
 from backend.events.publisher import (
-    STREAM_AI_JOBS, STREAM_AUDIT, STREAM_NOTIFICATIONS, STREAM_SYNC,
-    GROUP_AI_WORKERS, GROUP_AUDIT_WRITERS, GROUP_NOTIFICATIONS, GROUP_SYNC_WORKERS,
-    get_redis,
+    GROUP_AI_WORKERS,
+    GROUP_AUDIT_WRITERS,
+    GROUP_NOTIFICATIONS,
+    GROUP_SYNC_WORKERS,
+    HEALTH_CHECK_INTERVAL_S,
+    STREAM_AI_JOBS,
+    STREAM_AUDIT,
+    STREAM_NOTIFICATIONS,
+    STREAM_SYNC,
+    make_client,
 )
 
 log = logging.getLogger("civicconnect.workers")
 
 WORKER_BLOCK_MS = 5_000   # block 5 s waiting for new messages
+# The client's socket timeouts MUST exceed the blocking read, otherwise redis-py (>= 8 defaults both to 5 s) aborts every idle poll with "Timeout reading
+# from socket". Workers run in background threads, so unlike the request path (publisher.get_redis, 2 s connect) they can afford to wait.
+WORKER_SOCKET_TIMEOUT_S = WORKER_BLOCK_MS / 1000 + 10
+WORKER_CONNECT_TIMEOUT_S = WORKER_SOCKET_TIMEOUT_S
 WORKER_COUNT_PER_STREAM = 1
 
 _threads: list[threading.Thread] = []
+_worker_client: redis_lib.Redis | None = None
+_worker_client_lock = threading.Lock()
+
+
+def get_worker_redis() -> redis_lib.Redis | None:
+    """The shared client of the blocking stream readers (its own pool, so a 5 s read never occupies a publisher's connection); None if Redis is unreachable."""
+    global _worker_client
+    with _worker_client_lock:
+        if _worker_client is None:
+            try:
+                client = make_client(connect_timeout=WORKER_CONNECT_TIMEOUT_S, socket_timeout=WORKER_SOCKET_TIMEOUT_S, health_check_interval=HEALTH_CHECK_INTERVAL_S)
+                client.ping()
+                _worker_client = client
+            except Exception as exc:
+                log.warning("Worker Redis client unavailable (%s); retrying in 10 s.", exc)
+                return None
+        return _worker_client
+
+
+def _pause(seconds: float, stop: threading.Event | None) -> None:
+    (stop.wait(seconds) if stop is not None else time.sleep(seconds))
 
 
 # ── Generic stream reader ─────────────────────────────────────────────────────
@@ -37,13 +71,14 @@ def _stream_worker(
     group: str,
     consumer_name: str,
     handler: Callable[[dict], None],
+    stop: threading.Event | None = None,
 ) -> None:
-    """Read messages from a Redis Stream consumer group and call *handler*."""
+    """Read messages from a Redis Stream consumer group and call *handler*. ``stop`` ends the loop (tests); production threads are daemons and never stop."""
     log.info("Worker starting: stream=%s consumer=%s", stream, consumer_name)
-    while True:
-        r = get_redis()
+    while stop is None or not stop.is_set():
+        r = get_worker_redis()
         if r is None:
-            time.sleep(10)
+            _pause(10, stop)
             continue
         try:
             results = r.xreadgroup(
@@ -63,9 +98,11 @@ def _stream_worker(
                         r.xack(stream, group, entry_id)
                     except Exception as exc:
                         log.error("Handler error entry=%s: %s", entry_id, exc)
+        except redis_lib.exceptions.TimeoutError:
+            log.debug("Stream read timed out stream=%s (nothing to read); polling again", stream)    # not an error: just poll again, no back-off
         except Exception as exc:
             log.warning("Stream read error stream=%s: %s", stream, exc)
-            time.sleep(5)
+            _pause(5, stop)
 
 
 # ── Handlers ──────────────────────────────────────────────────────────────────
