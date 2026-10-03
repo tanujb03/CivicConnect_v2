@@ -5645,6 +5645,39 @@
             },
             "type": "array",
             "title": "Evidence Refs"
+          },
+          "title_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Local"
+          },
+          "summary_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Local"
+          },
+          "local_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Language"
           }
         },
         "type": "object",

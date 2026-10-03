@@ -51,6 +51,9 @@ class IntakeProposalOut(_Out):
     transcript: str | None = None                   # additive
     reasons: list[str] = Field(default_factory=list)        # additive
     evidence_refs: list[str] = Field(default_factory=list)  # additive
+    title_local: str | None = None                  # additive: title in the citizen's language when it is not English (presentation only; ``title`` stays canonical English)
+    summary_local: str | None = None                # additive: short summary in the citizen's language
+    local_language: str | None = None               # additive: language code of title_local / summary_local
 
 
 class IntakeAnalyzeResponse(_Out):

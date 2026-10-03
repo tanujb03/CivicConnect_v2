@@ -26,7 +26,7 @@ from .contracts import (
     ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
 from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver, ImageAnalyzer
-from . import transcription
+from . import localization, transcription
 from .vision import summarize
 
 log = logging.getLogger("civicconnect.ai_gateway")
@@ -147,11 +147,18 @@ class AIGateway:
                 warnings.append(W.make("VISION_DISAGREES", f"local image model sees {best['label']} (roads) but the proposal says {proposal['category']}: please check the photo"))
         code, canon = self._dept_out(dept)
         proposal.update(suggested_department=code, suggested_department_id=canon)
+        local = localization.localize_proposal(self.ai.provider, language=proposal.get("language"), title=proposal["title"], description=proposal["description"],
+                                               original_text="\n".join(x for x in (req.text, proposal.get("transcript")) if x), warnings=warnings,
+                                               provider_answered=str(res.ai_metadata.source).startswith("provider") and "local_vision" not in meta)
+        if local:                                                                    # presentation only: the canonical English fields above are untouched
+            proposal.update({k: local[k] for k in ("title_local", "summary_local", "local_language")})
         images = [a.as_dict() for a in analyses]
         extra: dict[str, Any] = {"image_analysis": images} if images else {}
         if speech:
             extra["transcription"] = transcription.summarize(speech)                 # transcript(s), detected language, model, status per clip
             extra["detected_language"] = extra["transcription"]["detected_language"]
+        if local:
+            extra["localization"] = local
         analysis_id = self._persist("intake", None, actor, res, confidence, extra or None)
         return IntakeAnalyzeResponse(proposal=proposal, confidence=confidence, warnings=warnings, requires_confirmation=True,
                                      alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=meta, analysis_id=analysis_id, image_analysis=images)
