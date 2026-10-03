@@ -22,6 +22,7 @@ CAPABILITIES: dict[str, frozenset[str]] = {
     "manage_incidents": frozenset({"ward_officer", "city_admin", "system_admin"}),
     "view_incidents": STAFF_ROLES | {"overlooker"},
     "manage_users": frozenset({"city_admin", "system_admin"}),
+    "manage_settings": frozenset({"city_admin", "system_admin"}),
     "view_map": ALL_ROLES,
 }
 
