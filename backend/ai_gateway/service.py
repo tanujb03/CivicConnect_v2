@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 from pydantic import ValidationError
 
+from ai.inference.common import provider_ready
 from ai.inference.errors import InputLimitExceeded, ToolPermissionDenied, ToolValidationError
 from ai.inference.schemas import (
     ActorContext, CopilotQuery, CopilotScope, FusionCase, FusionRequest, IntakeRequest, Location, ResolutionReviewRequest, TriageRequest, W,
@@ -25,6 +26,7 @@ from .contracts import (
     ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
 from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver, ImageAnalyzer
+from . import transcription
 from .vision import summarize
 
 log = logging.getLogger("civicconnect.ai_gateway")
@@ -38,6 +40,8 @@ CAPABILITY_ROLES: dict[str, frozenset[str]] = {
     "copilot": STAFF_ROLES | {"overlooker"},                       # "Run grounded copilot": admin, overlooker (scoped)
     "analytics_explain": STAFF_ROLES | {"overlooker"},             # "View city analytics": admin, overlooker (aggregates only)
     "resolution_review": STAFF_ROLES | {"field_worker"},           # internal hook; citizen-triggered reviews run as SYSTEM_ACTOR
+    "transcribe": STAFF_ROLES,                                     # queue jobs only (SYSTEM_ACTOR); no HTTP route
+    "embed": STAFF_ROLES,                                          # queue jobs only (SYSTEM_ACTOR); no HTTP route
 }
 OVERRIDE_ACTION = "AI_RECOMMENDATION_OVERRIDDEN"
 DECISION_ACTION = "TRIAGE_DECISION_RECORDED"
@@ -113,14 +117,18 @@ class AIGateway:
             if ev is None:      # unknown OR not visible to this actor: indistinguishable on purpose
                 raise CivicConnectException("EVIDENCE_NOT_FOUND", "Evidence not found or not available.", 404, {"evidence_id": eid})
             evidence.append(ev)
+        speech_warnings: list[str] = []         # AUDIO: speech-to-text first (Groq Whisper via the provider), so the transcript + language are stored and the adapter reuses the text
+        speech = transcription.transcribe_audio(self.ai.provider, evidence, req.language_hint, speech_warnings, save=self._save_transcript)
         try:
             loc = Location(**req.location.model_dump()) if req.location else None
-            res = self.ai.analyze_intake(IntakeRequest(text=req.text, evidence=evidence, language_hint=req.language_hint, location=loc))
+            res = self.ai.analyze_intake(IntakeRequest(text=req.text, evidence=transcription.usable_for_adapter(evidence), language_hint=req.language_hint, location=loc))
         except (ValidationError, InputLimitExceeded, ValueError) as e:
             raise self._input_error(e) from e
         proposal = res.proposal.model_dump(mode="json", exclude={"suggested_department", "location"})
         proposal["location"] = res.proposal.location.model_dump(mode="json") if res.proposal.location else None
-        warnings, confidence, meta = list(res.warnings), res.confidence, self._meta(res)
+        warnings = [*res.warnings, *speech_warnings]
+        confidence, meta = res.confidence, self._meta(res)
+        proposal["evidence_refs"] = list(dict.fromkeys([*proposal.get("evidence_refs", []), *(e.evidence_id for e in evidence)]))
         dept = res.proposal.suggested_department
         analyses = self._analyze_images(evidence, warnings)
         best = summarize(analyses)
@@ -140,9 +148,40 @@ class AIGateway:
         code, canon = self._dept_out(dept)
         proposal.update(suggested_department=code, suggested_department_id=canon)
         images = [a.as_dict() for a in analyses]
-        analysis_id = self._persist("intake", None, actor, res, confidence, {"image_analysis": images} if images else None)
+        extra: dict[str, Any] = {"image_analysis": images} if images else {}
+        if speech:
+            extra["transcription"] = transcription.summarize(speech)                 # transcript(s), detected language, model, status per clip
+            extra["detected_language"] = extra["transcription"]["detected_language"]
+        analysis_id = self._persist("intake", None, actor, res, confidence, extra or None)
         return IntakeAnalyzeResponse(proposal=proposal, confidence=confidence, warnings=warnings, requires_confirmation=True,
                                      alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=meta, analysis_id=analysis_id, image_analysis=images)
+
+    def _save_transcript(self, evidence_id: str, text: str, language: str | None) -> None:
+        save = getattr(self.evidence, "save_transcript", None)                 # optional port
+        if save is not None:
+            save(evidence_id, text, language)
+
+    # ------------------------------------------------------------------------------------------ audio transcription job (civic:ai_jobs)
+    def transcribe_case(self, case_id: str, actor: Actor) -> dict[str, Any]:
+        """Worker entry: transcribe the case's report audio that has no transcript yet. Stores the transcript on the evidence and ONE ``transcription`` AIAnalysis (transcripts,
+        detected language, warnings). A missing/unavailable provider degrades to a visible warning on that analysis; nothing here raises for provider reasons."""
+        self._require(actor, "transcribe")
+        case = self._case(case_id)
+        pending = getattr(self.evidence, "pending_audio", None)
+        ids = pending(case.id) if pending is not None else []
+        if not ids:
+            return {"status": "nothing_to_do", "warnings": []}
+        evidence = [ev for ev in (self.evidence.resolve(i, actor.user_id) for i in ids) if ev is not None]
+        warnings: list[str] = []
+        if len(evidence) < len(ids):
+            warnings.append(W.make(W.AUDIO_NOT_TRANSCRIBED, f"{len(ids) - len(evidence)} audio clip(s) could not be loaded"))
+        records = transcription.transcribe_audio(self.ai.provider, evidence, None, warnings, save=self._save_transcript)
+        summary = transcription.summarize(records)
+        ok = [r for r in records if r["status"] == "ok"]
+        analysis_id = self.analyses.save({"task_type": "transcription", "case_id": case.id, "actor_id": actor.user_id, "confidence": None, "model": next((r["model"] for r in ok), None),
+                                          "source": "provider" if ok else "none", "degraded": bool(warnings), "created_at": self.clock().isoformat(),
+                                          "result_json": {**summary, "warnings": warnings}, "detected_language": summary["detected_language"], "warnings": warnings})
+        return {"status": "ok" if ok else "unavailable", "transcribed": len(ok), "warnings": warnings, "detected_language": summary["detected_language"], "analysis_id": analysis_id}
 
     def _analyze_images(self, evidence: list, warnings: list[str]) -> list:
         out = []
@@ -169,19 +208,77 @@ class AIGateway:
         return FusionCase(case_id=c.id, category=c.category, subcategory=c.subcategory, latitude=c.latitude, longitude=c.longitude,
                           created_at=c.created_at, text=c.text, embedding=c.embedding, status=c.status)
 
-    def _embed_cases(self, subject: FusionCase, candidates: list[FusionCase], warnings) -> str | None:   # noqa: ARG002
-        """Fill missing embeddings with the local multilingual model (one batch). A failure leaves them empty: the adapter then falls back to the lexical signal visibly."""
-        todo = [c for c in (subject, *candidates) if c.embedding is None and c.text]
+    def _embed_cases(self, subject: FusionCase, candidates: list[FusionCase], stored_model: str | None) -> str | None:
+        """Make every vector the adapter compares come from ONE model, and return that model's tag. The repository already dropped candidate vectors that do not match the
+        subject's stored model / dimension. Subject with a stored vector: that model is kept and the local embedder only fills gaps if it IS that model. Subject without one:
+        the local embedder embeds subject and candidates together. A failure leaves vectors empty: the adapter then falls back to the lexical signal visibly."""
+        if subject.embedding is not None:
+            if self.embedder is None or self.embedder.tag != stored_model:
+                return stored_model
+            todo = [c for c in candidates if c.embedding is None and c.text]
+        else:
+            todo = [c for c in (subject, *candidates) if c.text]
         if not todo:
-            return None
+            return self.embedder.tag if subject.embedding is not None else stored_model
         try:
             vecs = self.embedder.embed([c.text for c in todo])
         except Exception as e:
             log.warning("local embedder failed: %s", type(e).__name__)
-            return None
+            return stored_model if subject.embedding is not None else None
         for c, v in zip(todo, vecs):
             c.embedding = v
         return self.embedder.tag
+
+    # ------------------------------------------------------------------------------------------ embeddings (civic:ai_jobs "embed")
+    def _embed_text(self, text: str, warnings: list[str]) -> tuple[list[float] | None, str | None, str]:
+        """(vector, model tag, source): the local M7 when configured, else the provider's embedder, else nothing (with a warning). Never raises."""
+        if self.embedder is not None:
+            try:
+                return [float(x) for x in self.embedder.embed([text])[0]], self.embedder.tag, "local_m7"
+            except Exception as e:                                      # noqa: BLE001
+                log.warning("local embedder failed: %s", type(e).__name__)
+                warnings.append(W.make("LOCAL_EMBEDDER_FAILED", f"the local embedder failed ({type(e).__name__}); trying the provider"))
+        provider = self.ai.provider
+        if provider_ready(provider, "embedding"):
+            try:
+                res = provider.embed([text])
+                if res.vectors and res.vectors[0]:
+                    return [float(x) for x in res.vectors[0]], f"provider:{res.model}", "provider"
+                warnings.append(W.make(W.PROVIDER_OUTPUT_INVALID, "the embedding provider returned no vector"))
+            except Exception as e:                                      # noqa: BLE001
+                log.warning("embedding provider failed: %s", type(e).__name__)
+                warnings.append(W.make(W.PROVIDER_UNAVAILABLE, f"the embedding provider failed ({type(e).__name__})"))
+        else:
+            warnings.append(W.make("NO_EMBEDDER", "no local embedder (AI_EMBED_ONNX_PATH) and no embedding provider configured; the case was not embedded"))
+        return None, None, "none"
+
+    def embed_case(self, case_id: str, actor: Actor) -> dict[str, Any]:
+        """Worker entry: embed the case text and store the vector (JSON everywhere + the pgvector columns where they exist, via ``repo.save_embedding``). Nothing is stored and a
+        warning is recorded on the ``embedding`` AIAnalysis when no embedder is available; this never raises for provider/model reasons."""
+        self._require(actor, "embed")
+        case = self._case(case_id)
+        warnings: list[str] = []
+        text = (case.text or "").strip()
+        vector, model, source = (None, None, "none")
+        if text:
+            vector, model, source = self._embed_text(text, warnings)
+        else:
+            warnings.append(W.make("EMBEDDING_SKIPPED", "the case has no text to embed"))
+        stored: dict | None = None
+        if vector is not None:
+            save = getattr(self.repo, "save_embedding", None)
+            if save is None:
+                warnings.append(W.make("EMBEDDING_NOT_STORED", "this store cannot persist embeddings"))
+            else:
+                try:
+                    stored = save(case.id, vector, model)
+                except Exception as e:                                  # noqa: BLE001
+                    log.warning("storing the embedding of %s failed: %s", case.id, type(e).__name__)
+                    warnings.append(W.make("EMBEDDING_NOT_STORED", f"storing the embedding failed ({type(e).__name__})"))
+        info = {"stored": stored is not None, "dim": len(vector) if vector else 0, "model": model, "pgvector": bool(stored and stored.get("pgvector")), "warnings": warnings}
+        analysis_id = self.analyses.save({"task_type": "embedding", "case_id": case.id, "actor_id": actor.user_id, "confidence": None, "model": model, "source": source,
+                                          "degraded": bool(warnings), "created_at": self.clock().isoformat(), "result_json": info, "warnings": warnings})
+        return {**info, "source": source, "analysis_id": analysis_id}
 
     def fusion(self, case_id: str, actor: Actor) -> FusionAnalyzeResponse:
         self._require(actor, "fusion")
@@ -191,7 +288,7 @@ class AIGateway:
                                             max_candidates=bounds["max_candidates"], same_category=bool(bounds.get("same_category_required", True)))
         subject, candidates, emb_model = self._fusion_case(case), [self._fusion_case(c) for c in cands], case.embedding_model
         if self.embedder is not None:
-            emb_model = self._embed_cases(subject, candidates, warnings=None)
+            emb_model = self._embed_cases(subject, candidates, case.embedding_model)
         try:
             res = self.ai.analyze_fusion(FusionRequest(subject=subject, candidates=candidates, embedding_model=emb_model))
         except (ValidationError, InputLimitExceeded, ValueError) as e:

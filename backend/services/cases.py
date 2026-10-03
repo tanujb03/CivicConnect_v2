@@ -171,13 +171,18 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
 def _queue_ai_enrichment(db: Session, case: CivicCase) -> None:
     """Queue the AI jobs once the case is COMMITTED (a worker that read it earlier would not find it). A rolled-back request queues nothing."""
     from sqlalchemy import event
+
+    from backend.models import EvidenceItem
     case_id, number = case.id, case.case_number
+    has_audio = db.execute(select(EvidenceItem.id).where(EvidenceItem.case_id == case_id, EvidenceItem.media_type == "AUDIO").limit(1)).first() is not None
+    # order matters (one worker, in order): speech-to-text first (the transcript is case text), then the embedding (AI-2 compares vectors), then triage and fusion
+    jobs = (["transcribe"] if has_audio else []) + ["embed", "triage", "fusion"]
 
     def _emit(_session) -> None:
         try:
             from backend.events import emit_ai_job
-            emit_ai_job("triage", case_id, None, {"case_number": number})
-            emit_ai_job("fusion", case_id, None, {"case_number": number})
+            for job in jobs:
+                emit_ai_job(job, case_id, None, {"case_number": number})
         except Exception:
             pass                                                  # events are optional infrastructure
     event.listen(db, "after_commit", _emit, once=True)

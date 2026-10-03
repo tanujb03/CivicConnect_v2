@@ -40,10 +40,22 @@ class CaseRepository(Protocol):
 
     def save_triage_decision(self, case_id: str, decision: dict, actor_id: str) -> None: ...
 
+    # Optional, like the evidence methods above (used by the ``embed`` job and by candidate search):
+    def save_embedding(self, case_id: str, vector: list[float], model: str) -> dict:
+        """Store the case's embedding: the JSON vector everywhere, plus the pgvector columns (embedding_vec, embedding_dim, embedding_model) where they exist.
+        Returns ``{"dim": int, "model": str, "pgvector": bool}``."""
+
 
 class EvidenceResolver(Protocol):
     def resolve(self, evidence_id: str, actor_id: str) -> EvidenceInput | None:
         """evidence_id -> bytes / BACKEND-SIGNED url / transcript, or None when unknown or not visible to the actor. Never pass user-supplied URLs (SSRF)."""
+
+    # Optional (the gateway checks with getattr, so a resolver without them still works; the transcript is then simply not persisted / no audio job runs):
+    def pending_audio(self, case_id: str) -> list[str]:
+        """Ids of the case's READY report AUDIO evidence that has no transcript yet."""
+
+    def save_transcript(self, evidence_id: str, text: str, language: str | None) -> None:
+        """Store the transcript on the evidence item (only when it has none)."""
 
 
 class AIAnalysisStore(Protocol):
