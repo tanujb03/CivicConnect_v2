@@ -11,6 +11,8 @@ import os
 import re
 import shutil
 import subprocess
+import threading
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 
@@ -194,3 +196,60 @@ def banner(plan: GpuPlan, batch: BatchPlan, workers: int | None = None) -> str:
     gpus = f"{plan.used} x {plan.names[0]}" if plan.used and len(set(plan.names)) == 1 else (", ".join(plan.names) or "CPU")
     extra = f" | workers {workers}/GPU" if workers else ""
     return f"GPUs: {plan.used} used of {plan.detected} visible ({gpus}) | {batch.describe()}{extra}" + (f"\n  note: {plan.note}" if plan.note else "")
+
+
+# ------------------------------------------------------------------------------------------------ "are both GPUs busy?"
+# A Jupyter kernel runs one cell at a time, so a second cell cannot run nvidia-smi while the training cell is busy. This timer thread does it instead and prints into the log.
+_QUERY = "index,name,utilization.gpu,memory.used,memory.total"
+BUSY_UTIL_PCT, BUSY_MEM_MB = 10, 800
+
+
+def _smi_query() -> list[dict]:
+    exe = shutil.which("nvidia-smi")
+    if not exe:
+        return []
+    try:
+        r = subprocess.run([exe, f"--query-gpu={_QUERY}", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=15, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    rows = []
+    for line in r.stdout.splitlines():
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) == 5 and parts[0].isdigit():
+            rows.append({"index": int(parts[0]), "name": parts[1], "util": int(float(parts[2] or 0)), "mem_used": int(float(parts[3] or 0)), "mem_total": int(float(parts[4] or 0))})
+    return rows
+
+
+def gpu_watch_report(samples: list[list[dict]], expected: int) -> tuple[str, bool]:
+    """(one-line summary, all expected GPUs busy). Per GPU: highest utilisation and memory seen over the samples; busy = util >= 10 % or >= 800 MB in use."""
+    peak: dict[int, dict] = {}
+    for snap in samples:
+        for g in snap:
+            cur = peak.setdefault(g["index"], dict(g))
+            cur["util"], cur["mem_used"] = max(cur["util"], g["util"]), max(cur["mem_used"], g["mem_used"])
+    shown = [peak[i] for i in sorted(peak)][: max(expected, 1)]
+    busy = [g for g in shown if g["util"] >= BUSY_UTIL_PCT or g["mem_used"] >= BUSY_MEM_MB]
+    line = " | ".join(f"GPU{g['index']} {g['name']} util {g['util']}% mem {g['mem_used'] / 1024:.1f}/{g['mem_total'] / 1024:.1f} GB" for g in shown) or "nvidia-smi reported no GPU"
+    ok = len(busy) >= expected and bool(shown)
+    return line + ("" if ok or not expected else f"   WARNING: only {len(busy)} of {expected} GPUs busy"), ok
+
+
+def start_gpu_watch(expected: int, *, delays: tuple[float, ...] = (120, 900), out_file=None, log=print, query=_smi_query, samples: int = 3, gap: float = 2.0) -> list[threading.Timer]:
+    """Print (and append to ``out_file``) how busy the GPUs are ``delays`` seconds from now. Daemon timers: they never keep the kernel alive. Returns the timers (``.cancel()``)."""
+    def fire(delay: float) -> None:
+        snaps = []
+        for i in range(samples):
+            snaps.append(query())
+            if i + 1 < samples:
+                time.sleep(gap)
+        msg = f"GPU watch @{delay:g}s: " + gpu_watch_report(snaps, expected)[0]
+        log(msg)
+        if out_file:
+            with open(out_file, "a", encoding="utf-8") as f:
+                f.write(msg + "\n")
+
+    timers = [threading.Timer(d, fire, args=(d,)) for d in delays]
+    for t in timers:
+        t.daemon = True
+        t.start()
+    return timers

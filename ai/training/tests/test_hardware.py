@@ -104,3 +104,36 @@ def test_training_record_is_plain_json():
 @pytest.mark.parametrize("device,count,single", [([0, 1], 2, 0), ("0,1", 2, 0), ("0,0", 2, 0), (0, 1, 0), ("0", 1, 0), ("cuda:1", 1, 1), ("cpu", 0, "cpu"), ("", 0, "cpu"), ([0, 1, 2, 3], 4, 0)])
 def test_device_count_and_the_single_device_used_after_training(device, count, single):
     assert hw.device_gpu_count(device) == count and hw.single_device(device) == single
+
+
+def g(i, util, mem, name="Tesla T4"):
+    return {"index": i, "name": name, "util": util, "mem_used": mem, "mem_total": 15360}
+
+
+def test_gpu_watch_report_flags_an_idle_second_gpu():
+    both, ok = hw.gpu_watch_report([[g(0, 97, 5200), g(1, 95, 5100)]], 2)
+    assert ok and "GPU0 Tesla T4 util 97% mem 5.1/15.0 GB" in both and "GPU1" in both and "WARNING" not in both
+    one, ok = hw.gpu_watch_report([[g(0, 97, 5200), g(1, 0, 3)]], 2)
+    assert not ok and "WARNING: only 1 of 2 GPUs busy" in one
+    peak, ok = hw.gpu_watch_report([[g(0, 90, 5000), g(1, 0, 5000)], [g(0, 95, 5000), g(1, 80, 5000)]], 2)      # a dip in one sample does not trigger the warning
+    assert ok and "util 80%" in peak
+    assert hw.gpu_watch_report([[]], 1)[1] is False and hw.gpu_watch_report([[g(0, 0, 0)]], 0)[0].endswith("GB")
+
+
+def test_gpu_watch_timer_logs_and_writes_a_file(tmp_path):
+    lines = []
+    timers = hw.start_gpu_watch(2, delays=(0.01,), out_file=tmp_path / "w.txt", log=lines.append, query=lambda: [g(0, 90, 4000), g(1, 91, 4100)], samples=2, gap=0)
+    for t in timers:
+        t.join(10)
+    assert len(lines) == 1 and lines[0].startswith("GPU watch @0.01s: GPU0") and "WARNING" not in lines[0]
+    assert (tmp_path / "w.txt").read_text(encoding="utf-8").strip() == lines[0]
+
+
+def test_smi_query_parses_csv_rows(monkeypatch):
+    class R:
+        stdout = "\n".join(["0, Tesla T4, 97, 5200, 15360", "1, Tesla T4, 0, 3, 15360", "noise"])
+    monkeypatch.setattr(hw.shutil, "which", lambda _: "nvidia-smi")
+    monkeypatch.setattr(hw.subprocess, "run", lambda *a, **k: R())
+    assert hw._smi_query() == [g(0, 97, 5200), g(1, 0, 3)]
+    monkeypatch.setattr(hw.shutil, "which", lambda _: None)
+    assert hw._smi_query() == []
