@@ -158,6 +158,7 @@ def ultralytics_device(plan: GpuPlan) -> list[int] | int | str:
 class TrainingHardware:
     """What a run actually used; written into model_card.json / manifest.json (new keys only, so older readers keep working)."""
     gpu_count: int
+    world_size: int = 1                 # processes / replicas taking part (1 on CPU and on one GPU)
     gpu_names: list[str] = field(default_factory=list)
     parallel: str = "none"              # "none" | "DataParallel" | "DDP"
     batch_effective: int = 0
