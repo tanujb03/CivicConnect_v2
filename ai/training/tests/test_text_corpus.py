@@ -102,3 +102,10 @@ def test_gold_template_roundtrip_and_validation(tmp_path):
     gen.generate_shards(spec.build_cells(languages=["en"], styles=["sms_short"], k=12)[:30], {"en": Fake()}, shards)
     m = cb.build(shards, tmp_path / "c", gold=p)
     assert m["gold"]["rows"] == 2 and (tmp_path / "c" / "gold.jsonl").exists() and json.loads((tmp_path / "c" / "gold.jsonl").read_text().splitlines()[0])["label_origin"] == "team_authored"
+
+
+def test_gold_csv_saved_by_excel_or_notepad_with_bom_and_crlf_is_read(tmp_path):
+    p = tmp_path / "gold.csv"
+    p.write_bytes("﻿text,label_id,language,note\r\nरस्त्यावर खड्डा आहे,roads/pothole,mr,\r\n".encode("utf-8"))
+    rows, bad = cb.load_gold(p)
+    assert [r["label_id"] for r in rows] == ["roads/pothole"] and rows[0]["language"] == "mr" and not bad

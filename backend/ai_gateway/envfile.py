@@ -37,7 +37,7 @@ def load_env_file(paths: list[Path] | None = None, environ: dict | None = None) 
     for p in paths or [Path.cwd() / ".env", REPO_ROOT / ".env"]:
         if p.is_file():
             set_names = []
-            for k, v in parse(p.read_text(encoding="utf-8")).items():
+            for k, v in parse(p.read_text(encoding="utf-8-sig")).items():
                 if k not in env and v != "":
                     env[k] = v
                     set_names.append(k)

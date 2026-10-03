@@ -246,3 +246,11 @@ def test_live_check_cli_requires_keys_and_never_prints_them(capsys, monkeypatch,
     assert live_check.main([]) == 2 and "No backend has a key" in capsys.readouterr().out
     monkeypatch.setenv("GEMINI_API_KEY", "SECRET-VALUE-XYZ")
     assert live_check.main([]) == 2 and "SECRET-VALUE-XYZ" not in capsys.readouterr().out          # key but no model ids
+
+
+def test_env_file_written_by_windows_tools_with_bom_and_crlf_is_still_read(tmp_path):
+    from backend.ai_gateway.envfile import load_env_file
+    f = tmp_path / ".env"
+    f.write_bytes(b"\xef\xbb\xbfGEMINI_API_KEY=abc\r\nGROQ_API_KEY=def\r\n")
+    env: dict = {}
+    assert sorted(load_env_file([f], env)) == ["GEMINI_API_KEY", "GROQ_API_KEY"] and env["GEMINI_API_KEY"] == "abc" and env["GROQ_API_KEY"] == "def"

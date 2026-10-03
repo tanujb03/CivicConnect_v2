@@ -47,6 +47,9 @@ licence status and the workflow. Reports always state their provenance and what 
 ## Road-damage detector (the project's trained image model)
 Until 2026-10-02 there was **no** image model: photos only went to the LLM provider (zero-shot) and, without a provider, came back `IMAGE_NOT_ANALYZED`. Notebook `06` trains a YOLO detector for `D40` pothole and the cracks `D00/D10/D20` on real road photos, evaluates it on held-out groups and on Maharashtra photos, and exports ONNX. The backend loads it through `AI_VISION_ONNX_PATH` (`backend/ai_gateway/vision.py`): detections appear as additive `image_analysis` on `POST /cases/intake/analyze`, and when no other AI answered with confidence the detection becomes a low-confidence proposal the citizen must confirm. Run it with `SMOKE = True` first (10–15 min), then overnight. Data prep, id decoding and metrics code: `training/src/vision/`.
 
+## Local text models (M6 classifier, M7 embedder)
+`intfloat/multilingual-e5-*` fine-tuned on an LLM-written synthetic corpus (4 languages x 27 labels x 9 styles; `training/src/text_corpus`, notebook `07_text_models_m6_m7_kaggle.ipynb`), exported to ONNX and loaded by `backend/ai_gateway/text_model.py` (`AI_TEXT_ONNX_PATH`, `AI_EMBED_ONNX_PATH`). **Pipeline built and proven on a tiny random model; real training not yet run.** Scored on held-out request groups and on a team-written gold set. Order of operations: `docs/RUNBOOK_ML.md`; session context: `docs/HANDOFF_LOCAL_SESSION.md`.
+
 ## Quick start
 ```bash
 pip install -e "ai[training,dev]"
@@ -72,7 +75,7 @@ Kaggle: see `training/README.md`. Backend: see `INTEGRATION_HANDOFF.md`. Taxonom
 | B1 encoder (frozen encoder + head on short synthetic lines) | **not run; deprioritised** | superseded by the data-diversity plan below |
 | **Road-damage detector (YOLO, trained image model)** | **pipeline built and tested; Kaggle training not yet run** | notebook `06_road_damage_detector_kaggle.ipynb`: RDD2020 (VOC) + RDD2022 (ids decoded from evidence) + BharatPotHole, group-safe splits, per-country metrics, Maharashtra domain check, ONNX export for the backend |
 
-## Test status (last run: 339 passed, 3 skipped, ~60 s)
+## Test status (`python -m pytest ai backend -q`: 750 passed, 3 skipped, ~2.5 min on 2026-10-03; the old ai-only figure was 339)
 | Category | Tests | Status |
 |---|---|---|
 | **Executed offline, passing** | 339: taxonomy integrity, schemas/contract shapes, featurizer/language, local classifier + artifact validation, triage, intake (incl. all fallbacks), OpenAI provider via **mock transport**, fusion, resolution, analytics grounding, copilot safety, service smoke, production-separation, dataset generator/splits, B0 trainer (sklearn↔numpy parity), fusion calibrator, B1 *pipeline logic* (fake encoder), evaluation metrics/harness/regression floors, **real-data architecture** (source cards + licence/terms gate, canonical schema, mapping layer, adapters, Socrata/figshare clients via mock transport, pairs, splits, hybrid guards, output-path/git hygiene, CLI, evaluation tracks and claim policy — all on invented *format fixtures*, no real data), notebooks (structure + **end-to-end execution of all four** — notebook 02 with a CI-only fake encoder, notebook 04 on format fixtures) | ✅ |

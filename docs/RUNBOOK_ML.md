@@ -16,6 +16,12 @@ pip install torch --index-url https://download.pytorch.org/whl/cu121
 pip install transformers ultralytics jupyter
 ```
 
+### Preflight
+```powershell
+python -m ai.training.src.doctor
+```
+Lists what is installed (incl. whether torch sees your GPU), which keys / model ids / artifact paths are set (names only, never values) and what is still `MISSING`. Re-run it after each step.
+
 ### Where does `.env` go? (question 2)
 In the **repository root**, next to `.env.example`:
 
@@ -23,7 +29,7 @@ In the **repository root**, next to `.env.example`:
 Copy-Item .env.example .env
 notepad .env
 ```
-Fill `GEMINI_API_KEY=` and `GROQ_API_KEY=` (no quotes, no spaces). `.env` is gitignored, so it is never committed. **Never paste a key into chat, GitHub or a notebook.** Real environment variables always win over `.env`.
+Fill `GEMINI_API_KEY=` and `GROQ_API_KEY=` (no quotes, no spaces). `.env` is gitignored, so it is never committed. **Never paste a key into chat, GitHub or a notebook.** Real environment variables always win over `.env`. Editors that add a UTF-8 BOM or Windows line endings are handled. The gold CSV must be saved as **UTF-8** (Excel: *CSV UTF-8*), otherwise Devanagari text turns into `?`.
 
 ### Network access (question 3)
 You do **not** need to open anything for the cloud session. Run the live checks on **your own laptop** (your keys stay local) and paste only the printed result. The only time the cloud session would need an allowlist entry is if you want Claude to call Gemini/Groq from there; that is not needed and not recommended.

@@ -85,7 +85,7 @@ def gold_template(path: Path) -> None:
 def load_gold(path: Path) -> tuple[list[dict], dict]:
     t = load_taxonomy()
     valid = {f"{s.category_id}/{sid}" for sid, s in t.subcategories.items()}
-    text = "\n".join(ln for ln in path.read_text(encoding="utf-8").splitlines() if not ln.lstrip().startswith("#"))
+    text = "\n".join(ln for ln in path.read_text(encoding="utf-8-sig").splitlines() if not ln.lstrip().startswith("#"))
     rows, bad, seen = [], Counter(), set()
     for r in csv.DictReader(text.splitlines()):
         tx, lab, lang = (r.get("text") or "").strip(), (r.get("label_id") or "").strip(), (r.get("language") or "").strip()
