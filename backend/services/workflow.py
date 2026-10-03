@@ -83,5 +83,6 @@ def transition(db: Session, case: CivicCase, to: str, *, actor_id: str | None, a
         record_audit(db, actor_id=actor_id, action=AUDITED[to], entity_type="CIVIC_CASE", entity_id=case.id, before={"status": frm}, after={"status": to, "reason": reason})
     if notify_reporter and to in NOTIFY_STATES and case.reporter_id and case.reporter_id != actor_id:
         notify(db, [case.reporter_id], NOTIFY_STATES[to], {"case_id": case.id, "case_number": case.case_number, "status": to,
-                                                           "title": f"Case {case.case_number}: {to.replace('_', ' ').title()}", "message": reason or ""})
+                                                           "title": f"Case {case.case_number}: {to.replace('_', ' ').title()}", "message": reason or ""},
+               template=f"case.status.{to.lower()}", params={"case_number": case.case_number, "reason": reason or ""})      # en / hi / mr by the reporter's preferred_language
     return case

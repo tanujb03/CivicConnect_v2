@@ -66,17 +66,18 @@ def record(db: Session, user: User, case: CivicCase, body: VerificationIn) -> tu
                 case.priority = new
         transition(db, case, "REOPENED", actor_id=user.id, actor_role=user.role, metadata=meta, reason=body.comment or f"Citizen reported: {body.result}")
         reopened = True
-        _notify_staff(db, case, f"Case {case.case_number} was reopened by verification ({body.result})")
+        _notify_staff(db, case, f"Case {case.case_number} was reopened by verification ({body.result})", "staff.case.reopened_by_verification", result=body.result)
     else:                                                    # FLAG_STAFF
-        _notify_staff(db, case, f"Case {case.case_number}: partial fix reported by the citizen; needs a decision")
+        _notify_staff(db, case, f"Case {case.case_number}: partial fix reported by the citizen; needs a decision", "staff.case.partial_fix")
     db.flush()
     return v, reopened
 
 
-def _notify_staff(db: Session, case: CivicCase, message: str) -> None:
+def _notify_staff(db: Session, case: CivicCase, message: str, template: str, **params: str) -> None:
     q = select(User.id).where(User.is_active.is_(True), User.role.in_(["operator", "department_manager"]), User.department_id == case.department_id) if case.department_id else None
     ids = list(db.execute(q).scalars()) if q is not None else []
-    notify(db, ids, "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": message, "message": ""})
+    notify(db, ids, "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": message, "message": ""}, template=template,
+           params={"case_number": case.case_number, **params})
 
 
 def reopen(db: Session, user: User, case: CivicCase, reason: str) -> CivicCase:

@@ -329,7 +329,8 @@ def add_contributor(db: Session, actor: User, case: CivicCase, user_id: str) -> 
     if target is None or not target.is_active:
         raise CivicConnectException("USER_NOT_FOUND", "That user does not exist.", 404)
     s, _ = add_support(db, target, case, role="CONTRIBUTOR")
-    notify(db, [target.id], "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": f"You were added to case {case.case_number}", "message": ""})
+    notify(db, [target.id], "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": f"You were added to case {case.case_number}", "message": ""},
+           template="case.contributor_added", params={"case_number": case.case_number})
     return s
 
 

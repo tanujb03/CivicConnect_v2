@@ -110,3 +110,71 @@ Reviewer: ____________ · Date: ____________ · Lines needing a fix: ___ / 20
 - Apply the fixes to the CSV (keep provenance `llm_authored_claude`; if a reviewer rewrites a line, that line is then human-edited: move it to a separate file, never mix it into the LLM-authored one).
 - If more than 4 of 20 lines in a language needed a fix, review all 84 lines of that language before using them for evaluation.
 - After editing the CSV, re-validate it with the repo loader (`ai.training.src.text_corpus.build.load_gold`): it must still accept every row.
+
+<!-- BEGIN GENERATED: notification templates (backend/services/i18n.py); do not edit by hand -->
+## Backend notification templates (Hindi and Marathi): NOT REVIEWED
+
+**Status: NOT REVIEWED.** Every `hi` and `mr` string in this section is a first draft written by the AI assistant (Claude) without a native speaker checking it. Do not treat them
+as final wording in a release. The English strings are the source of meaning. This section is generated from `backend/services/i18n.py`
+(`python -m backend.scripts.generate_i18n_review`; a test fails if it is out of date): to change a string edit `TEMPLATES` there and regenerate, and tick the box here once a native
+speaker has approved the row.
+
+### How the strings are used
+
+- `notify(..., template=<key>, params=...)` renders the title and message from these fixed templates in the **recipient's** `preferred_language` (`en`, `hi`, `mr`; `hi-IN` counts as
+  `hi`; any other language falls back to English). No LLM and no translation service is involved. The notification payload carries `template`, `params` and `language`.
+- **Keys are a stable contract** with the clients. Never rename or reuse a key; add a new one instead.
+- `{case_number}`, `{result}`, `{title}`, `{instructions}` are filled in as written. `{reason_line}` becomes ` Reason: <text>` / ` कारण: <text>` when a reason was given, else nothing.
+  Free text typed by people (reasons, instructions, incident titles) is inserted as written and is **not** translated.
+- This is different from the *intake* title and summary in the citizen's language (`title_local` / `summary_local`): those are written by the AI provider at intake time,
+  are presentation only, and the canonical English fields stay the source of truth (design section 14).
+
+### Please check in particular
+
+- Register: the drafts address the citizen politely (Hindi *आप*, Marathi *तुम्ही*). Is that right for municipal messages?
+- Terms: Hindi *शिकायत* / Marathi *तक्रार* (report/complaint), *निपटारा* / *निकाली* (resolved), *सत्यापन* / *पडताळणी* (verification), *कार्य आदेश* / *कामाचा आदेश* (work order),
+  *घटना* (incident). Prefer the words the city's own forms use.
+- Grammar of gender and number in the status titles (e.g. *सौंपी गई*, *सोपवली*, *नाकारली*).
+- Length: these are push/in-app notification titles; shorter is better.
+
+### Strings
+
+| Key | Language | Title | Message | Reviewed |
+|---|---|---|---|---|
+| `case.status.assigned` | English (source) | Case {case_number}: Assigned | Your report has been assigned to the responsible department.{reason_line} | n/a (source) |
+| `case.status.assigned` | Hindi | शिकायत {case_number}: सौंपी गई | आपकी शिकायत संबंधित विभाग को सौंप दी गई है।{reason_line} | ☐ |
+| `case.status.assigned` | Marathi | तक्रार {case_number}: सोपवली | तुमची तक्रार संबंधित विभागाकडे सोपवण्यात आली आहे.{reason_line} | ☐ |
+| `case.status.work_order_created` | English (source) | Case {case_number}: Work order created | Work on your report has been scheduled.{reason_line} | n/a (source) |
+| `case.status.work_order_created` | Hindi | शिकायत {case_number}: कार्य आदेश बना | आपकी शिकायत पर काम तय कर दिया गया है।{reason_line} | ☐ |
+| `case.status.work_order_created` | Marathi | तक्रार {case_number}: कामाचा आदेश तयार | तुमच्या तक्रारीवरील काम ठरवण्यात आले आहे.{reason_line} | ☐ |
+| `case.status.in_progress` | English (source) | Case {case_number}: In progress | Work on your report has started.{reason_line} | n/a (source) |
+| `case.status.in_progress` | Hindi | शिकायत {case_number}: काम शुरू | आपकी शिकायत पर काम शुरू हो गया है।{reason_line} | ☐ |
+| `case.status.in_progress` | Marathi | तक्रार {case_number}: काम सुरू | तुमच्या तक्रारीवरील काम सुरू झाले आहे.{reason_line} | ☐ |
+| `case.status.awaiting_verification` | English (source) | Case {case_number}: Awaiting verification | The work is done. Please check and confirm that the problem is fixed.{reason_line} | n/a (source) |
+| `case.status.awaiting_verification` | Hindi | शिकायत {case_number}: सत्यापन की प्रतीक्षा | काम पूरा हो गया है। कृपया देखकर पुष्टि करें कि समस्या ठीक हो गई है।{reason_line} | ☐ |
+| `case.status.awaiting_verification` | Marathi | तक्रार {case_number}: पडताळणीची प्रतीक्षा | काम पूर्ण झाले आहे. कृपया पाहून समस्या दूर झाली आहे याची खात्री करा.{reason_line} | ☐ |
+| `case.status.resolved` | English (source) | Case {case_number}: Resolved | Your report is marked as resolved. Thank you for helping your city.{reason_line} | n/a (source) |
+| `case.status.resolved` | Hindi | शिकायत {case_number}: निपटारा हुआ | आपकी शिकायत का निपटारा हो गया है। अपने शहर की मदद करने के लिए धन्यवाद।{reason_line} | ☐ |
+| `case.status.resolved` | Marathi | तक्रार {case_number}: निकाली निघाली | तुमची तक्रार निकाली काढण्यात आली आहे. शहराला मदत केल्याबद्दल धन्यवाद.{reason_line} | ☐ |
+| `case.status.reopened` | English (source) | Case {case_number}: Reopened | Your report has been reopened for further work.{reason_line} | n/a (source) |
+| `case.status.reopened` | Hindi | शिकायत {case_number}: फिर से खोली गई | आपकी शिकायत आगे की कार्रवाई के लिए फिर से खोली गई है।{reason_line} | ☐ |
+| `case.status.reopened` | Marathi | तक्रार {case_number}: पुन्हा उघडली | तुमची तक्रार पुढील कार्यवाहीसाठी पुन्हा उघडण्यात आली आहे.{reason_line} | ☐ |
+| `case.status.rejected` | English (source) | Case {case_number}: Rejected | Your report could not be accepted.{reason_line} | n/a (source) |
+| `case.status.rejected` | Hindi | शिकायत {case_number}: अस्वीकृत | आपकी शिकायत स्वीकार नहीं की जा सकी।{reason_line} | ☐ |
+| `case.status.rejected` | Marathi | तक्रार {case_number}: नाकारली | तुमची तक्रार स्वीकारता आली नाही.{reason_line} | ☐ |
+| `case.contributor_added` | English (source) | You were added to case {case_number} | You can now follow this report and add to it. | n/a (source) |
+| `case.contributor_added` | Hindi | आपको शिकायत {case_number} में जोड़ा गया | अब आप इस शिकायत को देख सकते हैं और इसमें जानकारी जोड़ सकते हैं। | ☐ |
+| `case.contributor_added` | Marathi | तुम्हाला तक्रार {case_number} मध्ये जोडण्यात आले | आता तुम्ही ही तक्रार पाहू शकता आणि त्यात भर घालू शकता. | ☐ |
+| `staff.case.reopened_by_verification` | English (source) | Case {case_number} was reopened by verification ({result}) | The reporter did not confirm the fix. | n/a (source) |
+| `staff.case.reopened_by_verification` | Hindi | शिकायत {case_number} सत्यापन के बाद फिर से खोली गई ({result}) | शिकायतकर्ता ने सुधार की पुष्टि नहीं की। | ☐ |
+| `staff.case.reopened_by_verification` | Marathi | तक्रार {case_number} पडताळणीनंतर पुन्हा उघडली ({result}) | तक्रारदाराने दुरुस्तीची पुष्टी केली नाही. | ☐ |
+| `staff.case.partial_fix` | English (source) | Case {case_number}: partial fix reported by the citizen; needs a decision | Please review the case and decide the next step. | n/a (source) |
+| `staff.case.partial_fix` | Hindi | शिकायत {case_number}: नागरिक ने आंशिक सुधार बताया; निर्णय आवश्यक है | कृपया शिकायत देखें और अगला कदम तय करें। | ☐ |
+| `staff.case.partial_fix` | Marathi | तक्रार {case_number}: नागरिकाने अंशतः दुरुस्ती कळवली; निर्णय आवश्यक आहे | कृपया तक्रार तपासा आणि पुढील पाऊल ठरवा. | ☐ |
+| `incident.created` | English (source) | Incident: {title} | Related reports were grouped into an incident. | n/a (source) |
+| `incident.created` | Hindi | घटना: {title} | संबंधित शिकायतों को एक घटना में जोड़ा गया है। | ☐ |
+| `incident.created` | Marathi | घटना: {title} | संबंधित तक्रारी एका घटनेत एकत्र करण्यात आल्या आहेत. | ☐ |
+| `work_order.assigned` | English (source) | New work order for case {case_number} | {instructions} | n/a (source) |
+| `work_order.assigned` | Hindi | शिकायत {case_number} के लिए नया कार्य आदेश | {instructions} | ☐ |
+| `work_order.assigned` | Marathi | तक्रार {case_number} साठी नवीन कामाचा आदेश | {instructions} | ☐ |
+<!-- END GENERATED: notification templates -->

@@ -63,7 +63,8 @@ def create(db: Session, user: User, body: IncidentCreate) -> Incident:
     if inc.ward_id:
         audience += list(db.execute(select(User.id).where(User.is_active.is_(True), User.role == "ward_officer", User.ward_id == inc.ward_id)).scalars())
     audience += [c.reporter_id for c in cases]
-    notify(db, [a for a in audience if a != user.id], "INCIDENT_CREATED", {"incident_id": inc.id, "title": f"Incident: {inc.title}", "message": "Related reports were grouped into an incident."})
+    notify(db, [a for a in audience if a != user.id], "INCIDENT_CREATED", {"incident_id": inc.id, "title": f"Incident: {inc.title}", "message": "Related reports were grouped into an incident."},
+           template="incident.created", params={"title": inc.title})
     return inc
 
 

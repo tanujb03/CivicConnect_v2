@@ -54,7 +54,8 @@ def create(db: Session, user: User, case: CivicCase, body: WorkOrderCreate) -> W
     add_event(db, case.id, "WORK_ORDER_ASSIGNED", actor_id=user.id, actor_role=user.role, visibility="INTERNAL", metadata={"work_order_id": wo.id, "assignee_id": worker.id})
     record_audit(db, actor_id=user.id, action="CASE_ASSIGNED_TO_WORKER", entity_type="WORK_ORDER", entity_id=wo.id, before=None, after={"case_id": case.id, "assignee_id": worker.id})
     notify(db, [worker.id], "WORK_ORDER_ASSIGNED", {"case_id": case.id, "case_number": case.case_number, "work_order_id": wo.id, "title": f"New work order for case {case.case_number}",
-                                                   "message": (body.instructions or "")[:200]})
+                                                   "message": (body.instructions or "")[:200]}, template="work_order.assigned",
+           params={"case_number": case.case_number, "instructions": (body.instructions or "")[:200]})
     return wo
 
 
@@ -173,7 +174,8 @@ def update(db: Session, user: User, wo: WorkOrder, *, assignee_id: str | None, i
         before["assignee_id"] = wo.assigned_worker_id
         wo.assigned_worker_id = _worker(db, assignee_id, case).id
         notify(db, [wo.assigned_worker_id], "WORK_ORDER_ASSIGNED", {"case_id": case.id, "case_number": case.case_number, "work_order_id": wo.id,
-                                                                    "title": f"New work order for case {case.case_number}", "message": ""})
+                                                                    "title": f"New work order for case {case.case_number}", "message": ""},
+               template="work_order.assigned", params={"case_number": case.case_number, "instructions": (wo.instructions or "")[:200]})
     if instructions is not None and instructions != wo.instructions:
         before["instructions"], wo.instructions = wo.instructions, instructions
     if due_at is not None and due_at != wo.deadline:
