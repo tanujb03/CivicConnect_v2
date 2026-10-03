@@ -14,6 +14,7 @@ from backend.core.permissions import CITY_WIDE_ROLES, DEPARTMENT_ROLES, STAFF_RO
 from backend.models import CaseCounter, CivicCase, Support, User, Ward, WorkOrder
 from backend.models.types import new_id
 from backend.schemas.case import CaseCreate, CasePatch
+from backend.services import classification
 from backend.services import evidence as evidence_service
 from backend.services import taxonomy as tx
 from backend.services.audit import record_audit
@@ -129,6 +130,11 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
     if not (body.title or body.description or body.evidence_ids):
         raise CivicConnectException("VALIDATION_ERROR", "A case needs a title, a description or evidence.", 422, {"fields": ["title", "description", "evidence_ids"]})
     category, subcategory = tx.resolve_category(body.category, body.subcategory)
+    suggestion = None
+    if not (body.category and body.category.strip()):            # a category given by a human is never replaced; only a missing one is suggested
+        suggestion = classification.suggest("\n".join(x for x in (body.title, body.description) if x and x.strip()))
+        if suggestion.applied:
+            category, subcategory = suggestion.category, suggestion.subcategory
     now = _now()
     lat, lon = body.location.latitude, body.location.longitude
     case = CivicCase(id=new_id(), support_count=0, reopen_count=0, recurrence_count=0, location_tags=[], priority_score=0, case_number=next_case_number(db, now.year), client_case_id=body.client_case_id, title=(body.title or (body.description or "")[:80] or "Civic issue report"),
@@ -150,6 +156,8 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
     db.add(ReportSignal(case_id=case.id, reporter_id=user.id, original_text=body.description or body.title, original_language=body.language, is_primary=True,
                         latitude=lat, longitude=lon, source_type="SMARTPHONE"))
     add_event(db, case.id, "CASE_CREATED", actor_id=user.id, actor_role=user.role, metadata={"case_number": case.case_number, "source": body.source})
+    if suggestion is not None:
+        classification.record(db, case, suggestion)
     if body.evidence_ids:
         evidence_service.attach(db, user, body.evidence_ids, case, purpose="REPORT")
     # SUBMITTED -> AI_PROCESSING -> NEEDS_REVIEW: the deterministic assessment above already ran; the model-based enrichment (fusion / triage suggestion)
