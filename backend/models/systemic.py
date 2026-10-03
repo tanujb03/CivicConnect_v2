@@ -15,6 +15,14 @@ class Notification(Base):
     payload: Mapped[dict] = mapped_column(JSONType, default=dict, nullable=False)
     read_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    # Expo push delivery of this notification (§53); values: PUSH_STATUSES. NONE = no push was requested for it.
+    push_status: Mapped[str] = mapped_column(String(16), default="NONE", server_default="NONE", nullable=False)
+    push_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    pushed_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
+    push_receipt_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+PUSH_STATUSES = ("NONE", "PENDING", "SENT", "FAILED", "SKIPPED")
 
 
 class Incident(Base):

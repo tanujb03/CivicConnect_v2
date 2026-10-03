@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db.session import Base
@@ -45,6 +45,14 @@ class EvidenceItem(Base):
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
     uploaded_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
+    # malware scan (design §44): new rows start PENDING; rows that existed before migration 0003 were backfilled UNSCANNED. Values: SCAN_STATUSES.
+    scan_status: Mapped[str] = mapped_column(String(16), default="PENDING", server_default="PENDING", nullable=False)
+    scan_engine: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    scan_signature: Mapped[str | None] = mapped_column(String(200), nullable=True)           # signature / threat name when INFECTED
+    scanned_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+SCAN_STATUSES = ("PENDING", "CLEAN", "INFECTED", "UNSCANNED", "ERROR")
 
 
 class AIAnalysis(Base):
@@ -68,7 +76,13 @@ class AIAnalysis(Base):
 
 
 class CaseEmbedding(Base):
-    """Cached text embedding of a case (AI-2). ``vector`` is a JSON list so this works everywhere; a pgvector column/index can replace it later."""
+    """Cached text embedding of a case (AI-2). ``vector`` is a JSON list so this works everywhere (SQLite, no extension).
+
+    On PostgreSQL with pgvector, migration 0003 also adds ``embedding_vec vector`` (NO fixed dimension: the final model, e5-small = 384 or e5-base = 768, is not
+    decided yet) and partial HNSW cosine indexes for 384 and 768 dims. That column and its indexes are deliberately NOT mapped here (like ``civic_cases.geog``):
+    they do not exist on SQLite or on a PostgreSQL without the extension, so they are read and written with SQL (see alembic/versions/0003_*.py for the query form).
+    ``embedding_dim`` / ``embedding_model`` describe whichever vector a row holds and are plain columns everywhere (``model`` is the older, required name column).
+    """
 
     __tablename__ = "case_embeddings"
 
@@ -76,6 +90,35 @@ class CaseEmbedding(Base):
     model: Mapped[str] = mapped_column(String(200), nullable=False)
     vector: Mapped[list] = mapped_column(JSONType, nullable=False)
     created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    embedding_dim: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+FLAG_KINDS = ("STILL_EXISTS", "OUTDATED", "INCORRECT", "INAPPROPRIATE")
+FLAG_STATUSES = ("OPEN", "UPHELD", "DISMISSED")
+
+
+class CaseFlag(Base):
+    """A citizen's flag on a case: it still exists, is outdated, wrong or inappropriate. One flag per (case, user, kind); staff resolve it (UPHELD / DISMISSED)."""
+
+    __tablename__ = "case_flags"
+    __table_args__ = (
+        UniqueConstraint("case_id", "user_id", "kind", name="uq_case_flag"),
+        CheckConstraint("kind IN ('STILL_EXISTS', 'OUTDATED', 'INCORRECT', 'INAPPROPRIATE')", name="ck_case_flags_kind"),
+        CheckConstraint("status IN ('OPEN', 'UPHELD', 'DISMISSED')", name="ck_case_flags_status"),
+        Index("ix_case_flags_case_kind", "case_id", "kind"),
+        Index("ix_case_flags_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("civic_cases.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)                          # FLAG_KINDS
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="OPEN", server_default="OPEN", nullable=False)   # FLAG_STATUSES
+    resolved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    resolved_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class CaseRelation(Base):

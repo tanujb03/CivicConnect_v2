@@ -52,7 +52,7 @@
           "health"
         ],
         "summary": "Ready",
-        "description": "§51A.17 readiness: required dependencies (database, object storage) must work; Redis is optional infrastructure and is reported as ``degraded`` when absent.\nThe body contains no citizen data.",
+        "description": "§51A.17 readiness: required dependencies (database, object storage) must work; Redis is optional infrastructure and is reported as ``degraded`` when absent.\n``vector_search`` says whether pgvector similarity search is available (optional, never affects readiness). The body contains no citizen data.",
         "operationId": "ready_api_v1_health_ready_get",
         "responses": {
           "200": {
