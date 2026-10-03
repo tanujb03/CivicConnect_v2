@@ -6,6 +6,7 @@ AI never decides: recommendations are stored, human decisions are separate, and 
 """
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -62,11 +63,26 @@ def _utcnow() -> datetime:
 
 class AIGateway:
     def __init__(self, ai: AIService, repo: CaseRepository, evidence: EvidenceResolver, analyses: AIAnalysisStore, audit: AuditSink,
-                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None, vision: ImageAnalyzer | None = None, embedder=None):
+                 clock: Callable[[], datetime] = _utcnow, facts: AnalyticsFactSource | None = None, vision: ImageAnalyzer | None = None, embedder=None,
+                 thresholds: Callable[[], dict[str, float]] | None = None):
         self.ai, self.repo, self.evidence, self.analyses, self.audit, self.clock = ai, repo, evidence, analyses, audit, clock
         self.facts = facts
         self.vision = vision
         self.embedder = embedder              # OnnxEmbedder (M7): local multilingual embeddings for duplicate detection
+        self.thresholds = thresholds          # admin settings (A13): {"ai_confidence_threshold", "duplicate_threshold"}; None = the policy files' values
+        # ``load_fusion_policy()`` is cached and shared by every FusionService: this gateway gets its own copy so applying thresholds never leaks into other gateways.
+        self.ai.fusion.policy = copy.deepcopy(self.ai.fusion.policy)
+        self._related_default = float(self.ai.fusion.policy["thresholds"]["related"])
+
+    def _apply_thresholds(self) -> None:
+        """Writes the admin-set thresholds into the policy dicts this gateway's AI service reads (A13). Called at the start of every call that uses them."""
+        if self.thresholds is None:
+            return
+        t = self.thresholds()
+        self.ai.policy.intake["low_confidence_threshold"] = t["ai_confidence_threshold"]
+        fusion = self.ai.fusion.policy["thresholds"]
+        fusion["possible_duplicate"] = t["duplicate_threshold"]
+        fusion["related"] = min(self._related_default, t["duplicate_threshold"])
 
     # ------------------------------------------------------------------------------------------ helpers
     @staticmethod
@@ -111,6 +127,7 @@ class AIGateway:
     # ------------------------------------------------------------------------------------------ 51A.5 intake
     def intake(self, req: IntakeAnalyzeRequest, actor: Actor) -> IntakeAnalyzeResponse:
         self._require(actor, "intake")
+        self._apply_thresholds()
         evidence = []
         for eid in req.evidence_ids:
             ev = self.evidence.resolve(eid, actor.user_id)
@@ -289,6 +306,7 @@ class AIGateway:
 
     def fusion(self, case_id: str, actor: Actor) -> FusionAnalyzeResponse:
         self._require(actor, "fusion")
+        self._apply_thresholds()
         case = self._case(case_id)
         bounds = self.ai.fusion.candidate_query_params()
         cands = self.repo.fusion_candidates(case, radius_m=bounds["radius_m"], time_window_days=bounds["time_window_days"],

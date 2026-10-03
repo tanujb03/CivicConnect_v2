@@ -311,6 +311,8 @@ class DbFactSource(DemoCityFactSource):
 
 
 def build_sql_gateway() -> Any:
+    from backend.services.settings import effective_thresholds
+
     from .deps import build_ai_service
     from .envfile import load_env_file
     from .service import AIGateway
@@ -321,4 +323,5 @@ def build_sql_gateway() -> Any:
     executor = DbToolExecutor(repo)
     classifier, embedder = build_text_models()
     ai = build_ai_service(executor, classifier)
-    return AIGateway(ai=ai, repo=repo, evidence=SqlEvidenceResolver(), analyses=SqlAnalysisStore(), audit=SqlAuditSink(), facts=DbFactSource(executor), vision=build_vision(), embedder=embedder)
+    return AIGateway(ai=ai, repo=repo, evidence=SqlEvidenceResolver(), analyses=SqlAnalysisStore(), audit=SqlAuditSink(), facts=DbFactSource(executor), vision=build_vision(),
+                     embedder=embedder, thresholds=effective_thresholds)
