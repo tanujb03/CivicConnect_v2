@@ -83,7 +83,7 @@ Local (RTX 4050): `jupyter lab` → open `ai/training/notebooks/07_text_models_m
 3. Unzip the bundle into `ai/artifacts/` so you get `ai/artifacts/civic_text_m6/<ver>` and `ai/artifacts/civic_embed_m7/<ver>`.
 
 ## 5 · Notebook 06 — road-damage detector (M5) **[you]**
-Kaggle (recommended; overnight): the four datasets from notebook 05 attached, GPU on, Internet on. `SMOKE = True` first (~10–15 min), paste output, then `SMOKE = False` + Save & Run All (Commit). Local alternative: set `CIVIC_PATHS_JSON` to the dataset folders and `CIVIC_YOLO_DEVICE=0`, batch ~16. Unzip the bundle so that `ai/artifacts/road_damage/road_damage/best.onnx` (with `model_card.json`) exists.
+Kaggle (recommended; overnight): the four datasets from notebook 05 attached, GPU on (T4 ×2 uses both GPUs; checklist and single-GPU switch in `docs/KAGGLE_RUNBOOK.md`), Internet on. `SMOKE = True` first (~10–15 min), paste output, then `SMOKE = False` + Save & Run All (Commit). Local alternative: set `CIVIC_PATHS_JSON` to the dataset folders and `CIVIC_YOLO_DEVICE=0`, batch ~16. Unzip the bundle so that `ai/artifacts/road_damage/road_damage/best.onnx` (with `model_card.json`) exists.
 
 ## 6 · Plug the models in
 
