@@ -1,7 +1,10 @@
 """Detector data preparation: group-safe splits, VOC->YOLO conversion, evidence-based decoding of numeric class ids, dataset assembly (INVENTED fixtures)."""
+import logging
+import os
 import random
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from ai.training.src.vision import yolo_data as yd
@@ -12,6 +15,20 @@ W, H = 640, 480
 def write_img(p: Path):
     p.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (64, 48), (120, 120, 120)).save(p)
+
+
+def can_symlink(where: Path) -> bool:
+    """False on Windows without Developer Mode / the symlink privilege (WinError 1314)."""
+    target, link = where / "_symlink_probe_target", where / "_symlink_probe_link"
+    target.write_text("x", encoding="utf-8")
+    try:
+        os.symlink(target, link)
+        return True
+    except OSError:
+        return False
+    finally:
+        link.unlink(missing_ok=True)
+        target.unlink(missing_ok=True)
 
 
 def write_voc(p: Path, stem: str, objs):
@@ -90,9 +107,11 @@ def test_collect_and_assemble_end_to_end_with_dedup_and_group_safe_splits(tmp_pa
     m = yd.assemble(out, a + b + c, seed=1)
     assert m["duplicate_stems_dropped"] == 50 and m["images"] == 200 + 1 + 30 and m["groups_straddling_splits"] == 0
     assert set(m["split_counts"]) <= {"train", "val", "test"} and sum(m["split_counts"].values()) == m["images"]
-    for sp in m["split_counts"]:                                                      # every image has a label file and a working symlink
+    for sp in m["split_counts"]:                                                      # every image has a label file and a working link (symlink wherever allowed)
         imgs = sorted((out / "images" / sp).iterdir())
-        assert imgs and all(p.is_symlink() and p.resolve().exists() for p in imgs)
+        assert imgs and all(p.exists() and Image.open(p).size == (64, 48) for p in imgs)
+        if can_symlink(tmp_path):
+            assert all(p.is_symlink() for p in imgs)
         assert {p.stem for p in imgs} == {p.stem for p in (out / "labels" / sp).iterdir()}
     assert "3: D40" in (out / "data.yaml").read_text() and m["boxes_per_class_by_split"]
     assert all(set(v) <= {"D40"} for v in m["boxes_per_class_by_split"].values())
@@ -117,3 +136,51 @@ def test_decode_from_overlap_names_the_ids_of_a_yolo_copy_by_matching_a_voc_copy
     res = yd.decode_from_overlap(items, yolo_root, min_pairs=50)
     assert res["ok"] and res["mapping"] == truth and res["overlapping_images"] == 240
     assert not yd.decode_from_overlap(items, tmp_path / "empty", min_pairs=50)["ok"]            # no overlap -> nothing may be assumed
+
+
+def _no_privilege(*_a, **_k):
+    raise OSError(1314, "A required privilege is not held by the client")
+
+
+def test_link_or_copy_uses_a_symlink_first_and_does_not_try_the_others(tmp_path, monkeypatch):
+    src, calls = tmp_path / "a.jpg", []
+    src.write_bytes(b"img")
+    monkeypatch.setattr(os, "symlink", lambda s, d: (calls.append("symlink"), Path(d).write_bytes(Path(s).read_bytes())))
+    monkeypatch.setattr(os, "link", lambda *a: pytest.fail("hardlink must not be tried while symlinks work"))
+    assert yd.link_or_copy(src, tmp_path / "b.jpg") == "symlink" and calls == ["symlink"]
+
+
+def test_link_or_copy_falls_back_to_a_hardlink_then_to_a_copy(tmp_path, monkeypatch):
+    src = tmp_path / "a.jpg"
+    src.write_bytes(b"img")
+    monkeypatch.setattr(os, "symlink", _no_privilege)                                   # Windows without Developer Mode
+    assert yd.link_or_copy(src, tmp_path / "hard.jpg") == "hardlink" and os.path.samefile(src, tmp_path / "hard.jpg")
+    monkeypatch.setattr(os, "link", _no_privilege)                                      # e.g. read-only input on another volume
+    assert yd.link_or_copy(src, tmp_path / "copy.jpg") == "copy"
+    assert (tmp_path / "copy.jpg").read_bytes() == b"img" and not os.path.samefile(src, tmp_path / "copy.jpg") and src.exists()
+
+
+def test_link_or_copy_raises_when_even_the_copy_fails(tmp_path, monkeypatch):
+    src = tmp_path / "a.jpg"
+    src.write_bytes(b"img")
+    for name in ("symlink", "link"):
+        monkeypatch.setattr(os, name, _no_privilege)
+    with pytest.raises(FileNotFoundError):
+        yd.link_or_copy(tmp_path / "missing.jpg", tmp_path / "x.jpg")
+
+
+@pytest.mark.parametrize("failing, expected", [(("symlink",), "hardlink"), (("symlink", "link"), "copy")])
+def test_assemble_still_builds_the_dataset_when_symlinks_are_not_allowed(tmp_path, monkeypatch, caplog, failing, expected):
+    root = tmp_path / "rdd2020"
+    for i in range(0, 60, 3):
+        s = f"India_{i:06d}"
+        write_img(root / "train/India/images" / f"{s}.jpg")
+        write_voc(root / "train/India/annotations/xmls" / f"{s}.xml", s, [("D40", (64, 48, 192, 144))])
+    items, _ = yd.collect_rdd_voc(root, countries=["India"])
+    for name in failing:
+        monkeypatch.setattr(os, name, _no_privilege)
+    with caplog.at_level(logging.INFO, logger=yd.log.name):
+        m = yd.assemble(tmp_path / "ds", items, seed=1)
+    imgs = [p for sp in m["split_counts"] for p in (tmp_path / "ds" / "images" / sp).iterdir()]
+    assert len(imgs) == m["images"] == 20 and all(not p.is_symlink() and Image.open(p).size == (64, 48) for p in imgs)
+    assert any(r.levelno == logging.WARNING and expected in r.getMessage() for r in caplog.records)      # the method used is logged (and flagged as a fallback)
