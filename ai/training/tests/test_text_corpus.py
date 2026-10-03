@@ -2,6 +2,8 @@
 import json
 import random
 
+import pytest
+
 from ai.inference.errors import ProviderUnavailable
 from ai.inference.provider import StructuredResult
 from ai.training.src.text_corpus import build as cb
@@ -175,6 +177,44 @@ def test_review_sample_is_one_line_per_label_seeded_and_marathi_takes_the_labels
     assert len({r["label_id"] for _, r in s1} | {r["label_id"] for _, r in s2}) == 27
     doc = rs.build_doc(gold)
     assert doc == rs.build_doc(gold) and doc.count("Labels NOT covered by this sample (7)") == 2 and doc.count("- [ ] row ") == 40 and "never as human gold" in doc
+
+
+def test_review_doc_is_regenerated_only_inside_its_markers_and_never_overwrites_other_content(tmp_path):
+    from pathlib import Path
+
+    from ai.training.src.text_corpus import review_sample as rs
+    gold = Path(__file__).parents[1] / "gold" / "gold_llm_authored_claude_v1.csv"
+    doc = tmp_path / "I18N_REVIEW.md"
+    rs.write_doc(gold, doc)                                                                       # new file: only the generated block
+    first = doc.read_text(encoding="utf-8")
+    assert first.startswith(rs.BEGIN) and first.rstrip().endswith(rs.END) and "## Hindi (hi)" in first
+    other = "## Backend notification templates (Hindi and Marathi): NOT REVIEWED\n\n- [ ] some other lane's strings\n"
+    doc.write_text(first.rstrip("\n") + "\n\n" + other, encoding="utf-8")
+    stale = doc.read_text(encoding="utf-8").replace("row ", "row STALE ", 3)
+    doc.write_text(stale, encoding="utf-8")
+    rs.write_doc(gold, doc)                                                                       # regenerate: the block is refreshed, the other section is untouched
+    now = doc.read_text(encoding="utf-8")
+    assert "STALE" not in now and now.count(rs.BEGIN) == 1 and now.count(rs.END) == 1 and now.endswith(other) and now.index(rs.END) < now.index("## Backend notification templates")
+    rs.write_doc(gold, doc)
+    assert doc.read_text(encoding="utf-8") == now                                                  # idempotent
+    foreign = tmp_path / "other.md"
+    foreign.write_text("# someone else's doc\n", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        rs.write_doc(gold, foreign)
+    assert foreign.read_text(encoding="utf-8") == "# someone else's doc\n"
+
+
+def test_the_committed_review_doc_is_current_with_the_gold_csv_and_keeps_the_other_generated_section(tmp_path):
+    from pathlib import Path
+
+    from ai.training.src.text_corpus import review_sample as rs
+    root = Path(__file__).parents[3]
+    committed = (root / "docs" / "I18N_REVIEW.md").read_text(encoding="utf-8")
+    copy = tmp_path / "I18N_REVIEW.md"
+    copy.write_text(committed, encoding="utf-8")
+    rs.write_doc(root / "ai" / "training" / "gold" / "gold_llm_authored_claude_v1.csv", copy)
+    assert copy.read_text(encoding="utf-8") == committed, "docs/I18N_REVIEW.md gold-review block is stale: run python -m ai.training.src.text_corpus.review_sample"
+    assert "## Backend notification templates" in committed and "<!-- BEGIN GENERATED: notification templates" in committed
 
 
 def test_gold_csv_saved_by_excel_or_notepad_with_bom_and_crlf_is_read(tmp_path):
