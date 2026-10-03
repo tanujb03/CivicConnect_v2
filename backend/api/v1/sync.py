@@ -1,71 +1,30 @@
+"""/api/v1/sync: offline synchronisation (§51A.16).
+
+Citizens queue mutations locally (IndexedDB) while offline; when connectivity returns the PWA posts the ordered batch here. Every mutation carries its own
+``idempotency_key`` and is applied at most once: a retried batch returns ``ALREADY_APPLIED`` and never creates a second case or side effect.
 """
-/api/v1/sync  — Offline sync mutation endpoint.
+from typing import Optional
 
-Citizens queue mutations locally (IndexedDB) while offline.
-When connectivity returns, the PWA POSTs each mutation here.
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 
-Rules (per Section 51A):
-- Idempotency-Key header is REQUIRED; missing → 422.
-- Duplicate keys are silently accepted (idempotent).
-- Each mutation is written to the civic:sync Redis Stream.
-- Worker (`events/workers.py`) applies the mutation asynchronously.
-"""
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel
-from typing import Any, Dict, Optional
-
-from backend.core.security import get_current_user
-from backend.events import emit_sync_mutation, emit_audit
+from backend.core.security import current_user
+from backend.db.session import get_db
+from backend.models import User
+from backend.schemas.sync import SyncChanges, SyncRequest, SyncResponse
+from backend.services import sync as sync_service
 
 router = APIRouter()
 
 
-class SyncMutation(BaseModel):
-    mutation_type: str          # "create_case" | "add_evidence" | "support"
-    data: Dict[str, Any]
+@router.post("/mutations", response_model=SyncResponse)
+def apply_sync_mutations(body: SyncRequest, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    results = sync_service.process(db, user, body.mutations)
+    db.commit()
+    return {"results": results, "server_cursor": sync_service.encode_cursor(sync_service.max_visible_seq(db, user))}
 
 
-@router.post("/mutations")
-def apply_sync_mutation(
-    mutation: SyncMutation,
-    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
-    current_user: dict = Depends(get_current_user),
-):
-    """
-    Idempotent mutation endpoint for offline-queued citizen actions.
-    Requires Idempotency-Key header.
-    """
-    if not idempotency_key:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": "sync.missing_idempotency_key",
-                    "message": "Idempotency-Key header is required for sync mutations."},
-        )
-
-    # Publish to Redis sync stream for async processing
-    entry_id = emit_sync_mutation(
-        idempotency_key=idempotency_key,
-        mutation_type=mutation.mutation_type,
-        actor_id=current_user["sub"],
-        data=mutation.data,
-    )
-
-    # Emit an audit event for the sync attempt
-    emit_audit(
-        actor_id=current_user["sub"],
-        action=f"sync.{mutation.mutation_type}",
-        details={"idempotency_key": idempotency_key, "stream_entry": entry_id},
-    )
-
-    return {
-        "status": "queued",
-        "idempotency_key": idempotency_key,
-        "mutation_type": mutation.mutation_type,
-        "stream_entry_id": entry_id,
-    }
-
-
-@router.get("/status")
-def get_sync_status(current_user: dict = Depends(get_current_user)):
-    """Check how many pending mutations exist in the sync stream for this user."""
-    return {"pending": 0, "last_synced_at": None}
+@router.get("/changes", response_model=SyncChanges)
+def get_sync_changes(cursor: Optional[str] = None, limit: int = Query(default=100, ge=1, le=500), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Authorized changes since ``cursor`` (omit it for a first full pull); page on with ``server_cursor`` while ``has_more``."""
+    return sync_service.changes_since(db, user, cursor, limit)

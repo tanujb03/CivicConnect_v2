@@ -71,47 +71,28 @@ def _stream_worker(
 # ── Handlers ──────────────────────────────────────────────────────────────────
 
 def _handle_notification(msg: dict) -> None:
-    """
-    Deliver in-app notification.
-    In production: write to DB + push via WebSocket / FCM / APNs.
-    """
-    log.info(
-        "NOTIFICATION → user=%s title=%r",
-        msg.get("user_id"), msg.get("title"),
-    )
-    # TODO: db.add(Notification(...)) + push gateway call
+    """In-app notifications are written to the database by the domain services themselves (backend/services/notifications.py); this stream is the delivery hook
+    (web push / email later). Today it only logs."""
+    log.info("NOTIFICATION → user=%s title=%r", msg.get("user_id"), msg.get("title"))
 
 
 def _handle_ai_job(msg: dict) -> None:
-    """
-    Run an async AI analysis job from the queue.
-    In production: call AIService methods and persist AIAnalysis row.
-    """
-    job_type = msg.get("job_type")
-    case_id  = msg.get("case_id")
-    log.info("AI_JOB → job_type=%s case_id=%s", job_type, case_id)
-    # TODO: ai_service.analyze_intake / triage / fusion then persist
+    """Async AI enrichment of a new case: AI-3 recommendation and AI-2 duplicate candidates (backend/services/ai_jobs.py)."""
+    job_type, case_id = msg.get("job_type"), msg.get("case_id")
+    if not job_type or not case_id:
+        return
+    from backend.services.ai_jobs import run_job
+    log.info("AI_JOB → %s %s: %s", job_type, case_id, run_job(job_type, case_id))
 
 
 def _handle_audit(msg: dict) -> None:
-    """Write an audit event to the database."""
-    log.info(
-        "AUDIT → actor=%s action=%s resource=%s",
-        msg.get("actor_id"), msg.get("action"), msg.get("resource_id"),
-    )
-    # TODO: db.add(AuditEvent(...))
+    """Audit rows are written synchronously with the action they describe; the stream is for subscribers (dashboards, SIEM)."""
+    log.info("AUDIT → actor=%s action=%s resource=%s", msg.get("actor_id"), msg.get("action"), msg.get("resource_id"))
 
 
 def _handle_sync(msg: dict) -> None:
-    """
-    Replay an offline mutation from the citizen PWA.
-    Idempotency key prevents double-application.
-    """
-    log.info(
-        "SYNC → mutation_type=%s actor=%s key=%s",
-        msg.get("mutation_type"), msg.get("actor_id"), msg.get("idempotency_key"),
-    )
-    # TODO: Check idempotency key in DB; if unseen → apply mutation
+    """``/sync/mutations`` applies every mutation synchronously (the client needs the per-mutation result); the stream is kept for subscribers."""
+    log.info("SYNC → mutation_type=%s actor=%s key=%s", msg.get("mutation_type"), msg.get("actor_id"), msg.get("idempotency_key"))
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────

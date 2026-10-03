@@ -19,12 +19,12 @@ from pathlib import Path
 
 from ai.evaluation import eval_fusion, eval_intake
 from ai.evaluation.analytics_reference import haversine_m
+from ai.evaluation.classifiers import load_classifier
 from ai.evaluation.provenance import build_provenance, claims_for, validate_track
 from ai.evaluation.run_eval import HERE, write_report
 from ai.inference.config import load_taxonomy
 from ai.inference.fusion.scoring import FusionWeights
 from ai.inference.intake.service import IntakeService
-from ai.inference.local.text_classifier import LocalTextClassifier
 from ai.inference.schemas import TriageRequest
 from ai.inference.triage.service import TriageService
 
@@ -100,7 +100,7 @@ def evaluate_triage_stability(d: dict) -> dict:
 
 def evaluate_city(d: dict, artifact: Path | None, fusion_weights: Path | None) -> dict:
     from ai.training.src.synthetic.city_checks import counts, recovery
-    clf = LocalTextClassifier.load(artifact) if artifact else None
+    clf = load_classifier(artifact) if artifact else None
     out: dict = {"task": "demo_city", "dataset": {"counts": {k: v for k, v in counts(d).items() if k != "multilingual_signals"}, "languages": counts(d)["multilingual_signals"]}}
     if clf is not None:
         svc = IntakeService(provider=None, classifier=clf)

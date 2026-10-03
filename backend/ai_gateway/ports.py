@@ -62,3 +62,8 @@ class AnalyticsFactSource(Protocol):
     def facts(self, *, actor_id: str, role: str, ward_id: str | None, department_id: str | None) -> AnalyticsFactSet:
         """DETERMINISTIC, role-scoped, display-ready facts (SQL aggregation in production; see ``ai/evaluation/analytics_facts.py`` for the spec).
         Raise ``ToolPermissionDenied`` when the actor may not see the requested scope."""
+
+
+class ImageAnalyzer(Protocol):
+    def analyze(self, evidence: EvidenceInput):
+        """Local image model (e.g. the road-damage detector): ``ImageAnalysis`` (see ``vision.py``) or None when the evidence is not an analysable image."""

@@ -23,11 +23,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ai.evaluation import eval_fusion, eval_intake, eval_real
+from ai.evaluation.classifiers import load_classifier
 from ai.evaluation.provenance import DESCRIPTIVE, TRACKS, TrackError, build_provenance, claims_for, validate_track
 from ai.inference.config import ProviderSettings, load_taxonomy
 from ai.inference.fusion.scoring import FusionWeights
 from ai.inference.intake.service import IntakeService
-from ai.inference.local.text_classifier import LocalTextClassifier
 from ai.inference.providers.openai_provider import OpenAIProvider
 
 HERE = Path(__file__).parent
@@ -102,7 +102,7 @@ def render_md(name: str, p: dict) -> str:
 
 
 def build_intake_system(system: str, artifact: Path | None):
-    clf = LocalTextClassifier.load(artifact) if artifact else None
+    clf = load_classifier(artifact) if artifact else None
     provider = None
     if system in ("provider", "hybrid"):
         s = ProviderSettings.from_env()

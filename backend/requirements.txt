@@ -10,3 +10,7 @@ python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.6
 redis>=4.5.0
+
+# optional: local road-damage model (set AI_VISION_ONNX_PATH to the notebook-06 bundle); without them the gateway runs without it
+onnxruntime
+Pillow

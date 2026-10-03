@@ -61,6 +61,7 @@ class IntakeAnalyzeResponse(_Out):
     alternatives: list[dict[str, Any]] = Field(default_factory=list)   # additive
     ai_metadata: dict[str, Any] | None = None                          # additive
     analysis_id: str | None = None                                     # additive
+    image_analysis: list[dict[str, Any]] = Field(default_factory=list)  # additive: local road-damage detections per image (boxes in original pixels)
 
 
 # ------------------------------------------------------------------ 51A.7 fusion

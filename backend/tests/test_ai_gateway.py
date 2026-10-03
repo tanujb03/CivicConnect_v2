@@ -421,8 +421,8 @@ class TestAnalyticsExplain:
 
 
 # --------------------------------------------------------------------------------------------- error envelope everywhere (51A.1)
-def test_auth_errors_use_the_envelope_and_keep_legacy_detail():
+def test_auth_errors_use_the_envelope():
     r = client.get("/api/v1/me/", headers={"Authorization": "Bearer garbage", "X-Request-ID": "abc"})
     assert r.status_code == 401
     body = r.json()
-    assert body["error"]["code"] == "auth.invalid_token" and body["error"]["request_id"] == "abc" and body["detail"]["code"] == "auth.invalid_token"
+    assert body["error"]["code"] == "AUTH_INVALID_TOKEN" and body["error"]["request_id"] == "abc"
