@@ -8,7 +8,8 @@ Several GPUs (Kaggle T4 x2): ``torch.nn.DataParallel``. The loss is per-sample c
 single-GPU one; batches come from the same seeded permutation, early stopping / checkpoints / export stay in one process, and the returned model is the unwrapped module.
 ``batch`` is the EFFECTIVE batch per optimizer step; ``grad_accum`` > 1 splits each step into weighted micro-batches (same gradient, 1/grad_accum of the memory).
 
-Evaluation sets: ``val`` and ``test`` (LLM-written, group-safe), the ORIGINAL template eval set (unseen template families, comparable with B0) and the team's ``gold`` set.
+Evaluation sets: ``val`` and ``test`` (LLM-written, group-safe), the ORIGINAL template eval set (unseen template families, comparable with B0) and the gold set, reported as one block per provenance (``gold[human, n=..]``, ``gold[llm_authored_claude, n=..]``,
+``gold[unspecified, n=..]``; see ``ai.evaluation.gold``).
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ai.evaluation.gold import block_meta, split_by_provenance
 from ai.inference.config import load_taxonomy
 from ai.training.src import hardware as hw
 
@@ -71,6 +73,18 @@ def metrics(logits: np.ndarray, rows: list[dict], labels: list[str]) -> dict:
 
 def template_eval_rows(path: Path) -> list[dict]:
     return [{"text": r["text"], "language": r["language"], "label_id": f"{r['category']}/{r['subcategory']}"} for r in read_jsonl(path)]
+
+
+def evaluation_sets(data: dict[str, list[dict]], gold: list[dict]) -> tuple[dict[str, list[dict]], set[str]]:
+    """The named sets to score, and which names are gold. Gold is split by provenance into ``gold[<provenance>, n=<rows>]`` blocks: never pooled, never called human unless marked human."""
+    gold_sets = split_by_provenance(gold)
+    return {"val": data["val"], "test_llm_groups": data["test"], **gold_sets}, set(gold_sets)
+
+
+def block_result(logits: np.ndarray, rows: list[dict], labels: list[str], *, gold: bool) -> dict:
+    """Metrics of one evaluation set; a gold block also carries its provenance, whether it is human-written, and what may (not) be claimed from it."""
+    m = metrics(logits, rows, labels)
+    return {**m, **block_meta(rows)} if gold else m
 
 
 # ------------------------------------------------------------------------------------------------ torch part
@@ -207,12 +221,12 @@ def train(corpus_dir: Path, model_name: str, *, epochs: int = 5, batch: int = 32
     results = {}
     val_logits = predict_logits(net, tok, [r["text"] for r in data["val"]], max_len=max_len, batch=128, prefix=prefix, device=device)
     temperature = fit_temperature(val_logits, np.array([idx[r["label_id"]] for r in data["val"]]))
-    sets = {"val": data["val"], "test_llm_groups": data["test"], "gold": gold}
+    sets, gold_names = evaluation_sets(data, gold)
     if template_eval and Path(template_eval).exists():
         sets["template_unseen_families"] = template_eval_rows(template_eval)
     for name, rows in sets.items():
         if rows:
-            results[name] = metrics(predict_logits(net, tok, [r["text"] for r in rows], max_len=max_len, batch=128, prefix=prefix, device=device), rows, labels)
+            results[name] = block_result(predict_logits(net, tok, [r["text"] for r in rows], max_len=max_len, batch=128, prefix=prefix, device=device), rows, labels, gold=name in gold_names)
             log(f"{name:26s} n={results[name]['n']:5d}  subcategory acc {results[name]['subcategory_accuracy']}  category acc {results[name]['category_accuracy']}  macro-F1 {results[name]['macro_f1']}")
     info = {"labels": labels, "temperature": temperature, "max_len": max_len, "prefix": prefix, "model_name": model_name, "history": history, "results": results,
             "hyperparameters": {"epochs": epochs, "batch": batch, "lr": lr, "head_lr": head_lr, "label_smoothing": label_smoothing, "seed": seed, "device": device,

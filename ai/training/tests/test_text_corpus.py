@@ -101,7 +101,80 @@ def test_gold_template_roundtrip_and_validation(tmp_path):
     shards = tmp_path / "s"
     gen.generate_shards(spec.build_cells(languages=["en"], styles=["sms_short"], k=12)[:30], {"en": Fake()}, shards)
     m = cb.build(shards, tmp_path / "c", gold=p)
-    assert m["gold"]["rows"] == 2 and (tmp_path / "c" / "gold.jsonl").exists() and json.loads((tmp_path / "c" / "gold.jsonl").read_text().splitlines()[0])["label_origin"] == "team_authored"
+    first = json.loads((tmp_path / "c" / "gold.jsonl").read_text().splitlines()[0])
+    assert m["gold"]["rows"] == 2 and (tmp_path / "c" / "gold.jsonl").exists()
+    assert (first["provenance"], first["label_origin"], first["synthetic"]) == ("unspecified", "unspecified", True)             # no provenance given: never defaulted to human
+    assert m["gold"]["by_provenance"] == {"unspecified": 2} and m["gold"]["human_rows"] == 0
+
+
+def test_gold_template_asks_for_a_provenance_column_and_example_rows_do_not_load(tmp_path):
+    p = tmp_path / "gold.csv"
+    cb.gold_template(p)
+    text = p.read_text(encoding="utf-8")
+    assert cb.GOLD_HEADER == ["text", "label_id", "language", "notes", "provenance"] and "text,label_id,language,notes,provenance" in text and "write `human` for lines YOU wrote" in text
+    assert cb.load_gold(p)[0] == []
+
+
+def test_gold_provenance_is_read_per_row_written_to_gold_jsonl_and_counted_in_the_manifest(tmp_path):
+    p = tmp_path / "gold.csv"
+    p.write_text("text,label_id,language,notes,provenance\n"
+                 "mere ghar ke saamne bada gadda hai,roads/pothole,hi-Latn,,human\n"                                             # explicit human
+                 "road par gadda hai school ke paas,roads/pothole,hi-Latn,llm_authored_claude; style=plain,llm_authored_claude\n"     # explicit column
+                 "gadda hai chowk par bahut bada,roads/pothole,hi-Latn,llm_authored_claude; style=sms,\n"                              # notes marker only
+                 "pothole near the market is huge,roads/pothole,en,,\n"                                                              # nothing: unspecified
+                 "big pothole by the temple wall,roads/pothole,en,written by the team,\n"                                            # 'team' in notes is not a marker
+                 "huge pothole by the bus depot,roads/pothole,en,llm_authored_claude,human\n"                                        # contradiction: not human
+                 "pothole next to the school gate,roads/pothole,en,,teacher\n", encoding="utf-8")                                    # unknown value: not human
+    rows, bad = cb.load_gold(p)
+    assert not bad and [(r["provenance"], r["provenance_source"]) for r in rows] == [
+        ("human", "column"), ("llm_authored_claude", "column"), ("llm_authored_claude", "notes"), ("unspecified", "none"), ("unspecified", "none"),
+        ("unspecified", "conflict"), ("unspecified", "column_unrecognized")]
+    shards = tmp_path / "s"
+    gen.generate_shards(spec.build_cells(languages=["en"], styles=["sms_short"], k=12)[:30], {"en": Fake()}, shards)
+    m = cb.build(shards, tmp_path / "c", gold=p)
+    out = [json.loads(x) for x in (tmp_path / "c" / "gold.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [(r["provenance"], r["label_origin"], r["synthetic"]) for r in out] == [
+        ("human", "team_authored", False), ("llm_authored_claude", "llm_authored_claude", True), ("llm_authored_claude", "llm_authored_claude", True),
+        ("unspecified", "unspecified", True), ("unspecified", "unspecified", True), ("unspecified", "unspecified", True), ("unspecified", "unspecified", True)]
+    assert sum(r["label_origin"] == "team_authored" for r in out) == 1                                                            # only the one explicit human row
+    g = m["gold"]
+    assert g["by_provenance"] == {"human": 1, "llm_authored_claude": 2, "unspecified": 4} and g["human_rows"] == 1
+    assert g["by_provenance_language"] == {"human": {"hi-Latn": 1}, "llm_authored_claude": {"hi-Latn": 2}, "unspecified": {"en": 4}} and "never reported as human" in g["note"]
+    assert json.loads((tmp_path / "c" / "manifest.json").read_text(encoding="utf-8"))["gold"]["by_provenance"] == g["by_provenance"] and "only rows marked human" in m["notice"]
+
+
+def test_the_four_column_gold_csv_from_before_provenance_existed_still_loads(tmp_path):
+    p = tmp_path / "old.csv"
+    p.write_text("text,label_id,language,notes\nroad par gadda hai,roads/pothole,hi-Latn,\nlight band hai,street_lighting/light_not_working,hi-Latn,llm_authored_claude; style=sms\n", encoding="utf-8")
+    rows, bad = cb.load_gold(p)
+    assert not bad and [r["provenance"] for r in rows] == ["unspecified", "llm_authored_claude"]
+
+
+def test_the_committed_llm_gold_set_is_marked_llm_authored_everywhere_and_never_human():
+    from pathlib import Path
+    rows, bad = cb.load_gold(Path(__file__).parents[1] / "gold" / "gold_llm_authored_claude_v1.csv")
+    assert not bad and len(rows) == 336
+    assert {(r["provenance"], r["provenance_source"]) for r in rows} == {("llm_authored_claude", "column")}
+    assert {r["language"] for r in rows} == {"en", "hi", "mr", "hi-Latn"} and len({r["label_id"] for r in rows}) == 27
+
+
+def test_review_sample_is_one_line_per_label_seeded_and_marathi_takes_the_labels_hindi_left_out():
+    from pathlib import Path
+
+    from ai.training.src.text_corpus import review_sample as rs
+    gold = Path(__file__).parents[1] / "gold" / "gold_llm_authored_claude_v1.csv"
+    rows = list(enumerate(cb.load_gold(gold)[0], 1))
+    hi = [(i, r) for i, r in rows if r["language"] == "hi"]
+    s1, miss1 = rs.stratified_sample(hi, 20, 7)
+    assert len(s1) == 20 and len({r["label_id"] for _, r in s1}) == 20 and len(miss1) == 7 and all(r["language"] == "hi" for _, r in s1)
+    assert (s1, miss1) == rs.stratified_sample(hi, 20, 7)                                         # fixed seed: reproducible
+    assert rs.stratified_sample(hi, 20, 8)[0] != s1                                               # another seed: another sample
+    mr = [(i, r) for i, r in rows if r["language"] == "mr"]
+    s2, miss2 = rs.stratified_sample(mr, 20, 11, tuple(miss1))
+    assert {r["label_id"] for _, r in s2} >= set(miss1) and len(s2) == 20 and not (set(miss1) & set(miss2))              # Marathi covers every label Hindi missed
+    assert len({r["label_id"] for _, r in s1} | {r["label_id"] for _, r in s2}) == 27
+    doc = rs.build_doc(gold)
+    assert doc == rs.build_doc(gold) and doc.count("Labels NOT covered by this sample (7)") == 2 and doc.count("- [ ] row ") == 40 and "never as human gold" in doc
 
 
 def test_gold_csv_saved_by_excel_or_notepad_with_bom_and_crlf_is_read(tmp_path):

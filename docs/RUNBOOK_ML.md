@@ -62,7 +62,9 @@ Paste the output. This is the only proof that M1 (Gemini) and M2 (Groq Whisper) 
 ```powershell
 python -m ai.training.src.text_corpus.build --gold-template D:/civic/gold.csv
 ```
-Fill `text,language,label_id` with real-sounding complaints written **by you** (aim for ~100–200 per language, hi / mr / en / hi-Latn, spread over the 27 labels; see the template's example rows and `label_id` values). It is never trained on — it is the honest score of M6.
+Fill `text,language,label_id` with real-sounding complaints written **by you** (aim for ~100–200 per language, hi / mr / en / hi-Latn, spread over the 27 labels; see the template's example rows and `label_id` values) and put `human` in the `provenance` column of every line you wrote yourself. It is never trained on — it is the honest score of M6.
+
+**Provenance is never assumed.** Only rows marked `human` count as human gold. A row marked `llm_authored_<model>` (or carrying that marker in `notes`) is LLM-written; a row with no or an unrecognised provenance is `unspecified`. `gold.jsonl` and the corpus manifest carry it (`gold.by_provenance`), and every M6 result block is named by it: `gold[human, n=..]`, `gold[llm_authored_claude, n=..]`, `gold[unspecified, n=..]` — reported separately, never pooled. `ai/training/gold/gold_llm_authored_claude_v1.csv` (336 lines written by Claude, a different model family from the corpus generators) is a cross-family sanity set, not a human gold set; its Hindi and Marathi lines need the native-speaker review in `docs/I18N_REVIEW.md`. Corpora built before this change have no provenance in `gold.jsonl`: rebuild them.
 
 ## 3 · Generate the training corpus (free LLM calls) **[you, ~hours of waiting]**
 
