@@ -1,6 +1,6 @@
-# Handoff: cloud session → local Claude Code session (AI/ML track)
+# Handoff: cloud session → local Claude Code session (AI/ML track + backend)
 
-You are a Claude Code session running **on Tanuj's laptop**. Until now the AI/ML track was driven from a cloud session that had **no GPU, no real API keys, no Kaggle access and no way to call Gemini/Groq**. You do have those (Tanuj's machine, RTX 4050, his `.env`). Read this file fully, then `docs/RUNBOOK_ML.md`, then act. Date of handoff: 3 October 2026.
+You are a Claude Code session running **on Tanuj's laptop**. Until now the AI/ML track was driven from a cloud session that had **no GPU, no real API keys, no Kaggle access and no way to call Gemini/Groq**. You do have those (Tanuj's machine, RTX 4050, his `.env`). Read this file fully (the **backend** is §10), then `docs/RUNBOOK_ML.md` for the ML steps, then act. Two workstreams: (A) ML models: §3–9 and the runbook; (B) the backend that was audited and implemented in the cloud session: §10 and `docs/BACKEND_AUDIT.md`. Date of handoff: 3 October 2026.
 
 ## 1 · Who, what, when
 - **User:** Tanuj Vivek Bhide (GitHub `tanujb03`, bhidetanuj@gmail.com). Owns the **AI/ML track** of *CivicConnect v2*, a hackathon project by Indian students. Teammates: Parth (backend), Krrish + Vedant (frontends). Use they/them for anyone whose pronouns are not stated.
@@ -8,12 +8,12 @@ You are a Claude Code session running **on Tanuj's laptop**. Until now the AI/ML
 - **Hackathon quality matters.** Tanuj explicitly does not want only "short synthetic lines": real fine-tuned models, honest evaluation, a strong demo.
 - **Deadlines** (`docs/TEAM_INTEGRATION_RULES.md`): 3–4 Oct integration with Parth; 5 Oct finishing + PPT; **6 Oct Innovibe submission**; 6–7 Oct Hacksphere.
 - **Be autonomous.** Tanuj is often busy and prefers you to keep driving, ask only for what truly needs them (keys, accounts, writing Hindi/Marathi, browser steps), and give exact, ordered instructions. Keep chat answers short; findings go in docs/reports.
-- Branch: work on **`tanuj`** (never push to `main` unless Tanuj says "merge"). `main` was last merged at `edcd63d`; `tanuj` is several commits ahead of it (see §9). Commits are authored as Tanuj Vivek Bhide <bhidetanuj@gmail.com>; end commit messages with the attribution trailers your harness specifies.
+- Branch: work on **`tanuj`** (never push to `main` unless Tanuj says "merge"). As of the end of the cloud session **`tanuj` was merged into `main`** (commit `e4b1fe4`, both branches identical): everything described here is on `main` too. Commits are authored as Tanuj Vivek Bhide <bhidetanuj@gmail.com>; end commit messages with the attribution trailers your harness specifies.
 
 ## 2 · Frozen things: do not change
 - `docs/CivicConnect_v2_V1_System_Design.md`, `docs/IMPLEMENTATION_PLAN_*.md`, `docs/TEAM_INTEGRATION_RULES.md`: frozen sources of truth.
 - `ai/inference/**` (the production package, `AIProvider` protocol, schemas, taxonomy, policies). New behaviour is added **outside** it (backend gateway, providers, loaders).
-- Frontend apps (`apps/`, `packages/`) are not your scope.
+- Frontend apps (`apps/`, `packages/`) are not your scope (you may READ `apps/admin/src/lib/api.ts`: it is the client the backend contract was checked against). The backend (`backend/`, `alembic/`) IS in scope now, but coordinate with Parth first (§10).
 - Never describe BharatPotHole's licence as CC BY-NC-SA (that is the code repo's); its data card stays `UNVERIFIED` and the notebook has `USE_BHARATPOTHOLE`. Other licences were accepted as verified by Tanuj (BMC CC BY 4.0, Mumbai/Nashik v2 CC BY 4.0, RDD2020 CC BY-NC 3.0 non-commercial, RDD2022 applied as CC BY-SA 4.0).
 - Never write secrets into the repo, chat or notebooks. `.env` is gitignored; show key *names* only.
 
@@ -66,7 +66,7 @@ Honest limits to keep in every claim: only M3/M4 are truly trained and only on s
 5. Notebook 07 smoke → full (local RTX 4050: e5-small batch 32, e5-base batch 16 on 6 GB; or Kaggle). Unzip artifacts into `ai/artifacts/civic_text_m6/<ver>` and `ai/artifacts/civic_embed_m7/<ver>`; evaluate: `python -m ai.evaluation.run_eval --task intake --system local --artifact <folder>`; if M6 beats B0 on held-out + gold, make it the default in docs.
 6. Recalibrate fusion: `python -m ai.training.src.train_fusion_calibrator --data ai/artifacts/datasets/synthetic_v1 --out ai/artifacts/fusion_calibrator --semantic-mode local --embed-onnx ai/artifacts/civic_embed_m7/<ver>`; set `AI_FUSION_EMBEDDING_WEIGHTS_PATH`; optionally add an embedding-mode cross-language duplicate evaluation on demo-city.
 7. Notebook 06 (M5): Kaggle, four datasets attached (RDD2020 copy, `aliabdelmenam/rdd-2022`, `surbhisaswatimohanty/bharatpothole`, Mumbai/Nashik copy), GPU + Internet on; smoke first, then full overnight; local alternative via `CIVIC_PATHS_JSON` + `CIVIC_YOLO_DEVICE=0`. Put `best.onnx` + `model_card.json` under `ai/artifacts/road_damage/road_damage/` and set `AI_VISION_ONNX_PATH`.
-8. Integration with Parth (3–4 Oct): **read §11 (Backend) first**: the backend was audited and implemented from the cloud session; tell Parth and agree who edits `backend/`. `ai/INTEGRATION_HANDOFF.md` (§§11–16) is the AI contract. Run the API (`uvicorn backend.main:app --reload`), exercise intake/fusion/triage/copilot/analytics with the live providers and the local models; fix gaps.
+8. Integration with Parth (3–4 Oct): **read §10 (Backend) first**: the backend was audited and implemented from the cloud session; tell Parth and agree who edits `backend/`. `ai/INTEGRATION_HANDOFF.md` (§§11–16) is the AI contract. Run the API (`uvicorn backend.main:app --reload`), exercise intake/fusion/triage/copilot/analytics with the live providers and the local models; fix gaps.
 9. Keep docs honest: after each milestone update `ai/README.md` (model-state table, measured results), `ai/INTEGRATION_HANDOFF.md`, and this file's §4. Commit on `tanuj` with focused messages; push when green; open a PR only if asked.
 
 ## 8 · Conventions
@@ -79,10 +79,11 @@ Honest limits to keep in every claim: only M3/M4 are truly trained and only on s
 ## 9 · State at handoff
 - Last pushed commit on `tanuj`: `27744a9` (M6/M7 text models, notebook 07, ONNX-aware evaluation loader, `docs/RUNBOOK_ML.md`, handoff §16). A later commit adds this file, `ai/training/src/doctor.py` (+tests), BOM/CRLF fixes in `backend/ai_gateway/envfile.py` and `ai/training/src/text_corpus/build.py`, and README updates; check `git log` to confirm it is there.
 - Tests at last full run: **752 passed, 6 skipped** (3 skips need live OpenAI / sentence-transformers, 3 need `TEST_DATABASE_URL`) (`python -m pytest ai backend -q`). The 3 skips need live OpenAI or `sentence-transformers`.
-- Not done anywhere yet: live Gemini/Groq calls, any real GPU training (M5/M6/M7), gold set, corpus generation, fusion recalibration with embeddings, M6 evaluation, Bhashini. Not possible: AI-4 vision evaluation. Blocked: rewriting authorship of six old commits (needs history rewrite the owner has not authorised).
+- Backend: audited and implemented (§10); merged to `main`; 113 backend tests + 3 PostgreSQL/PostGIS tests green in the cloud sandbox. Open items are listed at the end of §10.
+- Not done anywhere yet (ML): live Gemini/Groq calls, any real GPU training (M5/M6/M7), gold set, corpus generation, fusion recalibration with embeddings, M6 evaluation, Bhashini. Not possible: AI-4 vision evaluation. Blocked: rewriting authorship of six old commits (needs history rewrite the owner has not authorised).
 - Reports to regenerate when models change: `ai/evaluation/reports/`.
 
-## 11 · Backend (Parth's scope): audited, then implemented from the cloud session
+## 10 · Backend (Parth's scope): audited, then implemented from the cloud session
 **Audit:** `docs/BACKEND_AUDIT.md`. Parth said the backend was done; what was in the repo was a scaffold with mock responses (hard-coded `admin/admin` login, `CC-MOCK-1` cases, empty lists, no migrations, no state machine, no idempotency, passlib+bcrypt5 crashing on first hash). Tell Parth plainly and **coordinate before either of you edits `backend/`**: this branch rewrote models, routers and tests (see "What changed for Parth" below). If Parth has unpushed local work, merge it by hand against these files.
 
 **Now real (all verified by tests; 752 passed in the full suite, plus 3 PostgreSQL+PostGIS integration tests that ran green in the cloud sandbox against PostgreSQL 16 + PostGIS 3.4):**
@@ -117,5 +118,5 @@ Tests: `python -m pytest backend/tests -q`; PostgreSQL ones: `createdb civicconn
 4. `S3Storage` and Redis workers were not exercised against real services (Redis was only used through mocks and the local sandbox server for smoke checks); analytics are computed in Python over scoped rows (fine for the demo size, move to SQL group-by if cases reach many thousands).
 5. `backend/services/analytics.py` imports two pure functions from `ai/evaluation/analytics_reference.py` (hotspots, recurring sites) so dashboard numbers and copilot numbers agree; copy them into the backend if you want the backend deployable without `ai/evaluation`.
 
-## 10 · First message to Tanuj (suggested)
-Run the doctor, say what is missing, then walk them through `.env` creation and `live_check --list-models`. Keep going from there without waiting to be asked.
+## 11 · First message to Tanuj (suggested)
+Run the doctor, say what is missing, then walk them through `.env` creation and `live_check --list-models`. In the same first message ask whether Parth has unpushed backend work and remind them to tell Parth the backend was rewritten (§10). Then bring up the backend with the §10 commands (PostGIS + `alembic upgrade head` + `seed_demo` + `uvicorn`) and try the real frontends against it. Keep going from there without waiting to be asked.
