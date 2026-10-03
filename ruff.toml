@@ -1,0 +1,8 @@
+# Repository-wide ruff settings: the same rules as ai/pyproject.toml (which still applies to files under ai/).
+# Without a config file next to the code (backend/, scripts) ruff silently falls back to a user-level config, so results differed per machine.
+line-length = 130
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501", "B008", "B905", "E741", "E702"]
