@@ -156,7 +156,7 @@ def train(corpus_dir: Path, model_name: str, *, epochs: int = 5, batch: int = 32
     tok = AutoTokenizer.from_pretrained(model_name)
     model = build_model(model_name, len(labels)).to(device)
     net = torch.nn.DataParallel(model, device_ids=ids, output_device=ids[0]) if len(ids) > 1 else model        # forward only; everything else uses the unwrapped `model`
-    log(f"M6 training on {len(ids)} GPU(s) ({'DataParallel' if len(ids) > 1 else 'single device'}): effective batch {batch}"
+    log(f"M6 training on {f'{len(ids)} GPU(s)' if ids else 'the CPU'} ({'DataParallel' if len(ids) > 1 else 'single device'}): effective batch {batch}"
         + (f" = {grad_accum} micro-batches of {shares.effective}" if grad_accum > 1 else "") + (f", at most {shares.per_gpu} samples per GPU per forward" if ids else "") + f", device {device}")
     y_tr = np.array([idx[r["label_id"]] for r in data["train"]])
     steps = epochs * math.ceil(len(y_tr) / batch)
