@@ -191,6 +191,6 @@ class TrainingHardware:
 
 
 def banner(plan: GpuPlan, batch: BatchPlan, workers: int | None = None) -> str:
-    gpus = f"{plan.used} x {plan.names[0]}" if plan.used and len(set(plan.names)) == 1 else (", ".join(plan.names) or "no GPU (CPU)")
+    gpus = f"{plan.used} x {plan.names[0]}" if plan.used and len(set(plan.names)) == 1 else (", ".join(plan.names) or "CPU")
     extra = f" | workers {workers}/GPU" if workers else ""
     return f"GPUs: {plan.used} used of {plan.detected} visible ({gpus}) | {batch.describe()}{extra}" + (f"\n  note: {plan.note}" if plan.note else "")
