@@ -15,12 +15,14 @@ $script:DbPassword = if ($env:CIVIC_DB_PASSWORD) { $env:CIVIC_DB_PASSWORD } else
 $script:NativeExit = 0
 
 # Windows PowerShell 5.1 turns a native command's stderr (alembic and docker log there) into errors under $ErrorActionPreference = Stop; merge stderr and judge by exit code.
+# Deliberately a SIMPLE function (no param block / [Parameter] attributes): an advanced function would swallow native flags such as `psql -v` as -Verbose.
 function Invoke-Native {
-    param([Parameter(Mandatory)][string]$Exe, [Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    $exe = $args[0]
+    $rest = if ($args.Count -gt 1) { @($args[1..($args.Count - 1)]) } else { @() }
     $prev = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $out = & $Exe @Arguments 2>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { "$_" } }
+        $out = & $exe @rest 2>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { "$_" } }
         $script:NativeExit = $LASTEXITCODE
     } finally { $ErrorActionPreference = $prev }
     $out
