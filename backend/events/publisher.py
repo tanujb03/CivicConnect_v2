@@ -25,13 +25,18 @@ log = logging.getLogger("civicconnect.events")
 
 # ── Singleton Redis client (lazy, fault-tolerant) ─────────────────────────────
 _redis_client: redis_lib.Redis | None = None
+_redis_down_until: float = 0.0          # after a failed connection attempt, do not retry (and block for the timeout) on every event
+REDIS_RETRY_SECONDS = 30.0
 
 
 def get_redis() -> redis_lib.Redis | None:
     """Return a Redis client, or None if the server is unreachable."""
     global _redis_client
+    global _redis_down_until
     if _redis_client is not None:
         return _redis_client
+    if time.monotonic() < _redis_down_until:
+        return None
     try:
         client = redis_lib.from_url(
             settings.REDIS_URL,
@@ -43,7 +48,8 @@ def get_redis() -> redis_lib.Redis | None:
         log.info("Redis connected: %s", settings.REDIS_URL)
         return _redis_client
     except Exception as exc:
-        log.warning("Redis unavailable (%s); event publishing is disabled.", exc)
+        _redis_down_until = time.monotonic() + REDIS_RETRY_SECONDS
+        log.warning("Redis unavailable (%s); event publishing is disabled for %.0fs.", exc, REDIS_RETRY_SECONDS)
         return None
 
 

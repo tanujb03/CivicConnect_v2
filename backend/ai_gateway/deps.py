@@ -6,7 +6,10 @@ import threading
 from fastapi import Depends
 
 from ai.inference.service import AIService
+from backend.core.config import settings
+from backend.core.exceptions import CivicConnectException
 from backend.core.security import get_current_user
+from backend.db.session import get_db
 
 from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
 from .envfile import load_env_file
@@ -58,5 +61,12 @@ def get_gateway() -> AIGateway:
     return _gateway
 
 
-def get_actor(current_user: dict = Depends(get_current_user)) -> Actor:
-    return Actor(user_id=str(current_user["sub"]), role=normalize_role(current_user.get("role")))
+def get_actor(claims: dict = Depends(get_current_user), db=Depends(get_db)) -> Actor:
+    """With the SQL store the role is read from the database (a demoted or deactivated account loses AI access at once); with the demo store the token's role is used."""
+    if settings.AI_GATEWAY_STORE == "sql":
+        from backend.models import User
+        user = db.get(User, str(claims["sub"]))
+        if user is None or not user.is_active:
+            raise CivicConnectException("AUTH_INVALID_TOKEN", "The account no longer exists or is inactive.", 401)
+        return Actor(user_id=user.id, role=normalize_role(user.role))
+    return Actor(user_id=str(claims["sub"]), role=normalize_role(claims.get("role")))

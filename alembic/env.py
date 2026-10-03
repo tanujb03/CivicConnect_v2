@@ -23,11 +23,25 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.core.config import settings
 from backend.models import Base
 
+POSTGIS_TABLES = {"spatial_ref_sys", "geometry_columns", "geography_columns", "raster_columns", "raster_overviews"}
+
+
+def include_object(obj, name, type_, reflected, compare_to):
+    """PostGIS ships its own tables; they are not ours to create or drop."""
+    if type_ == "table" and name in POSTGIS_TABLES:
+        return False
+    if type_ == "column" and name == "geog":                       # generated PostGIS columns / indexes live in migration 0002, not in the ORM models
+        return False
+    if type_ == "index" and name in {"ix_civic_cases_geog", "ix_civic_cases_fts"}:
+        return False
+    return True
+
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-config.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI)
+config.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI.replace("%", "%%"))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -51,6 +65,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        include_object=include_object,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -74,7 +89,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata, include_object=include_object
         )
 
         with context.begin_transaction():
