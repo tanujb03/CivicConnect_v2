@@ -28,7 +28,7 @@ Endpoints marked **existing** were already there; **new** / **extended** are thi
 
 ## 2. Reference data (any authenticated user)
 
-All three: `ETag` (strong, content hash), `Cache-Control: private, max-age=300`. Send `If-None-Match: <etag>` to get `304 Not Modified` with an empty body. 401 without a token.
+All three: `ETag` (strong, content hash), `Cache-Control: private, max-age=300` (the taxonomy: `max-age=3600`). Send `If-None-Match: <etag>` to get `304 Not Modified` with an empty body. 401 without a token.
 
 `GET /reference/taxonomy` (categories and subcategories exactly as in `ai/inference/config/taxonomy.v1.json`; reviewer notes and id conventions are left out)
 ```json
@@ -47,7 +47,7 @@ with `?include=boundary` every item also has `"boundary"` (GeoJSON Polygon or nu
 
 ## 3. User management (CITY_ADMIN, SYSTEM_ADMIN)
 
-Everyone else: 403 `AUTH_FORBIDDEN`. User object (`UserAdminOut`):
+Everyone else: 403 `AUTH_FORBIDDEN`. `PATCH` (and `PUT /admin/settings`) **require** an `Idempotency-Key` header (400 `IDEMPOTENCY_KEY_REQUIRED` without; the admin client always sends one and a retry replays the first answer); `POST /admin/users` ignores it on purpose (a replay would have to store the password). User object (`UserAdminOut`):
 ```json
 {"id", "name", "email", "phone", "role": "OPERATOR", "department_id", "ward_id", "preferred_language", "is_active": true, "status": "active",
  "synthetic": false, "created_at", "updated_at", "last_login_at", "cases_reported": 0}
