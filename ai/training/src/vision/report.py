@@ -98,5 +98,17 @@ def write_bundle(work: Path, out_dir: Path, card: dict, files: list[Path]) -> Pa
     return bundle
 
 
+def epoch_seconds(results_csv: Path) -> list[float]:
+    """Wall-clock seconds of every epoch from Ultralytics' results.csv (its ``time`` column is cumulative; under DDP only rank 0 writes the file). [] if unavailable."""
+    import csv
+    try:
+        with open(results_csv, newline="", encoding="utf-8") as f:
+            rows = [{k.strip(): v for k, v in row.items() if k} for row in csv.DictReader(f)]
+        cum = [float(r["time"]) for r in rows if (r.get("time") or "").strip()]
+    except (OSError, KeyError, ValueError):
+        return []
+    return [round(b - a, 2) for a, b in zip([0.0, *cum], cum)]
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()

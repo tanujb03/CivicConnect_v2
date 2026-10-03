@@ -99,3 +99,8 @@ def test_training_record_is_plain_json():
     import json
     rec = hw.TrainingHardware(gpu_count=2, gpu_names=["T4", "T4"], parallel="DDP", batch_effective=32, batch_per_gpu=16).as_dict()
     assert json.loads(json.dumps(rec))["batch_per_gpu"] == 16 and rec["epoch_seconds"] == []
+
+
+@pytest.mark.parametrize("device,count,single", [([0, 1], 2, 0), ("0,1", 2, 0), ("0,0", 2, 0), (0, 1, 0), ("0", 1, 0), ("cuda:1", 1, 1), ("cpu", 0, "cpu"), ("", 0, "cpu"), ([0, 1, 2, 3], 4, 0)])
+def test_device_count_and_the_single_device_used_after_training(device, count, single):
+    assert hw.device_gpu_count(device) == count and hw.single_device(device) == single

@@ -154,6 +154,23 @@ def ultralytics_device(plan: GpuPlan) -> list[int] | int | str:
     return plan.device_ids if plan.used >= 2 else (0 if plan.used == 1 else "cpu")
 
 
+def device_gpu_count(device) -> int:
+    """GPUs behind an Ultralytics ``device=`` value: [0, 1] / "0,1" -> 2, 0 / "0" / "cuda:0" -> 1, "cpu" / "" -> 0."""
+    if isinstance(device, (list, tuple)):
+        return len(device)
+    d = str(device).strip().lower()
+    return 0 if d in ("", "cpu", "none") else len([t for t in d.split(",") if t.strip()])
+
+
+def single_device(device) -> int | str:
+    """ONE device for evaluation and ONNX export from the notebook process after (multi-GPU) training: "cpu" stays "cpu", anything else becomes the first GPU."""
+    if device_gpu_count(device) == 0:
+        return "cpu"
+    first = device[0] if isinstance(device, (list, tuple)) else str(device).split(",")[0].strip()
+    first = str(first).replace("cuda:", "")
+    return int(first) if first.isdigit() else first
+
+
 @dataclass
 class TrainingHardware:
     """What a run actually used; written into model_card.json / manifest.json (new keys only, so older readers keep working)."""
