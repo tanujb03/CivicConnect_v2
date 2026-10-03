@@ -1,0 +1,25 @@
+# Line endings: LF in the repository and in every working tree, on every OS.
+# (Hash manifests and golden files are computed over LF bytes; CRLF checkouts break them.)
+* text=auto eol=lf
+
+# Binary files: never touched.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.onnx binary
+*.npz  binary
+*.pt   binary
+*.zip  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+
+# Windows scripts need CRLF.
+*.bat eol=crlf
+*.cmd eol=crlf
+
+# Real-format CSV samples keep their original CRLF bytes (they test the parsers against the real export format).
+ai/training/tests/fixtures/real_data_formats/*.csv -text
