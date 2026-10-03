@@ -76,10 +76,11 @@ def test_pgvector_untyped_column_partial_hnsw_indexes_and_the_documented_query(p
 
 def test_postgis_column_indexes_and_dwithin_agree_with_the_portable_path(pg):
     from sqlalchemy import text
+
+    from backend.ai_gateway.sql import SqlCaseRepository
     from backend.db import session as dbs
     from backend.models import CivicCase
     from backend.services import seed
-    from backend.ai_gateway.sql import SqlCaseRepository
     from backend.services.geo import haversine_m
     original = str(dbs.engine.url)
     dbs.configure_database(URL)
@@ -108,6 +109,7 @@ def test_postgis_column_indexes_and_dwithin_agree_with_the_portable_path(pg):
 
 def test_demo_city_through_the_real_api_on_postgres(pg):
     from fastapi.testclient import TestClient
+
     from backend.db import session as dbs
     from backend.main import app
     original = str(dbs.engine.url)
@@ -122,5 +124,48 @@ def test_demo_city_through_the_real_api_on_postgres(pg):
         assert c.get("/api/v1/map/hotspots", headers=h).status_code == 200 and len(c.get("/api/v1/map/recurring-problems", headers=h).json()["items"]) > 0
         ready = c.get("/api/v1/health/ready").json()
         assert ready["checks"]["database"] == "ok" and ready["vector_search"] is True           # the image of scripts/dev/db_up.ps1 ships pgvector
+    finally:
+        dbs.configure_database(original)
+
+
+def test_trends_group_by_runs_on_postgres_and_matches_a_python_computation(pg):
+    """The daily / weekly SQL buckets (to_char / date_trunc / timezone on PostgreSQL, strftime on SQLite) must agree with an independent computation over the rows."""
+    from collections import Counter
+    from datetime import date, datetime, timedelta
+
+    from fastapi.testclient import TestClient
+
+    from backend.db import session as dbs
+    from backend.main import app
+    from backend.services import seed
+    from backend.services.city_rows import case_rows
+    original = str(dbs.engine.url)
+    dbs.configure_database(URL)
+    try:
+        with dbs.SessionLocal() as db:
+            seed.seed_demo_city(db)
+            db.commit()
+            rows = case_rows(db, True)
+        c = TestClient(app, raise_server_exceptions=False)
+        tok = c.post("/api/v1/auth/login", json={"identifier": "admin@demo.civicconnect.test", "password": "civicconnect-demo"}).json()["access_token"]
+        h = {"Authorization": f"Bearer {tok}"}
+        day = lambda iso: datetime.fromisoformat(iso.replace("Z", "+00:00")).date()      # noqa: E731
+        for gran in ("daily", "weekly"):
+            t = c.get(f"/api/v1/analytics/trends?granularity={gran}&days=365", headers=h).json()
+            first = date.fromisoformat(t["from"])
+            bucket = (lambda d: d - timedelta(days=d.weekday())) if gran == "weekly" else (lambda d: d)
+            inside = [r for r in rows if day(r["created_at"]) >= first]
+            assert len(inside) > 0
+            assert Counter((x["bucket"], x["category"], x["status"]) for x in t["series"] for _ in range(x["count"])) == \
+                Counter((bucket(day(r["created_at"])).isoformat(), r["category"] or "other", r["status"]) for r in inside)
+            totals = {x["bucket"]: x for x in t["totals"]}
+            created, resolved = Counter(), Counter()
+            for r in inside:
+                created[bucket(day(r["created_at"])).isoformat()] += 1
+            for r in rows:
+                if r["status"] == "RESOLVED" and r["closed_at"] and day(r["closed_at"]) >= first:
+                    resolved[bucket(day(r["closed_at"])).isoformat()] += 1
+            assert {k: v["created"] for k, v in totals.items() if v["created"]} == dict(created) and {k: v["resolved"] for k, v in totals.items() if v["resolved"]} == dict(resolved)
+            assert all(date.fromisoformat(k).weekday() == 0 for k in totals) if gran == "weekly" else len(totals) == 365
     finally:
         dbs.configure_database(original)

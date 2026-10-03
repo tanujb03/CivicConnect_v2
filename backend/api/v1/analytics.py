@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from backend.ai_gateway.service import Actor
 from backend.core.permissions import require_capability
 from backend.db.session import get_db
 from backend.models import User
+from backend.schemas.analytics import DepartmentStatsList, DepartmentStatsOut, TrendsOut, WardStatsList
 from backend.services import analytics as analytics_service
 
 router = APIRouter()
@@ -21,19 +22,29 @@ def analytics_overview(days: int = Query(default=30, ge=7, le=365), user: User =
     return analytics_service.overview(db, user, days=days)
 
 
-@router.get("/departments/{department_id}")
-def analytics_department(department_id: str, user: User = Depends(view), db: Session = Depends(get_db)):
-    return analytics_service.department(db, user, department_id)
+@router.get("/trends", response_model=TrendsOut)
+def analytics_trends(granularity: Literal["daily", "weekly"] = "daily", days: int = Query(default=30, ge=7, le=365), category: Optional[str] = Query(default=None, max_length=64),
+                     user: User = Depends(view), db: Session = Depends(get_db)):
+    """Cases created per day or ISO week (Monday, UTC) by category and status, plus created / resolved / critical totals per bucket. Grouped in SQL, scoped to the caller's role."""
+    return analytics_service.trends(db, user, granularity=granularity, days=days, category=category)
 
 
-@router.get("/departments")
-def analytics_departments(user: User = Depends(view), db: Session = Depends(get_db)):
-    return {"items": analytics_service.departments(db, user)}
+@router.get("/departments/{department_id}", response_model=DepartmentStatsOut)
+def analytics_department(department_id: str, days: int = Query(default=30, ge=7, le=365), user: User = Depends(view), db: Session = Depends(get_db)):
+    """A07: incoming and resolved over the last ``days`` days, median resolution, SLA compliance, open workload by severity, backlog age, reopened, recurring cases."""
+    return analytics_service.department(db, user, department_id, days=days)
 
 
-@router.get("/wards")
-def analytics_wards(user: User = Depends(view), db: Session = Depends(get_db)):
-    return {"items": analytics_service.wards(db, user)}
+@router.get("/departments", response_model=DepartmentStatsList)
+def analytics_departments(days: int = Query(default=30, ge=7, le=365), user: User = Depends(view), db: Session = Depends(get_db)):
+    return {"items": analytics_service.departments(db, user, days=days)}
+
+
+@router.get("/wards", response_model=WardStatsList)
+def analytics_wards(days: Optional[int] = Query(default=None, ge=1, le=3650, description="only cases created in the last N days (default: all time)"),
+                    user: User = Depends(view), db: Session = Depends(get_db)):
+    """A09: per ward cases, open, critical, backlog, median resolution days, recurring sites and the category distribution."""
+    return {"items": analytics_service.wards(db, user, days=days)}
 
 
 @router.get("/hotspots")

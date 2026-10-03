@@ -83,7 +83,7 @@ Changes reach the AI services within 5 seconds in every process (immediately in 
 
 ## 5. Analytics
 
-`GET /analytics/trends?granularity=daily|weekly&days=30&category=` (capability `view_analytics`; staff see their scope, the overlooker the whole city; `days` 7..365, default 30; weekly buckets start on Monday)
+`GET /analytics/trends?granularity=daily|weekly&days=30&category=` (capability `view_analytics`; staff see their scope, the overlooker the whole city; `days` 7..365, default 30; buckets are UTC days, weekly buckets are ISO weeks starting on Monday and the weekly window starts on the Monday of its first week, so `from` can be up to 6 days earlier than `days` ago)
 ```json
 {"granularity": "daily", "from": "2026-09-05", "until": "2026-10-04", "scope": "city",
  "series": [{"bucket": "2026-10-03", "category": "roads", "status": "RESOLVED", "count": 4}],
@@ -102,4 +102,4 @@ Changes reach the AI services within 5 seconds in every process (immediately in 
 `GET /analytics/wards?days=` (extended; `days` optional, default all time) item: `{"ward_id", "label", "name", "cases", "open", "sla_breached", "reopened", "critical", "backlog", "median_resolution_days", "recurrence", "by_category": [{"category", "count"}]}`
 (`critical` = open cases with priority URGENT/CRITICAL, `backlog` = open cases, `recurrence` = recurring problem sites in the ward).
 
-`GET /analytics/overview` (extended) adds `"priority_distribution": [{"priority": "URGENT", "count": 3}]` (open cases, all priorities present, zeros included).
+`GET /analytics/overview` (extended) adds `"priority_distribution": [{"priority": "URGENT", "count": 3}]` (priorities in the order CRITICAL, URGENT, HIGH, NORMAL, LOW) and `"severity_distribution": [{"severity": "HIGH", "count": 5}]` (CRITICAL, HIGH, MEDIUM, LOW): both count the open cases and always list every value, zeros included.
