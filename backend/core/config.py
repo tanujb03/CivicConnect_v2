@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,7 +53,9 @@ class Settings(BaseSettings):
     # Which store the AI gateway reads cases from: "sql" (the database) or "demo" (the synthetic demo city, no database needed)
     AI_GATEWAY_STORE: str = "demo"
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")   # .env also carries AI keys/model ids that are not backend settings
+    # .env also carries AI keys/model ids that are not backend settings. CIVIC_IGNORE_ENV_FILE=1 (set by the root conftest.py) makes the process ignore it, so a developer's
+    # .env (e.g. AI_GATEWAY_STORE=sql, real API keys) can never change what the tests do.
+    model_config = SettingsConfigDict(env_file=None if os.environ.get("CIVIC_IGNORE_ENV_FILE") else ".env", case_sensitive=True, extra="ignore")
 
     @property
     def cors_origins(self) -> list[str]:

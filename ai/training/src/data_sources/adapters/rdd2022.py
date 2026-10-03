@@ -116,9 +116,9 @@ class RDD2022Adapter:
                 self.stats["images_missing"] += 1
                 if check_images:
                     continue
-                img_rel = str((xml_path.parents[2] / "images" / (ann["filename"] or f"{xml_path.stem}.jpg")).relative_to(root))
+                img_rel = (xml_path.parents[2] / "images" / (ann["filename"] or f"{xml_path.stem}.jpg")).relative_to(root).as_posix()
             else:
-                img_rel = str(img.relative_to(root))
+                img_rel = img.relative_to(root).as_posix()
             boxes: list[BBox] = []
             labels: set[str] = set()
             for o in ann["objects"]:
@@ -154,5 +154,5 @@ class RDD2022Adapter:
                 if xml.exists() or (countries and country not in countries) or seen.get(rel) is not None:
                     continue
                 yield ImageRecord(record_id=f"{self.card.id}:{country or 'unknown'}:{context or '-'}:{img.stem}", provenance=self.provenance(img.stem),
-                                  image_relpath=str(rel), country=country, capture_context=context, has_annotation=False,
+                                  image_relpath=rel.as_posix(), country=country, capture_context=context, has_annotation=False,
                                   group_id=block_group(country, context, None, img.stem, self.block_size))

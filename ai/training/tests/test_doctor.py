@@ -3,7 +3,8 @@ from pathlib import Path
 from ai.training.src import doctor
 
 
-def test_doctor_reports_names_only_and_flags_what_is_missing(tmp_path):
+def test_doctor_reports_names_only_and_flags_what_is_missing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)                                 # the doctor also looks for .env in the cwd: never the developer's real one
     secret = "sk-very-secret-value"
     rows, ok = doctor.run({"GEMINI_API_KEY": secret, "AI_TEXT_ONNX_PATH": str(tmp_path / "nope")}, repo=tmp_path)
     flat = " ".join(f"{s} {i} {d}" for s, i, d in rows)

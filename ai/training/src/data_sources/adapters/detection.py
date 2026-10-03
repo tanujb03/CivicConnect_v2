@@ -136,7 +136,7 @@ class DetectionDatasetAdapter:
         country, _ctx = infer_country(rel.parts)
         country = country or self.default_country
         self.stats["country_unknown"] += country is None
-        return ImageRecord(record_id=f"{self.card.id}:{rid}", provenance=self.provenance(rid), image_relpath=str(rel), width=size[0], height=size[1],
+        return ImageRecord(record_id=f"{self.card.id}:{rid}", provenance=self.provenance(rid), image_relpath=rel.as_posix(), width=size[0], height=size[1],
                            country=country, has_annotation=annotated, boxes=boxes, image_labels=sorted(labels), source_labels=sorted(set(source_labels)),
                            group_id=self._group(rel), split_hint=self._split(rel))
 

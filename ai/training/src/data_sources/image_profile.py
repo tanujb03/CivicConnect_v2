@@ -23,7 +23,7 @@ COUNTRY_WORDS = ("india", "japan", "czech", "norway", "united_states", "unitedst
 def directory_tree(root: Path, depth: int = 3, max_entries: int = 80) -> list[dict]:
     """Directory outline of a real tree (names, file counts per extension)."""
     root = Path(root)
-    return outline_from_entries([(str(p.relative_to(root)), 0) for p in sorted(root.rglob("*")) if p.is_file()], depth, max_entries)
+    return outline_from_entries([(p.relative_to(root).as_posix(), 0) for p in sorted(root.rglob("*")) if p.is_file()], depth, max_entries)
 
 
 def outline_from_entries(entries: list[tuple[str, int]], depth: int = 3, max_entries: int = 80) -> list[dict]:
@@ -89,7 +89,7 @@ def profile_image_dataset(root: Path, *, sample: int = 12) -> dict:
     root = Path(root)
     if not root.is_dir():
         raise SchemaMismatch(f"dataset root not found: {root}")
-    entries = [(str(p.relative_to(root)), p.stat().st_size) for p in sorted(root.rglob("*")) if p.is_file()]
+    entries = [(p.relative_to(root).as_posix(), p.stat().st_size) for p in sorted(root.rglob("*")) if p.is_file()]
 
     def read(rel: str, n: int = 200_000) -> bytes:
         try:
