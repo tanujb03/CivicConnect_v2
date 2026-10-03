@@ -70,3 +70,20 @@ Still different from the design: Python 3.13.6 (design 3.14.x), SQLAlchemy 2.1.3
 **What:** Migration 0003 (down_revision 0002) adds `system_settings`, `device_tokens` (Expo push tokens), `case_flags` (STILL_EXISTS / OUTDATED / INCORRECT / INAPPROPRIATE, unique per case+user+kind), `evidence_items.scan_*` (malware scan state, design §44; new rows PENDING, rows that existed before 0003 UNSCANNED), `notifications.push_*` (Expo delivery state, §53) and the pgvector columns above. Migration 0001 was edited: the two circular foreign keys (`wards.officer_id`, `evidence_items.work_order_id`) are now added and dropped with `batch_alter_table` instead of `create_foreign_key` / `drop_constraint`. `backend/scripts/generate_openapi.py` now writes LF on every OS.
 **Why:** The task requires `alembic upgrade head` / `downgrade -1` / `upgrade head` to work on SQLite as well as PostgreSQL, and `upgrade head` on SQLite had never worked (0001 failed with "No support for ALTER of constraints in SQLite"); only `create_all` was used there. Batch mode emits the same `ALTER TABLE` on PostgreSQL, so databases already migrated to 0001/0002 are unaffected (the demo database was upgraded 0002 to 0003 in place). Check constraints on the allowed values exist only for the new table `case_flags`; on the altered tables (`scan_status`, `push_status`) SQLite cannot add them without recreating the table, so those values are enforced by the application (`SCAN_STATUSES`, `PUSH_STATUSES` in `backend.models`).
 **Affects:** Only the schema step adds Alembic revisions until the final prompt (CLAUDE.md). No existing API response changed apart from `vector_search` on the readiness endpoint. The API surface for the new tables (device registration, flags, settings, scan worker, Expo push) is built by later lanes; `backend/schemas/platform.py` holds their request/response shapes.
+
+## 2026-10-04 · Backend dependencies pinned; passlib dropped; AI_GATEWAY_STORE defaults to sql
+
+**What:** `backend/requirements.txt` now pins the direct dependencies to the versions of the working venv (Python 3.13.6): fastapi 0.142.2, uvicorn[standard] 0.54.0, pydantic 2.13.5, pydantic-settings 2.15.0, sqlalchemy 2.1.3, psycopg2-binary 2.9.13, alembic 1.20.0, geoalchemy2 0.20.0, python-jose[cryptography] 3.5.0, bcrypt 5.0.0, python-multipart 0.0.32, redis 8.1.0, httpx 0.28.1, numpy 2.5.3, and the optional onnxruntime 1.30.0, Pillow 12.3.0, tokenizers 0.23.2. `bcrypt` is listed explicitly and `passlib` is removed (nothing imports it; `backend/core/security.py` uses bcrypt directly). `boto3` moved to `backend/requirements-s3.txt` (1.43.108, newest on PyPI; it is not in the venv, so that version was never run by the backend). `AI_GATEWAY_STORE` now defaults to `sql` (was `demo`); `demo` stays selectable, and the test run pins `demo` in the root `conftest.py`.
+
+| Item | Design (section 27) | Pinned |
+|---|---|---|
+| FastAPI | 0.142.2 | 0.142.2 (matches) |
+| SQLAlchemy | 2.0.54 | 2.1.3 |
+| Alembic | 1.16.x | 1.20.0 |
+| HTTP client (httpx) | current stable line | 0.28.1 |
+| Async PostgreSQL driver | asyncpg | not used: psycopg2-binary 2.9.13 (sync) |
+| Pydantic / Uvicorn | 2.x / current stable line | 2.13.5 / 0.54.0 (within the line) |
+| Python | 3.14.x | 3.13.6 |
+
+**Why:** Unpinned `>=` ranges let a fresh install resolve to different releases than the ones the tests ran on; the SQL-backed endpoints (`cases.py`, `main.py`, `ai_gateway/deps.py`) need the `sql` store, so the default must match what the API actually runs. This supersedes the "requirements are unpinned" note of the 2026-10-03 versions entry.
+**Affects:** A `.env` that already sets `AI_GATEWAY_STORE=sql` is unchanged; anyone relying on the old implicit `demo` default must now set `AI_GATEWAY_STORE=demo`. Not verified on Python 3.14 or on SQLAlchemy 2.0.54 / Alembic 1.16.x.
