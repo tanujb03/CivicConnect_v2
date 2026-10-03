@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from backend.api.v1 import health, cases, copilot, auth, work_orders, evidence, map, me, incidents, analytics, sync
+from backend.api.v1 import health, cases, copilot, auth, work_orders, evidence, map, me, incidents, analytics, sync, reference
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -13,3 +13,4 @@ api_router.include_router(incidents.router, prefix="/incidents", tags=["incident
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(sync.router, prefix="/sync", tags=["sync"])
 api_router.include_router(copilot.router, prefix="/copilot", tags=["copilot"])
+api_router.include_router(reference.router, prefix="/reference", tags=["reference"])
