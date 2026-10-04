@@ -12,7 +12,7 @@
 
 @layer base {
   * {
-    @apply border-ink/10;
+    border-color: color-mix(in srgb, var(--ink) 10%, transparent);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
