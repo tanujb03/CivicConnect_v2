@@ -1,479 +1,194 @@
+/**
+ * A12 — Users
+ * Role count cards, staff table with active toggles, user drawer,
+ * read-only permission matrix.
+ *
+ * Gap: no user endpoints. Built against a useUsers() adapter.
+ * Shows the needsBackend banner.
+ */
 import React, { useState } from 'react';
-import { Users, UserPlus, Shield, Search, Eye, Ban, Unlock, MoreHorizontal, Key } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Users, Shield, Eye, X } from 'lucide-react';
 
-interface Citizen {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  status: 'active' | 'suspended' | 'blocked';
-  registrationDate: string;
-  lastLogin: string;
-  reportsSubmitted: number;
-  ward: string;
-}
-
-interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  department: string;
-  role: 'admin' | 'overseer';
-  status: 'active' | 'inactive';
-  lastLogin: string;
-  permissions: string[];
-  phone: string;
-}
-
-const mockCitizens: Citizen[] = [
-  { id: 'C001', name: 'Rahul Kumar', phone: '+91-9876543210', email: 'rahul@example.com', status: 'active', registrationDate: '2024-01-10', lastLogin: '2 hours ago', reportsSubmitted: 15, ward: 'Ward 1' },
-  { id: 'C002', name: 'Priya Singh', phone: '+91-9876543211', email: 'priya@example.com', status: 'active', registrationDate: '2024-01-08', lastLogin: '1 day ago', reportsSubmitted: 8, ward: 'Ward 3' },
-  { id: 'C003', name: 'Amit Verma', phone: '+91-9876543212', email: 'amit@example.com', status: 'suspended', registrationDate: '2024-01-05', lastLogin: '3 days ago', reportsSubmitted: 25, ward: 'Ward 2' },
-  { id: 'C004', name: 'Sunita Devi', phone: '+91-9876543213', email: 'sunita@example.com', status: 'blocked', registrationDate: '2024-01-03', lastLogin: '1 week ago', reportsSubmitted: 3, ward: 'Ward 4' },
+const ROLES = [
+  { role: 'Admin', count: 3, description: 'Full system access' },
+  { role: 'Department Head', count: 6, description: 'Department-level management' },
+  { role: 'Operator', count: 12, description: 'Case processing and triage' },
+  { role: 'Field Worker', count: 24, description: 'On-site inspection and resolution' },
+  { role: 'Overlooker', count: 4, description: 'Read-only city oversight' },
 ];
 
-const mockAdmins: AdminUser[] = [
-  { 
-    id: 'A001', 
-    name: 'Kumar Singh', 
-    email: 'kumar@jharkhand.gov.in', 
-    department: 'Road and Transportation', 
-    role: 'admin', 
-    status: 'active', 
-    lastLogin: '1 hour ago', 
-    permissions: ['view_issues', 'edit_issues', 'assign_issues'],
-    phone: '+91-9876543220'
-  },
-  { 
-    id: 'A002', 
-    name: 'Ravi Sharma', 
-    email: 'ravi@jharkhand.gov.in', 
-    department: 'Electrical', 
-    role: 'overseer', 
-    status: 'active', 
-    lastLogin: '30 minutes ago', 
-    permissions: ['view_issues', 'edit_issues', 'assign_issues', 'manage_departments', 'override_decisions'],
-    phone: '+91-9876543221'
-  },
+const mockUsers = [
+  { id: '1', name: 'Admin Kumar', email: 'admin@ranchi.gov.in', role: 'Admin', department: 'City Administration', active: true },
+  { id: '2', name: 'Priya Singh', email: 'priya@ranchi.gov.in', role: 'Department Head', department: 'Electrical', active: true },
+  { id: '3', name: 'Rajesh Verma', email: 'rajesh@ranchi.gov.in', role: 'Operator', department: 'Road Maintenance', active: true },
+  { id: '4', name: 'Sunita Devi', email: 'sunita@ranchi.gov.in', role: 'Department Head', department: 'Sanitation', active: true },
+  { id: '5', name: 'Amit Sharma', email: 'amit@ranchi.gov.in', role: 'Field Worker', department: 'Water Works', active: false },
+  { id: '6', name: 'Neha Gupta', email: 'neha@ranchi.gov.in', role: 'Operator', department: 'Garbage Management', active: true },
 ];
 
-const availablePermissions = [
-  'view_issues',
-  'edit_issues', 
-  'assign_issues',
-  'manage_departments',
-  'override_decisions',
-  'manage_users',
-  'system_settings',
-  'analytics_access'
+// Permission matrix from section 51A.18 (static, read-only)
+const permissionMatrix = [
+  { action: 'View cases', admin: true, deptHead: true, operator: true, field: true, overlooker: true },
+  { action: 'Create cases', admin: true, deptHead: true, operator: true, field: false, overlooker: false },
+  { action: 'Triage cases', admin: true, deptHead: false, operator: true, field: false, overlooker: false },
+  { action: 'Assign departments', admin: true, deptHead: true, operator: false, field: false, overlooker: false },
+  { action: 'Create work orders', admin: true, deptHead: true, operator: true, field: false, overlooker: false },
+  { action: 'Update work orders', admin: true, deptHead: true, operator: true, field: true, overlooker: false },
+  { action: 'Manage users', admin: true, deptHead: false, operator: false, field: false, overlooker: false },
+  { action: 'System settings', admin: true, deptHead: false, operator: false, field: false, overlooker: false },
+  { action: 'View analytics', admin: true, deptHead: true, operator: true, field: false, overlooker: true },
+  { action: 'AI copilot', admin: true, deptHead: true, operator: true, field: false, overlooker: true },
 ];
 
 const UserManagementPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'citizens' | 'admins'>('citizens');
-  const [citizenSearch, setCitizenSearch] = useState('');
-  const [adminSearch, setAdminSearch] = useState('');
-  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
-  const [newAdmin, setNewAdmin] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    department: '',
-    role: 'admin' as 'admin' | 'overseer',
-    permissions: [] as string[]
-  });
-
-  const handleCitizenAction = (citizenId: string, action: 'view' | 'suspend' | 'block' | 'activate') => {
-    console.log(`Performing ${action} on citizen ${citizenId}`);
-  };
-
-  const handleAdminAction = (adminId: string, action: 'view' | 'deactivate' | 'reset_password') => {
-    console.log(`Performing ${action} on admin ${adminId}`);
-  };
-
-  const handleCreateAdmin = () => {
-    console.log('Creating new admin:', newAdmin);
-    setIsCreateAdminOpen(false);
-    setNewAdmin({
-      name: '',
-      email: '',
-      phone: '',
-      department: '',
-      role: 'admin',
-      permissions: []
-    });
-  };
-
-  const handlePermissionChange = (permission: string, checked: boolean) => {
-    if (checked) {
-      setNewAdmin({...newAdmin, permissions: [...newAdmin.permissions, permission]});
-    } else {
-      setNewAdmin({...newAdmin, permissions: newAdmin.permissions.filter(p => p !== permission)});
-    }
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'active': return 'status-resolved';
-      case 'suspended': return 'status-progress';
-      case 'blocked': return 'status-urgent';
-      case 'inactive': return 'bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium';
-      default: return 'status-submitted';
-    }
-  };
-
-  const filteredCitizens = mockCitizens.filter(citizen => 
-    citizen.name.toLowerCase().includes(citizenSearch.toLowerCase()) ||
-    citizen.email.toLowerCase().includes(citizenSearch.toLowerCase()) ||
-    citizen.phone.includes(citizenSearch)
-  );
-
-  const filteredAdmins = mockAdmins.filter(admin => 
-    admin.name.toLowerCase().includes(adminSearch.toLowerCase()) ||
-    admin.email.toLowerCase().includes(adminSearch.toLowerCase()) ||
-    admin.department.toLowerCase().includes(adminSearch.toLowerCase())
-  );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const selectedUser = mockUsers.find(u => u.id === selectedUserId);
 
   return (
-    <div className="p-6 min-h-screen page-enter">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-civic-text-primary mb-2">User Management</h2>
-        <p className="text-civic-text-secondary">Manage citizen accounts and administrative users</p>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="cc-page-header">
+        <div className="cc-eyebrow cc-fade-up">A12</div>
+        <h1 className="cc-title cc-headline-pop">Users</h1>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex space-x-4 mb-6">
-        <Button
-          variant={activeTab === 'citizens' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('citizens')}
-          className="flex items-center space-x-2"
-        >
-          <Users className="h-4 w-4" />
-          <span>Citizen Management</span>
-        </Button>
-        <Button
-          variant={activeTab === 'admins' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('admins')}
-          className="flex items-center space-x-2"
-        >
-          <Shield className="h-4 w-4" />
-          <span>Admin/Overseer Management</span>
-        </Button>
-      </div>
-
-      {activeTab === 'citizens' && (
-        <div className="space-y-6">
-          {/* Search and Filters */}
-          <div className="civic-card p-4">
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-4 flex-1">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search citizens..."
-                    value={citizenSearch}
-                    onChange={(e) => setCitizenSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="text-sm text-gray-600">
-                {filteredCitizens.length} citizens found
-              </div>
-            </div>
-          </div>
-
-          {/* Citizens Table */}
-          <div className="civic-card">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registration</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reports</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredCitizens.map((citizen) => (
-                    <tr key={citizen.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium">{citizen.id}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>
-                          <div className="font-medium">{citizen.name}</div>
-                          <div className="text-gray-500">{citizen.ward}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>
-                          <div>{citizen.phone}</div>
-                          <div className="text-gray-500">{citizen.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={getStatusClass(citizen.status)}>
-                          {citizen.status.charAt(0).toUpperCase() + citizen.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{citizen.registrationDate}</td>
-                      <td className="px-6 py-4 text-sm">{citizen.lastLogin}</td>
-                      <td className="px-6 py-4 text-sm font-medium">{citizen.reportsSubmitted}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleCitizenAction(citizen.id, 'view')}
-                            className="text-blue-600"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {citizen.status === 'active' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleCitizenAction(citizen.id, 'suspend')}
-                              className="text-orange-600"
-                            >
-                              <Ban className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {citizen.status !== 'active' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleCitizenAction(citizen.id, 'activate')}
-                              className="text-green-600"
-                            >
-                              <Unlock className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      {/* Needs Backend banner */}
+      <div className="cc-banner-needs-backend cc-fade-up" style={{ '--stagger-index': 0 } as React.CSSProperties}>
+        <Shield className="h-4 w-4 shrink-0" />
+        <div>
+          <p className="font-semibold text-sm">Needs Backend</p>
+          <p className="text-xs">User management requires GET/PATCH /admin/users endpoints (audited). This screen shows static data.</p>
         </div>
-      )}
+      </div>
 
-      {activeTab === 'admins' && (
-        <div className="space-y-6">
-          {/* Search and Actions */}
-          <div className="civic-card p-4">
-            <div className="flex justify-between items-center">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search administrators..."
-                  value={adminSearch}
-                  onChange={(e) => setAdminSearch(e.target.value)}
-                  className="pl-10"
-                />
+      {/* Role count cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {ROLES.map((r, i) => (
+          <div key={r.role} className="cc-card p-4 cc-card-lift cc-fade-up" style={{ '--stagger-index': i + 1 } as React.CSSProperties}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center bg-lime-tint">
+                <Users className="h-3.5 w-3.5 text-ink" />
               </div>
-              <Dialog open={isCreateAdminOpen} onOpenChange={setIsCreateAdminOpen}>
-                <DialogTrigger asChild>
-                  <Button className="btn-civic-primary flex items-center space-x-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span>Create New Admin</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Create New Administrator</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          value={newAdmin.name}
-                          onChange={(e) => setNewAdmin({...newAdmin, name: e.target.value})}
-                          placeholder="Enter full name"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={newAdmin.email}
-                          onChange={(e) => setNewAdmin({...newAdmin, email: e.target.value})}
-                          placeholder="admin@jharkhand.gov.in"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={newAdmin.phone}
-                          onChange={(e) => setNewAdmin({...newAdmin, phone: e.target.value})}
-                          placeholder="+91-9876543210"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="department">Department</Label>
-                        <Select value={newAdmin.department} onValueChange={(value) => setNewAdmin({...newAdmin, department: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="roads">Road and Transportation</SelectItem>
-                            <SelectItem value="electrical">Electrical</SelectItem>
-                            <SelectItem value="sanitation">Sanitation</SelectItem>
-                            <SelectItem value="garbage">Garbage Management</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+            </div>
+            <p className="font-display text-xl text-ink">{r.count}</p>
+            <p className="text-[10px] font-mono text-muted uppercase mt-1">{r.role}</p>
+          </div>
+        ))}
+      </div>
 
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Select value={newAdmin.role} onValueChange={(value: 'admin' | 'overseer') => setNewAdmin({...newAdmin, role: value})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="overseer">Overseer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+      {/* Staff table */}
+      <div className="cc-card cc-fade-up" style={{ '--stagger-index': 6 } as React.CSSProperties}>
+        <div className="px-5 py-3 border-b-2 border-ink">
+          <h3 className="font-display text-sm text-ink">Staff Directory</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="cc-table" style={{ border: 'none', borderRadius: 0 }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th style={{ width: '60px' }}>View</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockUsers.map((user, i) => (
+                <tr key={user.id} className="cc-fade-up" style={{ '--stagger-index': i } as React.CSSProperties}>
+                  <td className="font-semibold text-ink">{user.name}</td>
+                  <td className="font-mono text-xs text-muted">{user.email}</td>
+                  <td><span className="cc-chip text-[10px]">{user.role}</span></td>
+                  <td className="text-muted">{user.department}</td>
+                  <td>
+                    <span className={`cc-chip text-[10px] ${user.active ? 'bg-lime text-ink' : 'bg-dot text-muted'}`}>
+                      {user.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => setSelectedUserId(user.id)}
+                      className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint transition-colors"
+                      aria-label={`View user ${user.name}`}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                    <div>
-                      <Label>Permissions</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {availablePermissions.map((permission) => (
-                          <div key={permission} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={permission}
-                              checked={newAdmin.permissions.includes(permission)}
-                              onCheckedChange={(checked) => handlePermissionChange(permission, checked as boolean)}
-                            />
-                            <Label htmlFor={permission} className="text-sm">
-                              {permission.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+      {/* Permission matrix — static, read-only */}
+      <div className="cc-card cc-fade-up" style={{ '--stagger-index': 7 } as React.CSSProperties}>
+        <div className="px-5 py-3 border-b-2 border-ink">
+          <h3 className="font-display text-sm text-ink">Permission Matrix</h3>
+          <p className="text-xs font-mono text-muted mt-0.5">Read-only, from section 51A.18</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="cc-table" style={{ border: 'none', borderRadius: 0 }}>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Admin</th>
+                <th>Dept Head</th>
+                <th>Operator</th>
+                <th>Field</th>
+                <th>Overlooker</th>
+              </tr>
+            </thead>
+            <tbody>
+              {permissionMatrix.map((row) => (
+                <tr key={row.action}>
+                  <td className="font-medium text-ink">{row.action}</td>
+                  {[row.admin, row.deptHead, row.operator, row.field, row.overlooker].map((allowed, ci) => (
+                    <td key={ci} className="text-center">
+                      <span className={`inline-block w-5 h-5 rounded border-2 border-ink text-[10px] leading-5 font-bold ${
+                        allowed ? 'bg-lime text-ink' : 'bg-ground text-muted'
+                      }`}>
+                        {allowed ? '✓' : '—'}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button variant="outline" onClick={() => setIsCreateAdminOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateAdmin} disabled={!newAdmin.name || !newAdmin.email || !newAdmin.department}>
-                        Create Admin
-                      </Button>
-                    </div>
+      {/* User drawer */}
+      {selectedUser && (
+        <>
+          <div className="fixed inset-0 bg-ink/20 z-30" onClick={() => setSelectedUserId(null)} aria-hidden="true" />
+          <div className="fixed inset-y-0 right-0 w-96 z-40 cc-card cc-fade-up"
+            style={{ borderRadius: 'var(--radius-lg) 0 0 var(--radius-lg)', borderRight: 'none', '--stagger-index': 0 } as React.CSSProperties}
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b-2 border-ink">
+                <h3 className="font-display text-lg text-ink">{selectedUser.name}</h3>
+                <button onClick={() => setSelectedUserId(null)} className="w-8 h-8 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-3">
+                {[
+                  { label: 'Email', value: selectedUser.email },
+                  { label: 'Role', value: selectedUser.role },
+                  { label: 'Department', value: selectedUser.department },
+                  { label: 'Status', value: selectedUser.active ? 'Active' : 'Inactive' },
+                ].map(f => (
+                  <div key={f.label} className="flex justify-between items-center py-2 border-b border-dot">
+                    <span className="text-[10px] font-mono text-muted uppercase">{f.label}</span>
+                    <span className="text-sm font-medium text-ink">{f.value}</span>
                   </div>
-                </DialogContent>
-              </Dialog>
+                ))}
+              </div>
             </div>
           </div>
-
-          {/* Admins Table */}
-          <div className="civic-card">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admin ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredAdmins.map((admin) => (
-                    <tr key={admin.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium">{admin.id}</td>
-                      <td className="px-6 py-4 text-sm font-medium">{admin.name}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <div>
-                          <div>{admin.email}</div>
-                          <div className="text-gray-500">{admin.phone}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{admin.department}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          admin.role === 'overseer' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={getStatusClass(admin.status)}>
-                          {admin.status.charAt(0).toUpperCase() + admin.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{admin.lastLogin}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleAdminAction(admin.id, 'view')}
-                            className="text-blue-600"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleAdminAction(admin.id, 'reset_password')}
-                            className="text-orange-600"
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-gray-600"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
