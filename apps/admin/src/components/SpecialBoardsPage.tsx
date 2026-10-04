@@ -42,7 +42,7 @@ const columns = [
   { key: 'resolved' as const, label: 'Resolved', tone: 'bg-lime/20' },
 ];
 
-const SpecialBoardsPage: React.FC = () => {
+const SpecialBoardsPage: React.FC<{ userRole?: string }> = ({ userRole }) => {
   const [showCreate, setShowCreate] = useState(false);
 
   return (
