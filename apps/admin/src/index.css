@@ -510,4 +510,93 @@
     font-family: var(--font-display);
     font-size: 1.5rem;
   }
+
+  /* ─── Card lift hover (used everywhere) ───────────────────── */
+  .cc-card-lift {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .cc-card-lift:hover {
+    transform: translate(-2px, -3px);
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* ─── Ticker ──────────────────────────────────────────────── */
+  .cc-ticker {
+    overflow: hidden;
+    position: relative;
+  }
+  .cc-ticker-track {
+    display: flex;
+    animation: cc-ticker-scroll 30s linear infinite;
+    width: max-content;
+  }
+  @keyframes cc-ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ─── Rosette spin ────────────────────────────────────────── */
+  .cc-rosette {
+    animation: cc-rosette-spin 20s linear infinite;
+  }
+  @keyframes cc-rosette-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}
+
+/* ─── Animation Keyframes (outside @layer for global scope) ── */
+@keyframes cc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cc-headline-pop {
+  0%   { opacity: 0; transform: scale(0.92); }
+  50%  { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cc-bar-grow-x {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes cc-pulse-ring {
+  0%   { opacity: 1; transform: scale(1); }
+  50%  { opacity: 0.3; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cc-typed-line {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── Utility animation classes ─────────────────────────────── */
+.cc-fade-up {
+  animation: cc-fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 0.06s);
+}
+
+.cc-headline-pop {
+  animation: cc-headline-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cc-typed-line {
+  animation: cc-typed-line 0.4s ease both;
+  animation-delay: calc(var(--line-index, 0) * 0.12s);
+}
+
+.cc-bar-grow-x {
+  animation: cc-bar-grow-x 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 0.1s);
+  transform-origin: left;
 }
