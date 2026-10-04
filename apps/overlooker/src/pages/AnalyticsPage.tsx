@@ -1,356 +1,126 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
-  Download,
-  Calendar,
-  Target,
-  MapPin,
-  Zap
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+/**
+ * O04 — Analytics (Overlooker)
+ * Read-only analytics dashboard with trend charts and category breakdown.
+ * Same data as A10 but read-only with no drill-down actions.
+ */
+import React from 'react';
+import { TrendingUp, BarChart3, Brain } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, LineChart, Line,
+} from 'recharts';
 
-interface MetricCardProps {
-  title: string;
-  value: string | number;
-  change?: number;
-  changeLabel?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-}
+const trendData = [
+  { week: 'W1', created: 45, resolved: 38 },
+  { week: 'W2', created: 52, resolved: 44 },
+  { week: 'W3', created: 48, resolved: 51 },
+  { week: 'W4', created: 61, resolved: 42 },
+];
 
-const MetricCard: React.FC<MetricCardProps> = ({ 
-  title, 
-  value, 
-  change, 
-  changeLabel, 
-  icon: Icon, 
-  color = 'text-primary' 
-}) => {
-  const isPositive = change && change > 0;
-  const isNegative = change && change < 0;
+const categoryData = [
+  { name: 'Roads', value: 145 },
+  { name: 'Lighting', value: 89 },
+  { name: 'Garbage', value: 76 },
+  { name: 'Water', value: 54 },
+  { name: 'Drainage', value: 43 },
+];
 
+const deptSla = [
+  { dept: 'Roads', sla: 82, active: 23 },
+  { dept: 'Electrical', sla: 74, active: 18 },
+  { dept: 'Sanitation', sla: 91, active: 12 },
+  { dept: 'Water', sla: 78, active: 20 },
+  { dept: 'Garbage', sla: 88, active: 15 },
+];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload) return null;
   return (
-    <Card className="civic-card">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold text-foreground">{value}</p>
-            {change !== undefined && (
-              <div className={cn(
-                "flex items-center space-x-1 text-sm",
-                isPositive ? "text-green-600" : isNegative ? "text-red-600" : "text-muted-foreground"
-              )}>
-                {isPositive && <TrendingUp className="w-3 h-3" />}
-                {isNegative && <TrendingDown className="w-3 h-3" />}
-                <span>{Math.abs(change)}% {changeLabel || (isPositive ? 'increase' : 'decrease')}</span>
-              </div>
-            )}
-          </div>
-          <div className={cn("p-3 rounded-full bg-muted", color)}>
-            <Icon className="w-6 h-6" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="cc-card p-3 text-xs" style={{ boxShadow: 'var(--shadow-hard)' }}>
+      <p className="font-mono font-semibold text-ink mb-1">{label}</p>
+      {payload.map((e: any, i: number) => (
+        <p key={i} style={{ color: e.color }} className="font-medium">{e.name}: {e.value}</p>
+      ))}
+    </div>
   );
 };
 
 const AnalyticsPage: React.FC = () => {
-  const [timeRange, setTimeRange] = useState('30d');
-
-  // Mock analytics data
-  const kpiData = [
-    { title: 'Total Issues', value: 1247, change: 12, icon: BarChart3 },
-    { title: 'Avg Resolution Time', value: '4.2 days', change: -15, changeLabel: 'improvement', icon: Clock },
-    { title: 'Pending Issues', value: 127, change: -8, changeLabel: 'decrease', icon: AlertTriangle },
-    { title: 'Citizen Satisfaction', value: '89%', change: 5, icon: Users },
-    { title: 'Response Rate', value: '94%', change: 3, icon: CheckCircle },
-    { title: 'Escalation Rate', value: '12%', change: -2, changeLabel: 'decrease', icon: TrendingUp },
-  ];
-
-  const department = {
-    name: 'Roads & Transportation',
-    pending: 45,
-    avgTime: '5.2 days',
-    satisfaction: '87%',
-  };
-
-  const trendData = [
-    { month: 'Jan', submitted: 89, resolved: 75, satisfaction: 87 },
-    { month: 'Feb', submitted: 95, resolved: 82, satisfaction: 89 },
-    { month: 'Mar', submitted: 102, resolved: 89, satisfaction: 91 },
-    { month: 'Apr', submitted: 87, resolved: 93, satisfaction: 88 },
-    { month: 'May', submitted: 112, resolved: 98, satisfaction: 92 },
-    { month: 'Jun', submitted: 98, resolved: 105, satisfaction: 89 },
-  ];
-
-  const priorityBreakdown = [
-    { priority: 'Critical', count: 23, percentage: 18, color: 'bg-red-500' },
-    { priority: 'High', count: 45, percentage: 35, color: 'bg-orange-500' },
-    { priority: 'Medium', count: 38, percentage: 30, color: 'bg-yellow-500' },
-    { priority: 'Low', count: 21, percentage: 17, color: 'bg-green-500' },
-  ];
-
   return (
-    <div className="min-h-screen bg-background page-enter">
-      {/* Header */}
-      <div className="civic-gradient-bg p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
-            <p className="text-white/80">Comprehensive performance insights</p>
+    <div className="space-y-6">
+      <div className="cc-page-header">
+        <div className="cc-eyebrow cc-fade-up">O04</div>
+        <h1 className="cc-title cc-headline-pop">Analytics</h1>
+        <p className="text-xs font-mono text-muted mt-1">Read-only city analytics</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Trend Chart */}
+        <div className="cc-card p-6 cc-card-lift cc-fade-up" style={{ '--stagger-index': 0 } as React.CSSProperties}>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center bg-lime-tint">
+              <TrendingUp className="h-3.5 w-3.5 text-ink" />
+            </div>
+            <h3 className="text-sm font-display text-ink">Case Trend</h3>
           </div>
-          <div className="flex items-center space-x-2">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 3 months</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="secondary" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
+          <p className="text-xs font-mono text-muted mb-4">Created vs resolved per week</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--dot)" />
+              <XAxis dataKey="week" tick={{ fontSize: 11, fill: 'var(--muted)', fontFamily: 'var(--font-mono)' }} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--muted)', fontFamily: 'var(--font-mono)' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="created" stroke="var(--fire)" strokeWidth={2} dot={false} name="Created" />
+              <Line type="monotone" dataKey="resolved" stroke="var(--lime)" strokeWidth={2} dot={false} name="Resolved" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Category breakdown */}
+        <div className="cc-card p-6 cc-card-lift cc-fade-up" style={{ '--stagger-index': 1 } as React.CSSProperties}>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center bg-lime-tint">
+              <BarChart3 className="h-3.5 w-3.5 text-ink" />
+            </div>
+            <h3 className="text-sm font-display text-ink">Category Mix</h3>
           </div>
+          <p className="text-xs font-mono text-muted mb-4">Distribution by type</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={categoryData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--dot)" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted)', fontFamily: 'var(--font-mono)' }} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: 'var(--ink)', fontFamily: 'var(--font-mono)' }} width={70} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" fill="var(--wine)" radius={[0, 4, 4, 0]} name="Cases" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {kpiData.map((kpi, index) => (
-            <MetricCard
-              key={index}
-              title={kpi.title}
-              value={kpi.value}
-              change={kpi.change}
-              changeLabel={kpi.changeLabel}
-              icon={kpi.icon}
-            />
+      {/* Department SLA */}
+      <div className="cc-card p-5 cc-fade-up" style={{ '--stagger-index': 2 } as React.CSSProperties}>
+        <h3 className="font-display text-sm text-ink mb-4">Department SLA Compliance</h3>
+        <div className="space-y-3">
+          {deptSla.map((d, i) => (
+            <div key={d.dept} className="cc-fade-up" style={{ '--stagger-index': i } as React.CSSProperties}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-ink">{d.dept}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted">{d.active} active</span>
+                  <span className={`cc-chip text-[9px] py-0 px-1.5 ${d.sla >= 85 ? 'bg-lime text-ink' : d.sla >= 70 ? 'bg-amber text-ink' : 'bg-fire text-on-fire'}`}>
+                    {d.sla}%
+                  </span>
+                </div>
+              </div>
+              <div className="cc-meter">
+                <div
+                  className={`cc-meter-fill cc-bar-grow-x ${d.sla >= 70 ? 'cc-meter-fill-lime' : 'cc-meter-fill-risk'}`}
+                  style={{ width: `${d.sla}%`, '--stagger-index': i } as React.CSSProperties}
+                />
+              </div>
+            </div>
           ))}
         </div>
-
-        {/* Issue Volume Trends */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <span>Issue Volume Trends</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-end justify-between space-x-2">
-              {trendData.map((data, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full space-y-1 mb-2">
-                    <div 
-                      className="bg-red-500 rounded-t"
-                      style={{ height: `${(data.submitted / 120) * 150}px` }}
-                      title={`Submitted: ${data.submitted}`}
-                    />
-                    <div 
-                      className="bg-green-500 rounded-t"
-                      style={{ height: `${(data.resolved / 120) * 150}px` }}
-                      title={`Resolved: ${data.resolved}`}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground">{data.month}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-center space-x-6 mt-4 text-xs">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded"></div>
-                <span>Submitted</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Resolved</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Department Performance (Single Department) */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Target className="w-5 h-5 text-primary" />
-              <span>Department Performance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 border border-border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">{department.name}</h3>
-                <Badge variant="outline">{department.pending} pending</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Avg Resolution:</span>
-                  <div className="font-medium">{department.avgTime}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Satisfaction:</span>
-                  <div className="font-medium">{department.satisfaction}</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Priority Distribution */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-primary" />
-              <span>Priority Distribution</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {priorityBreakdown.map((item, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">{item.priority}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {item.count} ({item.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={cn("h-2 rounded-full", item.color)}
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Geographic Heat Map */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <span>Geographic Distribution</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((ward, index) => {
-                const colors = [
-                  "bg-red-100 text-red-800",
-                  "bg-orange-100 text-orange-800",
-                  "bg-green-100 text-green-800",
-                  "bg-orange-100 text-orange-800",
-                  "bg-red-100 text-red-800",
-                  "bg-orange-100 text-orange-800",
-                  "bg-green-100 text-green-800",
-                  "bg-green-100 text-green-800",
-                  "bg-red-100 text-red-800"
-                ];
-
-                const issues = [45, 32, 8, 15, 52, 19, 9, 6, 40];
-
-                return (
-                  <div
-                    key={ward}
-                    className={cn(
-                      "p-4 rounded-lg text-center cursor-pointer transition-colors",
-                      colors[index]
-                    )}
-                  >
-                    <div className="text-lg font-bold">Ward {ward}</div>
-                    <div className="text-sm">{issues[index]} issues</div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Response Time Analytics */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <span>Response Time Metrics</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">4.2</div>
-                  <div className="text-sm text-muted-foreground">Average Days</div>
-                  <div className="text-xs text-green-600 mt-1">↓ 15% from last month</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">94%</div>
-                  <div className="text-sm text-muted-foreground">Within SLA</div>
-                  <div className="text-xs text-green-600 mt-1">↑ 3% from last month</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>10% slower than City Average</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Needs Improvement</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Export Options */}
-        <Card className="civic-card">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Download className="w-5 h-5 text-primary" />
-              <span>Export Reports</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button variant="outline" className="justify-start">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Performance Summary (PDF)
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <Calendar className="w-4 h-4 mr-2" />
-                Monthly Report (Excel)
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <Zap className="w-4 h-4 mr-2" />
-                Real-time Data (CSV)
-              </Button>
-              <Button variant="outline" className="justify-start">
-                <Target className="w-4 h-4 mr-2" />
-                Department Analysis (PDF)
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

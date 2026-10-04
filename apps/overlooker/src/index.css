@@ -1,109 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ═══════════════════════════════════════════════════════════════
+   CivicConnect Overlooker Portal — Stylesheet
+   Imports the shared design tokens and adds overlooker-specific styles.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import '../../packages/ui/tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════════════════════
-   CivicConnect Overlooker Portal — Premium Design System
-   ═══════════════════════════════════════════════════════════════ */
-
 @layer base {
-  :root {
-    /* CivicConnect Brand Colors */
-    --background: 140 25% 99%;
-    --foreground: 150 30% 12%;
-    
-    --civic-green: 142 76% 36%;
-    --civic-green-dark: 142 76% 28%;
-    --civic-green-light: 142 76% 45%;
-    --civic-green-subtle: 140 30% 96%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 150 30% 12%;
-    --card-border: 140 20% 90%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 150 30% 12%;
-
-    --primary: 142 76% 36%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 100%;
-    --secondary-foreground: 142 76% 36%;
-
-    --muted: 140 15% 96%;
-    --muted-foreground: 150 10% 45%;
-
-    --accent: 140 25% 93%;
-    --accent-foreground: 142 76% 36%;
-
-    /* Status Colors */
-    --status-urgent: 0 84% 60%;
-    --status-overdue: 25 95% 53%;
-    --status-disputed: 221 83% 53%;
-    --status-resolved: 142 76% 36%;
-    --status-ignored: 0 0% 45%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 140 20% 91%;
-    --input: 140 20% 93%;
-    --ring: 142 76% 36%;
-
-    --radius: 0.75rem;
-    
-    /* Enhanced Shadows */
-    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-    --shadow-floating: 0 16px 48px rgba(0, 0, 0, 0.1);
-    --shadow-glow: 0 0 20px hsl(var(--civic-green) / 0.2);
-    
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 150 30% 5%;
-    --foreground: 140 20% 95%;
-    --card: 150 25% 7%;
-    --card-foreground: 140 20% 95%;
-    --popover: 150 25% 7%;
-    --popover-foreground: 140 20% 95%;
-    --primary: 142 76% 45%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 150 20% 12%;
-    --secondary-foreground: 140 20% 95%;
-    --muted: 150 20% 12%;
-    --muted-foreground: 150 10% 60%;
-    --accent: 150 20% 12%;
-    --accent-foreground: 140 20% 95%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 140 20% 95%;
-    --border: 150 15% 15%;
-    --input: 150 15% 15%;
-    --ring: 142 76% 45%;
-    --sidebar-background: 150 25% 6%;
-    --sidebar-foreground: 140 15% 90%;
-    --sidebar-primary: 142 76% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 20% 10%;
-    --sidebar-accent-foreground: 140 15% 90%;
-    --sidebar-border: 150 15% 12%;
-    --sidebar-ring: 142 76% 45%;
-  }
-
   * {
+    @apply border-ink/10;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -112,216 +20,105 @@
     scroll-behavior: smooth;
   }
 
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(22, 163, 74, 0.15);
-    border-radius: 100px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(22, 163, 74, 0.3);
+  :focus-visible {
+    outline: 3px solid var(--lime);
+    outline-offset: 2px;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
-}
-
+/* ─── Overlooker Shell Styles ────────────────────────────────── */
 @layer components {
-  /* Glassmorphism Cards */
-  .civic-card {
-    @apply bg-white/80 backdrop-blur-lg rounded-2xl border border-white/50;
-    box-shadow: var(--shadow-card);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* No sidebar. Top bar with logo, OVERLOOKER chip, pill nav, Read only chip */
+  .overlooker-topbar {
+    background: var(--surface);
+    border-bottom: 2px solid var(--ink);
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 30;
   }
-  .civic-card:hover {
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
-    transform: translateY(-1px);
+
+  /* Pill nav with underline ticks */
+  .overlooker-pill-nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--ground);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 3px;
   }
-  
-  .civic-card-elevated {
-    @apply bg-white rounded-2xl;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  /* Premium Buttons */
-  .civic-button-primary {
-    @apply relative overflow-hidden text-primary-foreground rounded-xl font-semibold px-6 py-3;
-    background: linear-gradient(145deg, hsl(var(--civic-green)), hsl(var(--civic-green-light)));
-    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.25);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .civic-button-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 25px rgba(22, 163, 74, 0.35);
-  }
-  .civic-button-primary:active {
-    transform: translateY(0) scale(0.98);
-  }
-  
-  .civic-button-secondary {
-    @apply bg-white text-primary border-2 border-emerald-200 rounded-xl font-semibold px-6 py-3;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .civic-button-secondary:hover {
-    @apply bg-emerald-50 border-emerald-300;
-    transform: translateY(-1px);
-  }
-  
-  /* Premium Header */
-  .civic-gradient-bg {
-    background: linear-gradient(145deg, #0d4a1a 0%, #1a6b2e 50%, #1f8a3a 100%);
+
+  .overlooker-pill-link {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 999px;
+    color: var(--muted);
+    transition: all 0.2s ease;
     position: relative;
-    overflow: hidden;
   }
-  .civic-gradient-bg::before {
+
+  .overlooker-pill-link:hover {
+    color: var(--ink);
+  }
+
+  .overlooker-pill-link-active {
+    background: var(--ink);
+    color: var(--on-wine);
+    font-weight: 600;
+  }
+
+  /* Main content area */
+  .overlooker-main {
+    padding: 40px;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* Wine hero band with scalloped edge — used on O01 Home */
+  .overlooker-hero {
+    background: var(--wine);
+    color: var(--on-wine);
+    padding: 48px 40px;
+    position: relative;
+  }
+
+  .overlooker-hero::after {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 60%;
-    height: 200%;
-    background: radial-gradient(ellipse, rgba(108,199,122,0.12) 0%, transparent 60%);
-    pointer-events: none;
-  }
-  
-  /* Status Badges */
-  .civic-status-urgent {
-    @apply bg-red-50 text-red-700 border border-red-100 rounded-lg px-2.5 py-1 text-xs font-semibold;
-  }
-  .civic-status-overdue {
-    @apply bg-orange-50 text-orange-700 border border-orange-100 rounded-lg px-2.5 py-1 text-xs font-semibold;
-  }
-  .civic-status-disputed {
-    @apply bg-blue-50 text-blue-700 border border-blue-100 rounded-lg px-2.5 py-1 text-xs font-semibold;
-  }
-  .civic-status-resolved {
-    @apply bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg px-2.5 py-1 text-xs font-semibold;
-  }
-  .civic-status-ignored {
-    @apply bg-gray-50 text-gray-700 border border-gray-100 rounded-lg px-2.5 py-1 text-xs font-semibold;
-  }
-  
-  /* Bottom Navigation */
-  .floating-nav {
-    @apply fixed bottom-0 left-0 right-0 z-50;
-    @apply bg-white/90 backdrop-blur-xl border-t border-emerald-100/50;
-    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.06);
-  }
-  
-  /* Hover Lift */
-  .hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    bottom: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: var(--wine);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cpath d='M0,0 Q12.5,20 25,0 Q37.5,20 50,0 Q62.5,20 75,0 Q87.5,20 100,0 V20 H0Z' fill='%23000'/%3E%3C/svg%3E");
+    mask-size: 100px 20px;
+    mask-repeat: repeat-x;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20'%3E%3Cpath d='M0,0 Q12.5,20 25,0 Q37.5,20 50,0 Q62.5,20 75,0 Q87.5,20 100,0 V20 H0Z' fill='%23000'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100px 20px;
+    -webkit-mask-repeat: repeat-x;
   }
 
-  /* Page entrance animation */
-  .page-enter {
-    animation: fadeUp 0.5s ease-out;
-  }
-  
-  /* Issue pins */
-  .issue-pin {
-    @apply w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .issue-pin:hover {
-    transform: scale(1.2);
-  }
-  .issue-pin-urgent {
-    @apply bg-red-500;
-    animation: pulse-glow-red 2s infinite;
-  }
-  .issue-pin-overdue {
-    @apply bg-orange-500;
-  }
-  .issue-pin-resolved {
-    @apply bg-emerald-500;
-  }
-  .issue-pin-default {
-    @apply bg-primary;
-  }
-}
+  /* Re-use all the admin cc-* classes since they come from tokens.css */
 
-@layer utilities {
-  .text-shadow {
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  @media (max-width: 899px) {
+    .overlooker-topbar {
+      padding: 0 16px;
+      flex-wrap: wrap;
+      height: auto;
+      gap: 8px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+    .overlooker-main {
+      padding: 24px 16px;
+    }
+    .overlooker-hero {
+      padding: 32px 16px;
+    }
   }
-  
-  .backdrop-blur-glass {
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(255, 255, 255, 0.85);
-  }
-  
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  .animate-slide-up {
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-out;
-  }
-
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeUp {
-  0% { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow-red {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-}
-
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
