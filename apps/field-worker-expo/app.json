@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "CivicConnect Field Worker",
+    "slug": "civicconnect-field-worker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.civicconnect.fieldworker"
+    },
+    "android": {
+      "package": "com.civicconnect.fieldworker",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-location",
+      "expo-image-picker"
+    ],
+    "scheme": "civicconnect-worker"
+  }
+}

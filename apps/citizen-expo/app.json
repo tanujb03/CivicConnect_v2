@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "CivicConnect Citizen",
+    "slug": "civicconnect-citizen",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d4a1a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.civicconnect.citizen",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CivicConnect needs camera access to photograph civic issues.",
+        "NSMicrophoneUsageDescription": "CivicConnect needs microphone access to record voice descriptions of civic issues.",
+        "NSLocationWhenInUseUsageDescription": "CivicConnect needs your location to attach GPS coordinates to civic issue reports.",
+        "NSLocationAlwaysUsageDescription": "CivicConnect uses your location to show nearby civic issues."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d4a1a"
+      },
+      "package": "com.civicconnect.citizen",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-camera",
+      "expo-av",
+      "expo-location",
+      "expo-image-picker",
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0d4a1a",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "scheme": "civicconnect"
+  }
+}
