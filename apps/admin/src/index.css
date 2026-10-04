@@ -1,99 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ═══════════════════════════════════════════════════════════════
+   CivicConnect Admin Portal — Stylesheet
+   Imports the shared design tokens and adds admin-specific styles.
+   All colours come from token names, never raw hex.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import '../../packages/ui/tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════════════════════
-   CivicConnect Admin Portal — Premium Design System
-   ═══════════════════════════════════════════════════════════════ */
-
 @layer base {
-  :root {
-    /* Civic Admin Color Scheme */
-    --civic-primary: 142 69% 33%;
-    --civic-success: 142 71% 45%;
-    --civic-warning: 45 93% 47%;
-    --civic-danger: 0 84% 60%;
-    --civic-info: 221 83% 53%;
-    
-    /* Background System */
-    --civic-bg: 140 30% 97%;
-    --civic-card: 0 0% 100%;
-    --civic-border: 140 20% 91%;
-    
-    /* Text Colors */
-    --civic-text-primary: 150 30% 12%;
-    --civic-text-secondary: 150 10% 45%;
-    --civic-text-muted: 150 8% 55%;
-    
-    /* Gradients */
-    --civic-gradient-start: 142 69% 33%;
-    --civic-gradient-end: 142 69% 28%;
-    
-    /* Shadcn Compatibility */
-    --background: var(--civic-bg);
-    --foreground: var(--civic-text-primary);
-    --card: var(--civic-card);
-    --card-foreground: var(--civic-text-primary);
-    --popover: var(--civic-card);
-    --popover-foreground: var(--civic-text-primary);
-    --primary: var(--civic-primary);
-    --primary-foreground: 0 0% 100%;
-    --secondary: 140 20% 96%;
-    --secondary-foreground: var(--civic-text-primary);
-    --muted: 140 15% 96%;
-    --muted-foreground: var(--civic-text-muted);
-    --accent: 140 20% 95%;
-    --accent-foreground: var(--civic-text-primary);
-    --destructive: var(--civic-danger);
-    --destructive-foreground: 0 0% 100%;
-    --border: var(--civic-border);
-    --input: var(--civic-border);
-    --ring: var(--civic-primary);
-    --radius: 0.75rem;
-
-    --sidebar-background: 150 20% 98%;
-    --sidebar-foreground: 150 20% 25%;
-    --sidebar-primary: 142 69% 33%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 25% 95%;
-    --sidebar-accent-foreground: 142 69% 28%;
-    --sidebar-border: 140 15% 92%;
-    --sidebar-ring: 142 69% 33%;
-  }
-
-  .dark {
-    --background: 150 30% 5%;
-    --foreground: 140 20% 95%;
-    --card: 150 25% 7%;
-    --card-foreground: 140 20% 95%;
-    --popover: 150 25% 7%;
-    --popover-foreground: 140 20% 95%;
-    --primary: 142 69% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 150 20% 12%;
-    --secondary-foreground: 140 20% 95%;
-    --muted: 150 20% 12%;
-    --muted-foreground: 150 10% 60%;
-    --accent: 150 20% 12%;
-    --accent-foreground: 140 20% 95%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 140 20% 95%;
-    --border: 150 15% 15%;
-    --input: 150 15% 15%;
-    --ring: 142 69% 40%;
-    --sidebar-background: 150 25% 6%;
-    --sidebar-foreground: 140 15% 90%;
-    --sidebar-primary: 142 69% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 20% 10%;
-    --sidebar-accent-foreground: 140 15% 90%;
-    --sidebar-border: 150 15% 12%;
-    --sidebar-ring: 142 69% 40%;
-  }
-
   * {
+    @apply border-ink/10;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -102,196 +21,493 @@
     scroll-behavior: smooth;
   }
 
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(22, 163, 74, 0.15);
-    border-radius: 100px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(22, 163, 74, 0.3);
+  /* Focus ring: 3px lime outline as the plan requires */
+  :focus-visible {
+    outline: 3px solid var(--lime);
+    outline-offset: 2px;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* ─── Premium Component Classes ──────────────────────────────── */
+/* ─── Admin Shell Styles ─────────────────────────────────────── */
 @layer components {
-  /* Buttons */
-  .btn-civic-primary {
-    @apply relative overflow-hidden font-semibold px-5 py-2.5 rounded-xl text-white;
-    background: linear-gradient(145deg, hsl(142, 69%, 33%), hsl(142, 69%, 38%));
-    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.25);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .btn-civic-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 25px rgba(22, 163, 74, 0.35);
-  }
-  .btn-civic-primary:active {
-    transform: translateY(0);
-  }
-
-  .btn-civic-success {
-    @apply font-semibold px-5 py-2.5 rounded-xl text-white;
-    background: linear-gradient(145deg, hsl(142, 71%, 45%), hsl(142, 71%, 50%));
-    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .btn-civic-success:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 25px rgba(34, 197, 94, 0.35);
+  /* Admin sidebar: 248px, surface background, ink border */
+  .admin-sidebar {
+    width: 248px;
+    min-height: 100vh;
+    background: var(--surface);
+    border-right: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 30;
   }
 
-  .btn-civic-danger {
-    @apply font-semibold px-5 py-2.5 rounded-xl text-white;
-    background: linear-gradient(145deg, hsl(0, 84%, 60%), hsl(0, 84%, 55%));
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Active nav link: lime fill with ink outline and hard shadow */
+  .admin-nav-active {
+    background: var(--lime);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    box-shadow: var(--shadow-hard);
+    border-radius: var(--radius-md);
+    font-weight: 600;
   }
 
-  /* Glassmorphism Cards */
-  .civic-card {
-    @apply bg-white/80 backdrop-blur-lg rounded-2xl border border-white/50;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Nav link hover: slides 5px right */
+  .admin-nav-link {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.25s ease;
+    border-radius: var(--radius-md);
   }
-  .civic-card:hover {
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
-    transform: translateY(-1px);
-  }
-
-  .civic-card-elevated {
-    @apply bg-white rounded-2xl;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  .admin-nav-link:hover {
+    transform: translateX(5px);
+    background: var(--lime-tint);
   }
 
-  /* Status Badges */
-  .status-submitted {
-    @apply bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-lg text-xs font-semibold;
-  }
-  .status-progress {
-    @apply bg-amber-50 text-amber-700 border border-amber-100 px-2.5 py-1 rounded-lg text-xs font-semibold;
-  }
-  .status-resolved {
-    @apply bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1 rounded-lg text-xs font-semibold;
-  }
-  .status-urgent {
-    @apply bg-red-50 text-red-700 border border-red-100 px-2.5 py-1 rounded-lg text-xs font-semibold;
+  /* Main content area */
+  .admin-main {
+    margin-left: 248px;
+    padding: 36px;
+    min-height: 100vh;
   }
 
-  /* Gradients */
-  .civic-gradient {
-    background: linear-gradient(145deg, hsl(142, 69%, 28%), hsl(142, 69%, 38%));
+  /* Responsive: below 900px, sidebar stacks above content */
+  @media (max-width: 899px) {
+    .admin-sidebar {
+      position: relative;
+      width: 100%;
+      min-height: auto;
+      border-right: none;
+      border-bottom: 2px solid var(--ink);
+    }
+    .admin-main {
+      margin-left: 0;
+      padding: 24px 16px;
+    }
   }
 
-  /* Sidebar */
-  .nav-active {
-    @apply bg-emerald-50/80 text-emerald-700 font-semibold;
-    border-right: 3px solid hsl(142, 69%, 38%);
-  }
-  .nav-hover {
-    @apply hover:bg-emerald-50/50 transition-all duration-300;
-  }
-
-  /* Trends */
-  .trend-up {
-    @apply text-emerald-600;
-  }
-  .trend-down {
-    @apply text-red-600;
+  /* ─── Card styles per the plan ─────────────────────────────── */
+  /* Default card: surface, 2px ink outline, radius-lg, shadow-card */
+  .cc-card {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
   }
 
-  /* Ward Density */
-  .density-high {
-    @apply bg-red-50 border border-red-200/50 text-red-800 rounded-xl;
-  }
-  .density-medium {
-    @apply bg-amber-50 border border-amber-200/50 text-amber-800 rounded-xl;
-  }
-  .density-low {
-    @apply bg-emerald-50 border border-emerald-200/50 text-emerald-800 rounded-xl;
+  /* Toned cards */
+  .cc-card-wine {
+    background: var(--wine);
+    color: var(--on-wine);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
   }
 
-  /* Premium Sidebar Styling */
-  .sidebar-premium {
-    background: linear-gradient(180deg, #fafffe 0%, #f5fbf7 100%);
-    border-right: 1px solid rgba(22, 163, 74, 0.08);
+  .cc-card-fire {
+    background: var(--fire);
+    color: var(--on-fire);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
   }
 
-  /* Premium Header */
-  .header-admin {
-    background: linear-gradient(135deg, #0d4a1a 0%, #1a6b2e 50%, #1f8a3a 100%);
+  .cc-card-lime {
+    background: var(--lime);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ─── Button styles per the plan ───────────────────────────── */
+  .cc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--ink);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
     overflow: hidden;
+    min-height: 44px;
   }
-  .header-admin::before {
+  .cc-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hard);
+  }
+  .cc-btn:active {
+    transform: translate(0, 0);
+    box-shadow: none;
+  }
+
+  /* Primary button: ink fill, on-wine text */
+  .cc-btn-primary {
+    background: var(--ink);
+    color: var(--on-wine);
+  }
+
+  /* Outline button: surface fill */
+  .cc-btn-outline {
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  /* Dark button: wine fill */
+  .cc-btn-dark {
+    background: var(--wine);
+    color: var(--on-wine);
+    border-color: var(--wine);
+  }
+
+  /* ─── Chip styles ──────────────────────────────────────────── */
+  .cc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    white-space: nowrap;
+  }
+
+  /* Dashed chip for AI suggestions */
+  .cc-chip-dashed {
+    border-style: dashed;
+  }
+
+  /* Priority chips per the plan */
+  .cc-priority-urgent {
+    background: var(--fire);
+    color: var(--on-fire);
+    border-color: var(--ink);
+  }
+  .cc-priority-high {
+    background: var(--amber);
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+  .cc-priority-normal {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+  .cc-priority-low {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  /* ─── AI Panel: scalloped wine panel with rosette ──────────── */
+  .cc-ai-panel {
+    background: var(--wine);
+    color: var(--on-wine);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    padding: 24px;
+  }
+
+  /* ─── KPI Card ─────────────────────────────────────────────── */
+  .cc-kpi-card {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+    position: relative;
+  }
+  .cc-kpi-card .cc-kpi-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .cc-kpi-card .cc-kpi-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .cc-kpi-card .cc-kpi-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* KPI card with pulse for critical items */
+  .cc-kpi-pulse {
+    position: relative;
+  }
+  .cc-kpi-pulse::after {
     content: '';
     position: absolute;
-    top: -100%;
-    right: -30%;
-    width: 60%;
-    height: 300%;
-    background: radial-gradient(ellipse, rgba(108,199,122,0.08) 0%, transparent 60%);
+    inset: -3px;
+    border-radius: inherit;
+    border: 3px solid var(--fire);
+    animation: cc-pulse-ring 1.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     pointer-events: none;
   }
 
-  /* Hover lift */
-  .hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ─── Page header with eyebrow code ────────────────────────── */
+  .cc-page-header {
+    margin-bottom: 32px;
   }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  .cc-page-header .cc-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .cc-page-header .cc-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    line-height: 1.1;
+    color: var(--ink);
   }
 
-  /* Animated gradient */
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient-shift 6s ease infinite;
+  /* ─── Data table ───────────────────────────────────────────── */
+  .cc-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .cc-table thead {
+    background: var(--lime-tint);
+  }
+  .cc-table th {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid var(--ink);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--lime-tint);
+  }
+  .cc-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--dot);
+  }
+  .cc-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .cc-table tbody tr {
+    transition: background 0.15s ease;
+  }
+  .cc-table tbody tr:hover {
+    background: var(--lime-tint);
   }
 
-  /* Page transition */
-  .page-enter {
-    animation: fade-up 0.5s ease-out;
+  /* ─── Meter bar ────────────────────────────────────────────── */
+  .cc-meter {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--dot);
+    overflow: hidden;
+    border: 1px solid var(--ink);
   }
-}
+  .cc-meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    transform-origin: left;
+  }
+  .cc-meter-fill-lime {
+    background: var(--lime);
+  }
+  .cc-meter-fill-risk {
+    background: var(--fire);
+  }
 
-@keyframes fade-up {
-  0% { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
+  /* ─── Folder tabs ──────────────────────────────────────────── */
+  .cc-folder-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--ink);
+  }
+  .cc-folder-tab {
+    padding: 10px 20px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid var(--ink);
+    border-bottom: none;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin-right: -2px;
+    background: var(--ground);
+    color: var(--muted);
+  }
+  .cc-folder-tab:hover {
+    background: var(--lime-tint);
+    color: var(--ink);
+  }
+  .cc-folder-tab-active {
+    background: var(--surface);
+    color: var(--ink);
+    position: relative;
+    z-index: 1;
+  }
+  .cc-folder-tab-wine {
+    background: var(--wine);
+    color: var(--on-wine);
+  }
+  .cc-folder-tab-fire {
+    background: var(--fire);
+    color: var(--on-fire);
+  }
 
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+  /* ─── State view banners ───────────────────────────────────── */
+  .cc-banner-degraded {
+    background: var(--amber);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cc-banner-needs-backend {
+    background: var(--amber);
+    color: var(--ink);
+    border: 2px dashed var(--ink);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cc-banner-error {
+    background: var(--fire);
+    color: var(--on-fire);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+  }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
+  /* ─── Sticker: tilted decorative label ─────────────────────── */
+  .cc-sticker {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 14px;
+    background: var(--lime);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-hard);
+    transform: rotate(-3deg);
+  }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.3); }
-  50% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+  /* ─── Heat tile for ward heatmap ───────────────────────────── */
+  .cc-heat-tile {
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  /* ─── Timeline ─────────────────────────────────────────────── */
+  .cc-timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+  .cc-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--ink);
+  }
+  .cc-timeline-event {
+    position: relative;
+    padding-bottom: 24px;
+  }
+  .cc-timeline-event::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--surface);
+  }
+  .cc-timeline-event-wine::before {
+    background: var(--wine);
+  }
+  .cc-timeline-event-fire::before {
+    background: var(--fire);
+  }
+  .cc-timeline-event-lime::before {
+    background: var(--lime);
+  }
+
+  /* ─── Gauge (circular confidence meter) ────────────────────── */
+  .cc-gauge {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: conic-gradient(
+      var(--lime) calc(var(--gauge-value, 0) * 1%),
+      var(--dot) calc(var(--gauge-value, 0) * 1%)
+    );
+  }
+  .cc-gauge-inner {
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+  }
 }
