@@ -7,7 +7,7 @@
  * Shows the needsBackend banner.
  */
 import React, { useState } from 'react';
-import { Users, Shield, Eye, X } from 'lucide-react';
+import { Users, Shield, Eye, X, ArrowUpDown } from 'lucide-react';
 
 const ROLES = [
   { role: 'Admin', count: 3, description: 'Full system access' },
@@ -42,7 +42,21 @@ const permissionMatrix = [
 
 const UserManagementPage: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
   const selectedUser = mockUsers.find(u => u.id === selectedUserId);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const sortedUsers = [...mockUsers].sort((a, b) => {
+    // @ts-ignore
+    const av = a[sortField], bv = b[sortField];
+    return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
 
   return (
     <div className="space-y-6">
@@ -85,17 +99,25 @@ const UserManagementPage: React.FC = () => {
           <table className="cc-table" style={{ border: 'none', borderRadius: 0 }}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Department</th>
-                <th>Status</th>
+                {(['name', 'email', 'role', 'department', 'active'] as const).map((col) => (
+                  <th key={col} onClick={() => handleSort(col)} className="cursor-pointer select-none">
+                    <span className="flex items-center gap-1">
+                      {col === 'active' ? 'Status' : col.charAt(0).toUpperCase() + col.slice(1)}
+                      <ArrowUpDown className="h-3 w-3 opacity-40" />
+                    </span>
+                  </th>
+                ))}
                 <th style={{ width: '60px' }}>View</th>
               </tr>
             </thead>
             <tbody>
-              {mockUsers.map((user, i) => (
-                <tr key={user.id} className="cc-fade-up" style={{ '--stagger-index': i } as React.CSSProperties}>
+              {sortedUsers.map((user, i) => (
+                <tr 
+                  key={user.id} 
+                  className="cc-fade-up cursor-pointer hover:bg-ground" 
+                  style={{ '--stagger-index': i } as React.CSSProperties}
+                  onClick={() => setSelectedUserId(user.id)}
+                >
                   <td className="font-semibold text-ink">{user.name}</td>
                   <td className="font-mono text-xs text-muted">{user.email}</td>
                   <td><span className="cc-chip text-[10px]">{user.role}</span></td>
@@ -107,7 +129,7 @@ const UserManagementPage: React.FC = () => {
                   </td>
                   <td>
                     <button
-                      onClick={() => setSelectedUserId(user.id)}
+                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(user.id); }}
                       className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint transition-colors"
                       aria-label={`View user ${user.name}`}
                     >

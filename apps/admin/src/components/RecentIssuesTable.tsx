@@ -3,7 +3,7 @@
  * Uses cc-table styling with row stagger animation on mount.
  */
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, ArrowUpDown } from 'lucide-react';
 
 interface Issue {
@@ -44,6 +44,7 @@ function StatusChip({ status }: { status: string }) {
 const RecentIssuesTable: React.FC = () => {
   const [sortField, setSortField] = useState<keyof Issue>('id');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const navigate = useNavigate();
 
   const handleSort = (field: keyof Issue) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -91,8 +92,9 @@ const RecentIssuesTable: React.FC = () => {
             {sorted.map((issue, i) => (
               <tr
                 key={issue.id}
-                className="cc-fade-up"
+                className="cc-fade-up cursor-pointer hover:bg-ground"
                 style={{ '--stagger-index': i } as React.CSSProperties}
+                onClick={() => navigate(`/cases/${issue.id}`)}
               >
                 <td className="font-mono text-xs font-semibold" style={{ color: 'var(--wine)' }}>{issue.id}</td>
                 <td className="max-w-[180px] truncate">{issue.location}</td>
@@ -101,7 +103,7 @@ const RecentIssuesTable: React.FC = () => {
                 <td className="text-muted">{issue.assignedTo}</td>
                 <td className="font-mono text-muted text-xs">{issue.timeAgo}</td>
                 <td>
-                  <Link to={`/cases/${issue.id}`}>
+                  <Link to={`/cases/${issue.id}`} onClick={(e) => e.stopPropagation()}>
                     <button
                       className="w-7 h-7 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint transition-colors"
                       aria-label={`View case ${issue.id}`}

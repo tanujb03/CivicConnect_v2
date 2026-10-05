@@ -6,7 +6,7 @@
  * Data: GET /incidents?status=, POST /incidents, PATCH /incidents/{id}.
  */
 import React, { useState } from 'react';
-import { AlertTriangle, Plus, Clock, MapPin, Users } from 'lucide-react';
+import { AlertTriangle, Plus, Clock, MapPin, Users, X } from 'lucide-react';
 
 interface Incident {
   id: string;
@@ -44,6 +44,9 @@ const columns = [
 
 const SpecialBoardsPage: React.FC<{ userRole?: string }> = ({ userRole }) => {
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  
+  const selectedIncident = mockIncidents.find(i => i.id === selectedIncidentId);
 
   return (
     <div className="space-y-6">
@@ -108,7 +111,12 @@ const SpecialBoardsPage: React.FC<{ userRole?: string }> = ({ userRole }) => {
                     <div className="text-center text-xs font-mono text-muted py-8">No incidents</div>
                   )}
                   {items.map((inc, i) => (
-                    <div key={inc.id} className="cc-card p-3 cc-card-lift cc-fade-up" style={{ '--stagger-index': i } as React.CSSProperties}>
+                    <div 
+                      key={inc.id} 
+                      className="cc-card p-3 cc-card-lift cc-fade-up cursor-pointer hover:border-wine/50 transition-colors" 
+                      style={{ '--stagger-index': i } as React.CSSProperties}
+                      onClick={() => setSelectedIncidentId(inc.id)}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono text-[10px] font-semibold" style={{ color: 'var(--wine)' }}>{inc.id}</span>
                         <SeverityChip severity={inc.severity} />
@@ -132,6 +140,45 @@ const SpecialBoardsPage: React.FC<{ userRole?: string }> = ({ userRole }) => {
           );
         })}
       </div>
+
+      {/* Incident drawer */}
+      {selectedIncident && (
+        <>
+          <div className="fixed inset-0 bg-ink/20 z-30" onClick={() => setSelectedIncidentId(null)} aria-hidden="true" />
+          <div className="fixed inset-y-0 right-0 w-96 z-40 cc-card cc-fade-up"
+            style={{ borderRadius: 'var(--radius-lg) 0 0 var(--radius-lg)', borderRight: 'none', '--stagger-index': 0 } as React.CSSProperties}
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b-2 border-ink">
+                <h3 className="font-display text-lg text-ink">{selectedIncident.id}</h3>
+                <button onClick={() => setSelectedIncidentId(null)} className="w-8 h-8 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <SeverityChip severity={selectedIncident.severity} />
+                  <span className={`cc-chip text-[10px] ${columns.find(c => c.key === selectedIncident.status)?.tone}`}>{selectedIncident.status}</span>
+                </div>
+                <h4 className="font-medium text-ink">{selectedIncident.title}</h4>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Location', value: selectedIncident.location },
+                    { label: 'Reported', value: selectedIncident.reportedAt },
+                    { label: 'Linked Cases', value: selectedIncident.casesLinked.toString() },
+                    { label: 'Wards', value: selectedIncident.affectedWards.join(', ') },
+                  ].map(f => (
+                    <div key={f.label} className="flex justify-between items-center py-2 border-b border-dot">
+                      <span className="text-[10px] font-mono text-muted uppercase">{f.label}</span>
+                      <span className="text-sm font-medium text-ink">{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

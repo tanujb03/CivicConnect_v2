@@ -22,11 +22,11 @@ const MOCK_PERF: Record<string, {
   median_resolution_hours: number; sla_compliance_pct: number;
   reopened: number; backlog_age_days: number;
 }> = {
-  roads:      { incoming: 89, active: 23, resolved: 66, median_resolution_hours: 31, sla_compliance_pct: 82, reopened: 4, backlog_age_days: 8 },
+  roads: { incoming: 89, active: 23, resolved: 66, median_resolution_hours: 31, sla_compliance_pct: 82, reopened: 4, backlog_age_days: 8 },
   electrical: { incoming: 76, active: 18, resolved: 58, median_resolution_hours: 42, sla_compliance_pct: 74, reopened: 6, backlog_age_days: 11 },
   sanitation: { incoming: 54, active: 12, resolved: 42, median_resolution_hours: 22, sla_compliance_pct: 91, reopened: 2, backlog_age_days: 5 },
-  water:      { incoming: 61, active: 20, resolved: 41, median_resolution_hours: 38, sla_compliance_pct: 78, reopened: 5, backlog_age_days: 9 },
-  garbage:    { incoming: 48, active: 15, resolved: 33, median_resolution_hours: 19, sla_compliance_pct: 88, reopened: 1, backlog_age_days: 4 },
+  water: { incoming: 61, active: 20, resolved: 41, median_resolution_hours: 38, sla_compliance_pct: 78, reopened: 5, backlog_age_days: 9 },
+  garbage: { incoming: 48, active: 15, resolved: 33, median_resolution_hours: 19, sla_compliance_pct: 88, reopened: 1, backlog_age_days: 4 },
 };
 
 // Aggregate highlight cards

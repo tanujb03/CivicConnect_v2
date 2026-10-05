@@ -4,7 +4,7 @@
    All colours come from token names, never raw hex.
    ═══════════════════════════════════════════════════════════════ */
 
-@import '../../packages/ui/tokens.css';
+@import '../../../packages/ui/tokens.css';
 
 @tailwind base;
 @tailwind components;
