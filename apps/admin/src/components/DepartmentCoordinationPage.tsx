@@ -9,7 +9,7 @@
  *       filters by status only.
  */
 import React, { useState } from 'react';
-import { Building2, Clock, Users, Plus, ArrowUpRight } from 'lucide-react';
+import { Building2, Clock, Users, Plus, ArrowUpRight, X } from 'lucide-react';
 
 interface WorkOrder {
   id: string;
@@ -49,6 +49,9 @@ const columns = [
 const DepartmentCoordinationPage: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState('All');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
+
+  const selectedWorkOrder = mockWorkOrders.find(wo => wo.id === selectedWorkOrderId);
 
   const filtered = mockWorkOrders.filter(wo =>
     deptFilter === 'All' || wo.department === deptFilter
@@ -145,8 +148,9 @@ const DepartmentCoordinationPage: React.FC = () => {
                   {items.map((wo, i) => (
                     <div
                       key={wo.id}
-                      className="cc-card p-3 cc-card-lift cc-fade-up"
+                      className="cc-card p-3 cc-card-lift cc-fade-up cursor-pointer hover:border-wine/50 transition-colors"
                       style={{ '--stagger-index': i } as React.CSSProperties}
+                      onClick={() => setSelectedWorkOrderId(wo.id)}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono text-[10px] font-semibold" style={{ color: 'var(--wine)' }}>{wo.id}</span>
@@ -174,6 +178,44 @@ const DepartmentCoordinationPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Work Order drawer */}
+      {selectedWorkOrder && (
+        <>
+          <div className="fixed inset-0 bg-ink/20 z-30" onClick={() => setSelectedWorkOrderId(null)} aria-hidden="true" />
+          <div className="fixed inset-y-0 right-0 w-96 z-40 cc-card cc-fade-up"
+            style={{ borderRadius: 'var(--radius-lg) 0 0 var(--radius-lg)', borderRight: 'none', '--stagger-index': 0 } as React.CSSProperties}
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b-2 border-ink">
+                <h3 className="font-display text-lg text-ink">{selectedWorkOrder.id}</h3>
+                <button onClick={() => setSelectedWorkOrderId(null)} className="w-8 h-8 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <PriorityChip priority={selectedWorkOrder.priority} />
+                  <span className={`cc-chip text-[10px] ${columns.find(c => c.key === selectedWorkOrder.status)?.tone}`}>{selectedWorkOrder.status}</span>
+                </div>
+                <h4 className="font-medium text-ink">{selectedWorkOrder.title}</h4>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Department', value: selectedWorkOrder.department },
+                    { label: 'Case ID', value: selectedWorkOrder.caseId },
+                    { label: 'Assigned', value: selectedWorkOrder.assignedAt },
+                  ].map(f => (
+                    <div key={f.label} className="flex justify-between items-center py-2 border-b border-dot">
+                      <span className="text-[10px] font-mono text-muted uppercase">{f.label}</span>
+                      <span className="text-sm font-semibold text-ink">{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

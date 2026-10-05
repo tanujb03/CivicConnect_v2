@@ -17,8 +17,9 @@
 import React, { useState } from 'react';
 import {
   ArrowUpRight, ArrowDownRight, FileText, Clock, AlertCircle,
-  TrendingUp, RotateCcw, Brain, MapPin, Loader2, Users,
+  TrendingUp, RotateCcw, Brain, MapPin, Loader2, Users, ArrowUpDown,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line,
@@ -31,20 +32,20 @@ import { useAnalyticsOverview } from '../hooks/useAdminApi';
 
 // ─── Mock data — replaced by API when backend is ready ────────────────────────
 const mockKpis = [
-  { title: 'Active Cases',          value: 248,   change: '+12',  trend: 'up',   icon: FileText,    pulse: false },
-  { title: 'Critical Cases',        value: 23,    change: '+5',   trend: 'up',   icon: AlertCircle, pulse: true },
-  { title: 'SLA At Risk',           value: 41,    change: '+8',   trend: 'up',   icon: Clock,       pulse: true },
-  { title: 'Unassigned',            value: 17,    change: '-3',   trend: 'down', icon: TrendingUp,  pulse: false },
-  { title: 'Awaiting Verification', value: 34,    change: '+2',   trend: 'up',   icon: Users,       pulse: false },
-  { title: 'Reopened',              value: 9,     change: '+1',   trend: 'up',   icon: RotateCcw,   pulse: true },
+  { title: 'Active Cases', value: 248, change: '+12', trend: 'up', icon: FileText, pulse: false },
+  { title: 'Critical Cases', value: 23, change: '+5', trend: 'up', icon: AlertCircle, pulse: true },
+  { title: 'SLA At Risk', value: 41, change: '+8', trend: 'up', icon: Clock, pulse: true },
+  { title: 'Unassigned', value: 17, change: '-3', trend: 'down', icon: TrendingUp, pulse: false },
+  { title: 'Awaiting Verification', value: 34, change: '+2', trend: 'up', icon: Users, pulse: false },
+  { title: 'Reopened', value: 9, change: '+1', trend: 'up', icon: RotateCcw, pulse: true },
 ];
 
 const mockPriorityQueue = [
   { id: 'CC-1042', title: 'Major pothole near school — recurring', priority: 'URGENT', ward: 'W12', age: '5d', dept: 'Roads' },
-  { id: 'CC-1038', title: 'Raw sewage overflow, residential block', priority: 'HIGH',   ward: 'W18', age: '3d', dept: 'Sanitation' },
-  { id: 'CC-1031', title: 'Street lighting failure — 200m stretch', priority: 'HIGH',   ward: 'W7',  age: '6d', dept: 'Electrical' },
+  { id: 'CC-1038', title: 'Raw sewage overflow, residential block', priority: 'HIGH', ward: 'W18', age: '3d', dept: 'Sanitation' },
+  { id: 'CC-1031', title: 'Street lighting failure — 200m stretch', priority: 'HIGH', ward: 'W7', age: '6d', dept: 'Electrical' },
   { id: 'CC-1027', title: 'Water supply disruption — 300 households', priority: 'URGENT', ward: 'W3', age: '2d', dept: 'Water' },
-  { id: 'CC-1019', title: 'Garbage accumulation — market area',     priority: 'NORMAL', ward: 'W9',  age: '4d', dept: 'Sanitation' },
+  { id: 'CC-1019', title: 'Garbage accumulation — market area', priority: 'NORMAL', ward: 'W9', age: '4d', dept: 'Sanitation' },
 ];
 
 const aiSituationSummary =
@@ -79,9 +80,9 @@ const TICKER_ITEMS = [
 function PriorityChip({ priority }: { priority: string }) {
   const cls: Record<string, string> = {
     URGENT: 'cc-priority-urgent',
-    HIGH:   'cc-priority-high',
+    HIGH: 'cc-priority-high',
     NORMAL: 'cc-priority-normal',
-    LOW:    'cc-priority-low',
+    LOW: 'cc-priority-low',
   };
   return (
     <span className={`cc-chip text-[11px] ${cls[priority] ?? 'cc-priority-normal'}`}>
@@ -110,6 +111,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const Dashboard: React.FC = () => {
   const { data: overview, isLoading, isError } = useAnalyticsOverview();
   const [activeTab, setActiveTab] = useState('all');
+  const navigate = useNavigate();
+
+  const [sortField, setSortField] = useState<keyof typeof mockPriorityQueue[0]>('id');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: keyof typeof mockPriorityQueue[0]) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const criticalQueue = mockPriorityQueue.filter(item => item.priority === 'URGENT');
+  const slaQueue = mockPriorityQueue.filter(item => parseInt(item.age) >= 4);
+
+  const filteredQueue = activeTab === 'critical' ? criticalQueue : activeTab === 'sla' ? slaQueue : mockPriorityQueue;
+
+  const sortedQueue = [...filteredQueue].sort((a, b) => {
+    const av = a[sortField], bv = b[sortField];
+    return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
 
   return (
     <div className="space-y-8">
@@ -230,9 +250,9 @@ const Dashboard: React.FC = () => {
         {/* Folder tabs */}
         <div className="cc-folder-tabs">
           {[
-            { id: 'all', label: 'All Priority', count: 5 },
-            { id: 'critical', label: 'Critical', count: 2 },
-            { id: 'sla', label: 'SLA at Risk', count: 3 },
+            { id: 'all', label: 'All Priority', count: mockPriorityQueue.length },
+            { id: 'critical', label: 'Critical', count: criticalQueue.length },
+            { id: 'sla', label: 'SLA at Risk', count: slaQueue.length },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -252,20 +272,23 @@ const Dashboard: React.FC = () => {
             <table className="cc-table" style={{ border: 'none', borderRadius: 0 }}>
               <thead>
                 <tr>
-                  <th>Case</th>
-                  <th>Title</th>
-                  <th>Priority</th>
-                  <th>Ward</th>
-                  <th>Dept.</th>
-                  <th>Age</th>
+                  {(['id', 'title', 'priority', 'ward', 'dept', 'age'] as const).map((col) => (
+                    <th key={col} onClick={() => handleSort(col)} className="cursor-pointer select-none">
+                      <span className="flex items-center gap-1">
+                        {col === 'id' ? 'Case' : col === 'dept' ? 'Dept.' : col.charAt(0).toUpperCase() + col.slice(1)}
+                        <ArrowUpDown className="h-3 w-3 opacity-40" />
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {mockPriorityQueue.map((item, i) => (
+                {sortedQueue.map((item, i) => (
                   <tr
                     key={item.id}
-                    className="cc-fade-up cursor-pointer"
+                    className="cc-fade-up cursor-pointer hover:bg-ground transition-colors"
                     style={{ '--stagger-index': i } as React.CSSProperties}
+                    onClick={() => navigate(`/cases/${item.id}`)}
                   >
                     <td className="font-mono text-xs font-semibold" style={{ color: 'var(--wine)' }}>{item.id}</td>
                     <td className="max-w-xs truncate">{item.title}</td>
@@ -279,7 +302,7 @@ const Dashboard: React.FC = () => {
             </table>
           </div>
           <div className="px-5 py-3 border-t-2 border-ink flex justify-end">
-            <button className="cc-btn cc-btn-outline text-xs py-1.5 px-3">
+            <button className="cc-btn cc-btn-outline text-xs py-1.5 px-3" onClick={() => navigate('/cases')}>
               View Full Workbench <ArrowUpRight className="h-3 w-3" />
             </button>
           </div>
@@ -327,7 +350,7 @@ const Dashboard: React.FC = () => {
               <YAxis tick={{ fontSize: 11, fill: 'var(--muted)', fontFamily: 'var(--font-mono)' }} />
               <Tooltip content={<CustomTooltip />} />
               <Line type="monotone" dataKey="resolved" stroke="var(--lime)" strokeWidth={2.5} dot={false} name="Resolved" />
-              <Line type="monotone" dataKey="pending"  stroke="var(--fire)" strokeWidth={2.5} dot={false} name="Pending" />
+              <Line type="monotone" dataKey="pending" stroke="var(--fire)" strokeWidth={2.5} dot={false} name="Pending" />
             </LineChart>
           </ResponsiveContainer>
         </div>

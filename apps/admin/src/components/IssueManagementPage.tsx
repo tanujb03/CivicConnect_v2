@@ -10,7 +10,7 @@
  */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, ArrowUpRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, ArrowUpRight, X, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 
 interface Issue {
   id: string;
@@ -84,6 +84,13 @@ const IssueManagementPage: React.FC = () => {
     department: 'all',
     ward: 'all',
   });
+  const [sortField, setSortField] = useState<keyof Issue>('id');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: keyof Issue) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
 
   const handleSelectAll = (checked: boolean) => {
     setIssues(issues.map(issue => ({ ...issue, selected: checked })));
@@ -98,19 +105,27 @@ const IssueManagementPage: React.FC = () => {
   const selectedCount = issues.filter(i => i.selected).length;
   const selectedIssue = issues.find(i => i.id === selectedIssueId);
 
-  const filteredIssues = issues.filter(issue => {
+  const filteredIssuesList = issues.filter(issue => {
     if (searchQuery && !issue.location.toLowerCase().includes(searchQuery.toLowerCase()) && !issue.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (filters.status !== 'all' && issue.status !== filters.status) return false;
     if (filters.priority !== 'all' && issue.priority !== filters.priority) return false;
     if (filters.ward !== 'all' && issue.ward !== filters.ward) return false;
+    
+    if (activeTab === 'critical' && issue.priority !== 'URGENT') return false;
+    if (activeTab === 'sla_at_risk' && parseInt(issue.timeAgo) >= 4) return false; // example logic
+    
     return true;
   });
 
+  const filteredIssues = [...filteredIssuesList].sort((a, b) => {
+    const av = a[sortField], bv = b[sortField];
+    return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+
   const tabs = [
-    { id: 'all', label: 'All Cases', count: issues.length },
-    { id: 'submitted', label: 'New', count: issues.filter(i => i.status === 'submitted').length },
-    { id: 'in_progress', label: 'In Progress', count: issues.filter(i => i.status === 'in_progress').length },
-    { id: 'resolved', label: 'Resolved', count: issues.filter(i => i.status === 'resolved').length },
+    { id: 'all', label: 'All Priority', count: issues.length },
+    { id: 'critical', label: 'Critical', count: issues.filter(i => i.priority === 'URGENT').length },
+    { id: 'sla_at_risk', label: 'SLA at Risk', count: issues.filter(i => parseInt(i.timeAgo) >= 4).length },
   ];
 
   return (
@@ -192,8 +207,6 @@ const IssueManagementPage: React.FC = () => {
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
-                if (tab.id !== 'all') setFilters(prev => ({ ...prev, status: tab.id }));
-                else setFilters(prev => ({ ...prev, status: 'all' }));
               }}
               className={`cc-folder-tab ${activeTab === tab.id ? 'cc-folder-tab-active' : ''}`}
             >
@@ -240,13 +253,14 @@ const IssueManagementPage: React.FC = () => {
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}></th>
-                  <th>Case</th>
-                  <th>Location</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                  <th>Assigned</th>
-                  <th>Age</th>
+                  {(['id', 'location', 'category', 'status', 'priority', 'assignedTo', 'timeAgo'] as const).map((col) => (
+                    <th key={col} onClick={() => handleSort(col)} className="cursor-pointer select-none">
+                      <span className="flex items-center gap-1">
+                        {col === 'id' ? 'Case' : col === 'assignedTo' ? 'Assigned' : col === 'timeAgo' ? 'Age' : col.charAt(0).toUpperCase() + col.slice(1)}
+                        <ArrowUpDown className="h-3 w-3 opacity-40" />
+                      </span>
+                    </th>
+                  ))}
                   <th style={{ width: '80px' }}>Actions</th>
                 </tr>
               </thead>

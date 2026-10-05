@@ -6,26 +6,26 @@
  * Data: /analytics/wards. Tiles are schematic until the API returns ward geometry.
  */
 import React, { useState } from 'react';
-import { Layers } from 'lucide-react';
+import { Layers, ArrowUpDown } from 'lucide-react';
 
 const wardsData = [
-  { id: 'W01', cases: 8,  resolved: 6,  sla: 88, backlog: 2,  step: 1 },
-  { id: 'W02', cases: 14, resolved: 10, sla: 82, backlog: 4,  step: 2 },
-  { id: 'W03', cases: 27, resolved: 18, sla: 71, backlog: 9,  step: 3 },
-  { id: 'W04', cases: 5,  resolved: 5,  sla: 100,backlog: 0,  step: 1 },
-  { id: 'W05', cases: 11, resolved: 8,  sla: 85, backlog: 3,  step: 2 },
-  { id: 'W06', cases: 19, resolved: 12, sla: 74, backlog: 7,  step: 3 },
+  { id: 'W01', cases: 8, resolved: 6, sla: 88, backlog: 2, step: 1 },
+  { id: 'W02', cases: 14, resolved: 10, sla: 82, backlog: 4, step: 2 },
+  { id: 'W03', cases: 27, resolved: 18, sla: 71, backlog: 9, step: 3 },
+  { id: 'W04', cases: 5, resolved: 5, sla: 100, backlog: 0, step: 1 },
+  { id: 'W05', cases: 11, resolved: 8, sla: 85, backlog: 3, step: 2 },
+  { id: 'W06', cases: 19, resolved: 12, sla: 74, backlog: 7, step: 3 },
   { id: 'W07', cases: 34, resolved: 22, sla: 65, backlog: 12, step: 4 },
-  { id: 'W08', cases: 3,  resolved: 3,  sla: 100,backlog: 0,  step: 1 },
-  { id: 'W09', cases: 22, resolved: 15, sla: 73, backlog: 7,  step: 3 },
-  { id: 'W10', cases: 6,  resolved: 5,  sla: 92, backlog: 1,  step: 1 },
-  { id: 'W11', cases: 15, resolved: 11, sla: 80, backlog: 4,  step: 2 },
+  { id: 'W08', cases: 3, resolved: 3, sla: 100, backlog: 0, step: 1 },
+  { id: 'W09', cases: 22, resolved: 15, sla: 73, backlog: 7, step: 3 },
+  { id: 'W10', cases: 6, resolved: 5, sla: 92, backlog: 1, step: 1 },
+  { id: 'W11', cases: 15, resolved: 11, sla: 80, backlog: 4, step: 2 },
   { id: 'W12', cases: 45, resolved: 25, sla: 58, backlog: 20, step: 5 },
-  { id: 'W13', cases: 9,  resolved: 7,  sla: 89, backlog: 2,  step: 1 },
-  { id: 'W14', cases: 12, resolved: 9,  sla: 83, backlog: 3,  step: 2 },
-  { id: 'W15', cases: 7,  resolved: 6,  sla: 90, backlog: 1,  step: 1 },
-  { id: 'W16', cases: 20, resolved: 14, sla: 75, backlog: 6,  step: 3 },
-  { id: 'W17', cases: 16, resolved: 12, sla: 81, backlog: 4,  step: 2 },
+  { id: 'W13', cases: 9, resolved: 7, sla: 89, backlog: 2, step: 1 },
+  { id: 'W14', cases: 12, resolved: 9, sla: 83, backlog: 3, step: 2 },
+  { id: 'W15', cases: 7, resolved: 6, sla: 90, backlog: 1, step: 1 },
+  { id: 'W16', cases: 20, resolved: 14, sla: 75, backlog: 6, step: 3 },
+  { id: 'W17', cases: 16, resolved: 12, sla: 81, backlog: 4, step: 2 },
   { id: 'W18', cases: 38, resolved: 20, sla: 60, backlog: 18, step: 4 },
 ];
 
@@ -42,6 +42,19 @@ const WardHeatmapPage: React.FC = () => {
   const [metric, setMetric] = useState('Active Cases');
   const [selectedWard, setSelectedWard] = useState<string | null>(null);
   const ward = wardsData.find(w => w.id === selectedWard);
+
+  const [sortField, setSortField] = useState<keyof typeof wardsData[0]>('id');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  
+  const handleSort = (field: keyof typeof wardsData[0]) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const sortedWards = [...wardsData].sort((a, b) => {
+    const av = a[sortField], bv = b[sortField];
+    return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
 
   return (
     <div className="space-y-6">
@@ -77,17 +90,24 @@ const WardHeatmapPage: React.FC = () => {
               </div>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {wardsData.map((w, i) => (
-                <button
-                  key={w.id}
-                  onClick={() => setSelectedWard(w.id)}
-                  className={`cc-heat-tile cc-card-lift cc-fade-up cursor-pointer ${selectedWard === w.id ? 'ring-3 ring-lime' : ''}`}
-                  style={{ background: getHeatColor(w.step), color: getTextColor(w.step), '--stagger-index': i } as React.CSSProperties}
-                >
-                  <div className="font-mono text-[10px] opacity-70">{w.id}</div>
-                  <div className="font-display text-lg">{w.cases}</div>
-                </button>
-              ))}
+              {wardsData.map((w, i) => {
+                let displayValue: string | number = w.cases;
+                if (metric === 'SLA Compliance') displayValue = `${w.sla}%`;
+                else if (metric === 'Backlog') displayValue = w.backlog;
+                else if (metric === 'Resolution Rate') displayValue = `${Math.round(w.resolved / w.cases * 100)}%`;
+
+                return (
+                  <button
+                    key={w.id}
+                    onClick={() => setSelectedWard(w.id)}
+                    className={`cc-heat-tile cc-card-lift cc-fade-up cursor-pointer ${selectedWard === w.id ? 'ring-3 ring-lime' : ''}`}
+                    style={{ background: getHeatColor(w.step), color: getTextColor(w.step), '--stagger-index': i } as React.CSSProperties}
+                  >
+                    <div className="font-mono text-[10px] opacity-70">{w.id}</div>
+                    <div className="font-display text-lg">{displayValue}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -138,16 +158,18 @@ const WardHeatmapPage: React.FC = () => {
           <table className="cc-table" style={{ border: 'none', borderRadius: 0 }}>
             <thead>
               <tr>
-                <th>Ward</th>
-                <th>Cases</th>
-                <th>Resolved</th>
-                <th>SLA</th>
-                <th>Backlog</th>
-                <th>Heat</th>
+                {(['id', 'cases', 'resolved', 'sla', 'backlog', 'step'] as const).map((col) => (
+                  <th key={col} onClick={() => handleSort(col)} className="cursor-pointer select-none">
+                    <span className="flex items-center gap-1">
+                      {col === 'id' ? 'Ward' : col === 'step' ? 'Heat' : col === 'sla' ? 'SLA' : col.charAt(0).toUpperCase() + col.slice(1)}
+                      <ArrowUpDown className="h-3 w-3 opacity-40" />
+                    </span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {wardsData.map((w, i) => (
+              {sortedWards.map((w, i) => (
                 <tr key={w.id} className="cc-fade-up cursor-pointer hover:bg-lime-tint"
                   style={{ '--stagger-index': i } as React.CSSProperties}
                   onClick={() => setSelectedWard(w.id)}
