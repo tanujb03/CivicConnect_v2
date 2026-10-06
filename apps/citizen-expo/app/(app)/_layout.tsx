@@ -9,6 +9,7 @@ export default function AppLayout() {
       <Stack.Screen name="map/expanded" />
       <Stack.Screen name="settings/accessibility" />
       <Stack.Screen name="settings/language" />
+      <Stack.Screen name="settings/profile" />
     </Stack>
   );
 }

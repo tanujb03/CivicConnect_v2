@@ -1,13 +1,14 @@
 /**
  * C09 — Notifications
  * Workflow events — each deep-links to the relevant entity.
+ * Restyled for Direction A (ink borders, hard shadows, lime/wine/fire palette).
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Colors, Typography, Spacing, Radii, Shadows, Layout } from '../../../src/constants/theme';
+import { Colors, Typography, Spacing, Radii, Layout } from '../../../src/constants/theme';
 import { notificationsApi } from '../../../src/api/client';
 import type { AppNotification, NotificationEventType } from '../../../src/types';
 
@@ -22,19 +23,6 @@ const EVENT_ICONS: Record<NotificationEventType, string> = {
   department_requested_info:  '❓',
   case_supported:             '👍',
   incident_nearby:            '⚠️',
-};
-
-const EVENT_COLORS: Record<NotificationEventType, string> = {
-  case_assigned:              Colors.info,
-  case_in_progress:           Colors.warning,
-  evidence_uploaded:          Colors.brand[500],
-  verification_requested:     Colors.success,
-  case_resolved:              Colors.success,
-  case_reopened:              Colors.error,
-  duplicate_found:            '#8b5cf6',
-  department_requested_info:  Colors.warning,
-  case_supported:             Colors.brand[500],
-  incident_nearby:            Colors.error,
 };
 
 const MOCK_NOTIFICATIONS: AppNotification[] = [
@@ -86,44 +74,43 @@ function NotificationItem({
   onMarkRead: (id: string) => void;
 }) {
   const icon = EVENT_ICONS[item.type] ?? '📢';
-  const color = EVENT_COLORS[item.type] ?? Colors.neutral[400];
   const ago = getTimeAgo(item.created_at);
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.item,
-        { borderLeftColor: color, borderLeftWidth: 4 },
-        !item.read && styles.itemUnread,
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={item.title}
-    >
-      <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-        <Text style={styles.icon}>{icon}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-          <Text style={[styles.itemTitle, !item.read && styles.itemTitleUnread]}>{item.title}</Text>
-          {!item.read && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onMarkRead(item.id);
-              }}
-              style={styles.checkBtn}
-              accessibilityLabel="Mark as read"
-            >
-              <Text style={{ fontSize: 13, color: Colors.brand[600] }}>✓</Text>
-            </TouchableOpacity>
-          )}
+    <View style={styles.itemOuter}>
+      <View style={styles.itemShadow} />
+      <TouchableOpacity
+        style={[styles.item, !item.read && styles.itemUnread]}
+        onPress={onPress}
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+      >
+        <View style={styles.iconBox}>
+          <Text style={styles.icon}>{icon}</Text>
         </View>
-        <Text style={styles.itemBody} numberOfLines={2}>{item.body}</Text>
-        <Text style={styles.itemTime}>{ago}</Text>
-      </View>
-      {!item.read && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <Text style={[styles.itemTitle, !item.read && styles.itemTitleUnread]}>{item.title}</Text>
+            {!item.read && (
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onMarkRead(item.id);
+                }}
+                style={styles.checkBtn}
+                accessibilityLabel="Mark as read"
+              >
+                <Text style={{ fontSize: 13, color: Colors.ink }}>✓</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.itemBody} numberOfLines={2}>{item.body}</Text>
+          <Text style={styles.itemTime}>{ago}</Text>
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -176,28 +163,33 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <Text style={styles.headerSub}>
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>C09 • NOTIFICATIONS</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
+      <View style={styles.actionsRow}>
+        <Text style={styles.unreadLabel}>
+          {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up ✓'}
+        </Text>
         <View style={{ flexDirection: 'row', gap: Spacing[2] }}>
           {unreadCount > 0 && (
-            <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
-              <Text style={styles.markAllText}>Mark all read</Text>
+            <TouchableOpacity onPress={markAllRead} style={styles.actionBtn}>
+              <Text style={styles.actionBtnText}>Mark all read</Text>
             </TouchableOpacity>
           )}
           {notifications.length > 0 && (
-            <TouchableOpacity onPress={clearAll} style={styles.clearBtn}>
-              <Text style={styles.clearBtnText}>🗑️ Clear</Text>
+            <TouchableOpacity onPress={clearAll} style={[styles.actionBtn, { backgroundColor: Colors.fire }]}>
+              <Text style={[styles.actionBtnText, { color: Colors.surface }]}>Clear</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={Colors.brand[600]} /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={Colors.ink} /></View>
       ) : notifications.length === 0 ? (
         <View style={styles.center}>
           <Text style={{ fontSize: 48, marginBottom: Spacing[4] }}>🔔</Text>
@@ -215,7 +207,7 @@ export default function NotificationsScreen() {
               onMarkRead={handleMarkRead}
             />
           )}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.brand[600]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.ink} />}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -235,26 +227,29 @@ function getTimeAgo(iso: string): string {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.neutral[50] },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[5], paddingVertical: Spacing[4], backgroundColor: Colors.brand[800] },
-  headerTitle: { fontSize: Typography.xl, fontWeight: Typography.bold, color: '#fff', letterSpacing: -0.4 },
-  headerSub: { fontSize: Typography.xs, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  markAllBtn: { paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: Radii.lg },
-  markAllText: { fontSize: Typography.xs, color: '#fff', fontWeight: Typography.semibold },
-  clearBtn: { paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], backgroundColor: 'rgba(239,68,68,0.2)', borderRadius: Radii.lg },
-  clearBtnText: { fontSize: Typography.xs, color: '#fca5a5', fontWeight: Typography.semibold },
-  list: { paddingHorizontal: Spacing[5], paddingTop: Spacing[3], paddingBottom: Layout.bottomNavHeight + Spacing[4] },
-  item: { flexDirection: 'row', gap: Spacing[3], alignItems: 'flex-start', backgroundColor: '#fff', borderRadius: Radii.xl, padding: Spacing[4], marginBottom: Spacing[2], ...Shadows.sm, borderWidth: 1, borderColor: Colors.neutral[100] },
-  itemUnread: { backgroundColor: '#fff' },
-  iconBox: { width: 44, height: 44, borderRadius: Radii.lg, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: Colors.ground },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[4], paddingVertical: Spacing[4] },
+  backBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: Colors.ink, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  backBtnText: { fontSize: 18, color: Colors.ink },
+  headerTitle: { fontFamily: 'monospace', fontSize: 14, fontWeight: Typography.bold, color: Colors.muted },
+  actionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[4], marginBottom: Spacing[4] },
+  unreadLabel: { fontSize: 16, fontWeight: Typography.bold, color: Colors.ink },
+  actionBtn: { backgroundColor: Colors.lime, paddingHorizontal: Spacing[3], paddingVertical: Spacing[1.5], borderRadius: Radii.full, borderWidth: 1.5, borderColor: Colors.ink },
+  actionBtnText: { fontSize: 12, fontWeight: Typography.bold, color: Colors.ink },
+  list: { paddingHorizontal: Spacing[4], paddingBottom: Layout.bottomNavHeight + Spacing[4] },
+  itemOuter: { marginBottom: Spacing[3] },
+  itemShadow: { position: 'absolute', top: 4, left: 4, right: -4, bottom: -4, backgroundColor: Colors.ink, borderRadius: Radii.lg },
+  item: { flexDirection: 'row', gap: Spacing[3], alignItems: 'flex-start', backgroundColor: Colors.surface, borderRadius: Radii.lg, padding: Spacing[4], borderWidth: 2, borderColor: Colors.ink },
+  itemUnread: { backgroundColor: Colors.limeTint },
+  iconBox: { width: 44, height: 44, borderRadius: Radii.lg, backgroundColor: Colors.ground, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.ink },
   icon: { fontSize: 22 },
-  itemTitle: { fontSize: Typography.sm, fontWeight: Typography.semibold, color: Colors.neutral[700], marginBottom: 2 },
-  itemTitleUnread: { color: Colors.neutral[900], fontWeight: Typography.bold },
-  itemBody: { fontSize: Typography.xs, color: Colors.neutral[500], lineHeight: 16, marginBottom: 4 },
-  itemTime: { fontSize: 10, color: Colors.neutral[400], fontWeight: Typography.medium },
-  checkBtn: { width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.brand[50], alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.brand[200] },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.brand[500], marginTop: 6 },
+  itemTitle: { fontSize: 14, fontWeight: Typography.semibold, color: Colors.muted, marginBottom: 2 },
+  itemTitleUnread: { color: Colors.ink, fontWeight: Typography.bold },
+  itemBody: { fontSize: 13, color: Colors.muted, lineHeight: 18, marginBottom: 4 },
+  itemTime: { fontSize: 10, color: Colors.muted, fontWeight: Typography.medium },
+  checkBtn: { width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.ink },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.fire, marginTop: 6, borderWidth: 1, borderColor: Colors.ink },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing[3], paddingHorizontal: Spacing[8] },
-  emptyTitle: { fontSize: Typography.xl, fontWeight: Typography.bold, color: Colors.neutral[900] },
-  emptySub: { fontSize: Typography.base, color: Colors.neutral[400], textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { fontSize: 20, fontWeight: Typography.bold, color: Colors.ink },
+  emptySub: { fontSize: 15, color: Colors.muted, textAlign: 'center', lineHeight: 22 },
 });

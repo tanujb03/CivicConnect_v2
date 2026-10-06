@@ -3,7 +3,9 @@
     "target": "esnext",
     "module": "esnext",
     "lib": [
-      "esnext"
+      "esnext",
+      "dom",
+      "dom.iterable"
     ],
     "allowJs": true,
     "jsx": "react-native",
