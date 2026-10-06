@@ -1,528 +1,424 @@
-/**
- * F02 — Work Order Detail
- *
- * Displays:
- * - Location (Address, Ward, GPS coordinates)
- * - Issue summary & Department
- * - Original Citizen Evidence gallery
- * - Priority & SLA Countdown
- * - Supervisor / Dispatch Instructions
- * - Contextual primary action (Start Work -> Upload Evidence -> Complete Work)
- */
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
+  Pressable,
+  Alert,
   Linking,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSizes, Radii, Shadows, Spacing } from '../../src/theme/tokens';
+import { FontFamily } from '../../src/theme/fonts';
 import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-  WORK_ORDER_STATUS_CONFIG,
-  PRIORITY_CONFIG,
-} from '../../src/constants/theme';
-import { workOrdersApi } from '../../src/api/client';
-import type { WorkOrder } from '../../src/types';
+  Card,
+  PageHeader,
+  PriorityChip,
+  StatusChip,
+  SlaChip,
+  Button,
+  StateView,
+  HardShadow,
+  useToast,
+} from '../../src/ui';
+import { apiClient } from '../../src/api/client';
+
+function InfoRow({ icon, label, value, onPress }: {
+  icon: string;
+  label: string;
+  value: string;
+  onPress?: () => void;
+}) {
+  const content = (
+    <View style={styles.infoRow}>
+      <Ionicons name={icon as any} size={16} color={Colors.wine} />
+      <View style={styles.infoContent}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={[styles.infoValue, onPress && styles.infoLink]}>{value}</Text>
+      </View>
+      {onPress ? <Ionicons name="chevron-forward" size={14} color={Colors.muted} /> : null}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="link">
+        {content}
+      </Pressable>
+    );
+  }
+  return content;
+}
 
 export default function WorkOrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const { show } = useToast();
+  const queryClient = useQueryClient();
 
-  const [order, setOrder] = useState<WorkOrder | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: workOrder, isLoading, isError } = useQuery({
+    queryKey: ['workOrder', id],
+    queryFn: () => apiClient.getWorkOrder(id!),
+    enabled: !!id,
+  });
 
-  const fetchOrder = useCallback(async () => {
-    if (!id) return;
-    try {
-      const data = await workOrdersApi.get(id);
-      if (data) setOrder(data);
-    } catch {}
-    finally {
-      setLoading(false);
+  const mutation = useMutation({
+    mutationFn: (status: 'IN_PROGRESS' | 'DONE' | 'CANCELLED') =>
+      apiClient.updateWorkOrder(id!, { status }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['workOrder', id], updated);
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['kpi'] });
+      show('Status updated', 'success');
+    },
+    onError: () => show('Failed to update status', 'error'),
+  });
+
+  const handleCallCitizen = () => {
+    if (workOrder?.citizenPhone) {
+      Linking.openURL(`tel:${workOrder.citizenPhone}`).catch(() =>
+        show('Could not open dialer', 'error')
+      );
     }
-  }, [id]);
-
-  useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
-
-  const openNavigation = () => {
-    if (!order?.location) return;
-    const { lat, lng } = order.location;
-    const label = encodeURIComponent(order.title);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${lat},${lng}`,
-      android: `geo:0,0?q=${lat},${lng}(${label})`,
-      default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-    });
-    if (url) Linking.openURL(url);
   };
 
-  if (loading) {
+  const handleOpenMaps = () => {
+    if (workOrder?.lat && workOrder?.lng) {
+      const url = `https://maps.google.com/?q=${workOrder.lat},${workOrder.lng}`;
+      Linking.openURL(url).catch(() => show('Could not open Maps', 'error'));
+    } else {
+      const url = `https://maps.google.com/?q=${encodeURIComponent(workOrder?.address ?? '')}`;
+      Linking.openURL(url);
+    }
+  };
+
+  const handleQuickAccept = () => {
+    if (workOrder?.status !== 'OPEN') return;
+    Alert.alert(
+      'Accept Work Order',
+      'Mark this work order as In Progress?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: () => mutation.mutate('IN_PROGRESS'),
+        },
+      ]
+    );
+  };
+
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.action[600]} />
-        <Text style={styles.loadingText}>Loading work order details...</Text>
+      <SafeAreaView style={styles.root}>
+        <StateView variant="loading" title="Loading work order..." />
       </SafeAreaView>
     );
   }
 
-  if (!order) {
+  if (isError || !workOrder) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>Work Order Not Found</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>‹ Back to Assigned Tasks</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.root}>
+        <PageHeader title="Work Order" onBack={() => router.back()} />
+        <StateView
+          variant="error"
+          title="Not found"
+          message="This work order could not be loaded"
+          actionLabel="Go Back"
+          onAction={() => router.back()}
+        />
       </SafeAreaView>
     );
   }
 
-  const statusConfig = WORK_ORDER_STATUS_CONFIG[order.status] ?? WORK_ORDER_STATUS_CONFIG.assigned;
-  const priorityConfig = PRIORITY_CONFIG[order.priority] ?? PRIORITY_CONFIG.medium;
+  const isDone = workOrder.status === 'DONE' || workOrder.status === 'CANCELLED';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.back()}>
-          <Text style={styles.headerBackText}>‹ Tasks</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerCaseNumber}>{order.case_number}</Text>
-          <Text style={styles.headerSubtitle}>WORK ORDER</Text>
-        </View>
-        <View style={{ width: 50 }} />
-      </View>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <PageHeader
+          title={workOrder.caseId}
+          eyebrow={`WARD ${workOrder.ward}`}
+          subtitle={`Last updated ${new Date(workOrder.updatedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`}
+          onBack={() => router.back()}
+        />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Status & Priority Banner */}
-        <View style={styles.bannerRow}>
-          <View style={[styles.priorityBadge, { backgroundColor: priorityConfig.bg }]}>
-            <Text style={[styles.priorityText, { color: priorityConfig.color }]}>
-              {priorityConfig.label} PRIORITY
+        {/* Status + chips */}
+        <View style={styles.chipRow}>
+          <PriorityChip priority={workOrder.priority} />
+          <StatusChip status={workOrder.status} />
+          <SlaChip deadline={workOrder.slaDeadline} />
+        </View>
+
+        {/* Title */}
+        <View style={styles.section}>
+          <Text style={styles.workTitle}>{workOrder.title}</Text>
+        </View>
+
+        {/* Description */}
+        <Card shadow="hard" containerStyle={styles.cardMargin}>
+          <Text style={styles.sectionLabel}>DESCRIPTION</Text>
+          <Text style={styles.description}>{workOrder.description}</Text>
+        </Card>
+
+        {/* Location & Citizen */}
+        <Card shadow="hard" containerStyle={styles.cardMargin}>
+          <Text style={styles.sectionLabel}>DETAILS</Text>
+
+          <InfoRow
+            icon="location-outline"
+            label="Address"
+            value={workOrder.address}
+            onPress={handleOpenMaps}
+          />
+          <View style={styles.rowDivider} />
+
+          <InfoRow
+            icon="grid-outline"
+            label="Category"
+            value={workOrder.category}
+          />
+          <View style={styles.rowDivider} />
+
+          <InfoRow
+            icon="calendar-outline"
+            label="Created"
+            value={new Date(workOrder.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+          />
+
+          {workOrder.citizenName ? (
+            <>
+              <View style={styles.rowDivider} />
+              <InfoRow
+                icon="person-outline"
+                label="Reported by"
+                value={workOrder.citizenName}
+              />
+            </>
+          ) : null}
+
+          {workOrder.citizenPhone ? (
+            <>
+              <View style={styles.rowDivider} />
+              <InfoRow
+                icon="call-outline"
+                label="Citizen phone"
+                value={workOrder.citizenPhone}
+                onPress={handleCallCitizen}
+              />
+            </>
+          ) : null}
+        </Card>
+
+        {/* Map placeholder */}
+        <HardShadow
+          offset={Shadows.card}
+          radius={Radii.lg}
+          containerStyle={styles.mapWrapper}
+        >
+          <Pressable
+            style={styles.mapPlaceholder}
+            onPress={handleOpenMaps}
+            accessibilityLabel="Open location in Maps"
+          >
+            <Ionicons name="map-outline" size={36} color={Colors.muted} />
+            <Text style={styles.mapLabel}>TAP TO OPEN IN MAPS</Text>
+            <Text style={styles.mapAddress} numberOfLines={2}>
+              {workOrder.address}
             </Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg, borderColor: statusConfig.border }]}>
-            <Text style={[styles.statusText, { color: statusConfig.text }]}>
-              {statusConfig.label}
-            </Text>
-          </View>
-        </View>
+            {workOrder.lat && workOrder.lng ? (
+              <Text style={styles.mapCoords}>
+                {workOrder.lat.toFixed(5)}, {workOrder.lng.toFixed(5)}
+              </Text>
+            ) : null}
+          </Pressable>
+        </HardShadow>
 
-        {/* Title & Department */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.orderTitle}>{order.title}</Text>
-          <Text style={styles.departmentText}>🏢 {order.department}</Text>
-          {order.description && (
-            <Text style={styles.descriptionText}>{order.description}</Text>
-          )}
-        </View>
+        {/* Action Buttons */}
+        {!isDone ? (
+          <View style={styles.actionSection}>
+            <Text style={styles.sectionLabel}>ACTIONS</Text>
 
-        {/* Location & Navigation */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeading}>Site Location</Text>
-            <TouchableOpacity style={styles.navBtn} onPress={openNavigation}>
-              <Text style={styles.navBtnText}>🧭 Open GPS</Text>
-            </TouchableOpacity>
-          </View>
+            {workOrder.status === 'OPEN' ? (
+              <Button
+                title="ACCEPT & START"
+                onPress={handleQuickAccept}
+                variant="wine"
+                loading={mutation.isPending}
+                style={styles.actionBtn}
+              />
+            ) : null}
 
-          <Text style={styles.addressText}>
-            {order.location.address || 'Field Site Coordinates'}
-          </Text>
-          {order.location.landmark && (
-            <Text style={styles.landmarkText}>Landmark: {order.location.landmark}</Text>
-          )}
-          <Text style={styles.coordText}>
-            GPS: {order.location.lat.toFixed(5)}, {order.location.lng.toFixed(5)} • {order.location.ward || 'Zone East'}
-          </Text>
-        </View>
-
-        {/* Dispatch Instructions */}
-        <View style={[styles.sectionCard, styles.instructionsCard]}>
-          <Text style={styles.instructionHeading}>⚠️ Field Instructions & Task Scope</Text>
-          <Text style={styles.instructionBody}>
-            {order.instructions || 'Inspect physical site, secure safety perimeter, repair defect, and photograph completed resolution.'}
-          </Text>
-
-          {order.required_evidence && order.required_evidence.length > 0 && (
-            <View style={styles.evidenceReqWrap}>
-              <Text style={styles.evidenceReqTitle}>Mandatory Completion Evidence:</Text>
-              {order.required_evidence.map((req, idx) => (
-                <Text key={idx} style={styles.evidenceReqItem}>
-                  ✓ {req}
-                </Text>
-              ))}
+            <View style={styles.actionRow}>
+              <View style={styles.actionHalf}>
+                <Button
+                  title="ADD EVIDENCE"
+                  onPress={() => router.push(`/work-order/evidence/${id}` as any)}
+                  variant="secondary"
+                  size="default"
+                />
+              </View>
+              <View style={styles.actionHalf}>
+                <Button
+                  title="COMPLETE"
+                  onPress={() => router.push(`/work-order/complete/${id}` as any)}
+                  variant="primary"
+                  size="default"
+                />
+              </View>
             </View>
-          )}
-        </View>
 
-        {/* Original Citizen Evidence Gallery */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionHeading}>Original Citizen Evidence</Text>
-          {order.original_evidence.length === 0 ? (
-            <Text style={styles.noEvidenceText}>No original photo attached by citizen reporter.</Text>
-          ) : (
-            <View style={styles.gallery}>
-              {order.original_evidence.map(ev => (
-                <View key={ev.id} style={styles.evidenceBox}>
-                  <Image source={{ uri: ev.url }} style={styles.evidenceImg} />
-                  <View style={styles.evidenceOverlay}>
-                    <Text style={styles.evidenceSourceBadge}>CITIZEN REPORT</Text>
-                    {ev.caption && <Text style={styles.evidenceCaption}>{ev.caption}</Text>}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* SLA & Time Tracking */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionHeading}>SLA & Time Targets</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Assigned At:</Text>
-            <Text style={styles.metaValue}>{new Date(order.assigned_at).toLocaleString()}</Text>
+            {workOrder.status === 'IN_PROGRESS' ? (
+              <Button
+                title="UPDATE STATUS"
+                onPress={() => router.push(`/work-order/start/${id}` as any)}
+                variant="ghost"
+                size="default"
+                style={styles.ghostBtn}
+              />
+            ) : null}
           </View>
-          {order.start_time && (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Work Commenced:</Text>
-              <Text style={styles.metaValue}>{new Date(order.start_time).toLocaleString()}</Text>
-            </View>
-          )}
-          {order.completion_time && (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Work Finished:</Text>
-              <Text style={styles.metaValue}>{new Date(order.completion_time).toLocaleString()}</Text>
-            </View>
-          )}
-          {order.deadline && (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>SLA Deadline:</Text>
-              <Text style={[styles.metaValue, { color: Colors.error[700], fontWeight: '700' }]}>
-                {new Date(order.deadline).toLocaleString()}
+        ) : (
+          <Card shadow="hard" containerStyle={styles.cardMargin}>
+            <View style={styles.closedBanner}>
+              <Ionicons
+                name={workOrder.status === 'DONE' ? 'checkmark-circle' : 'close-circle'}
+                size={24}
+                color={workOrder.status === 'DONE' ? Colors.wine : Colors.muted}
+              />
+              <Text style={styles.closedText}>
+                {workOrder.status === 'DONE' ? 'Work order resolved' : 'Work order cancelled'}
               </Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Floating Bottom Workflow Action */}
-      <View style={styles.bottomBar}>
-        {order.status === 'assigned' || order.status === 'acknowledged' ? (
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={() => router.push(`/work-order/start/${order.id}`)}
-          >
-            <Text style={styles.primaryActionText}>🚀 Start Work at Site (F03)</Text>
-          </TouchableOpacity>
-        ) : order.status === 'in_progress' || order.status === 'on_site' ? (
-          <TouchableOpacity
-            style={[styles.primaryActionBtn, styles.evidenceBtn]}
-            onPress={() => router.push(`/work-order/evidence/${order.id}`)}
-          >
-            <Text style={styles.primaryActionText}>📸 Upload Resolution Evidence (F04)</Text>
-          </TouchableOpacity>
-        ) : order.status === 'evidence_uploaded' ? (
-          <TouchableOpacity
-            style={[styles.primaryActionBtn, styles.completeBtn]}
-            onPress={() => router.push(`/work-order/complete/${order.id}`)}
-          >
-            <Text style={styles.primaryActionText}>✅ Finalize & Complete Work (F05)</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.completedNotice}>
-            <Text style={styles.completedNoticeText}>
-              ✓ Work Order Completed • Dispatched to Citizen Verification
-            </Text>
-          </View>
+            {workOrder.closedAt ? (
+              <Text style={styles.closedDate}>
+                {new Date(workOrder.closedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+              </Text>
+            ) : null}
+          </Card>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
+  root: { flex: 1, backgroundColor: Colors.ground },
+  scrollContent: { paddingBottom: 48 },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: Spacing.screenH,
+    marginBottom: 16,
   },
-  header: {
+  section: { paddingHorizontal: Spacing.screenH, marginBottom: 16 },
+  workTitle: {
+    fontFamily: FontFamily.display,
+    fontSize: 22,
+    color: Colors.ink,
+    lineHeight: 28,
+  },
+  cardMargin: { marginHorizontal: Spacing.screenH, marginBottom: 16, width: undefined },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  description: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.body,
+    color: Colors.ink,
+    lineHeight: 24,
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
+    gap: 10,
+    paddingVertical: 12,
   },
-  headerBackBtn: {
-    padding: Spacing.sm,
-  },
-  headerBackText: {
-    fontSize: Typography.bodyLarge.fontSize,
-    color: Colors.action[700],
-    fontWeight: '700',
-  },
-  headerTitleWrap: {
-    alignItems: 'center',
-  },
-  headerCaseNumber: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '800',
-    color: Colors.neutral[900],
-  },
-  headerSubtitle: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[400],
+  infoContent: { flex: 1 },
+  infoLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
-  scrollContent: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: 110,
+  infoValue: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.body,
+    color: Colors.ink,
   },
-  bannerRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
+  infoLink: { color: Colors.wine, textDecorationLine: 'underline' },
+  rowDivider: { height: 1, backgroundColor: Colors.dot },
+  mapWrapper: {
+    marginHorizontal: Spacing.screenH,
+    marginBottom: 16,
   },
-  priorityBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
-    borderRadius: Radii.sm,
-  },
-  priorityText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
+  mapPlaceholder: {
+    height: 140,
+    backgroundColor: Colors.dot,
     borderRadius: Radii.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
-  orderTitle: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '800',
-    color: Colors.neutral[900],
-  },
-  departmentText: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.action[700],
-    fontWeight: '600',
-  },
-  descriptionText: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[700],
-    lineHeight: 22,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionHeading: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  navBtn: {
-    backgroundColor: Colors.info[50],
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.md,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  navBtnText: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.info[700],
-    fontWeight: '700',
-  },
-  addressText: {
-    fontSize: Typography.bodyMedium.fontSize,
-    fontWeight: '600',
-    color: Colors.neutral[800],
-  },
-  landmarkText: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[600],
-  },
-  coordText: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.neutral[400],
-    marginTop: 2,
-  },
-  instructionsCard: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
-  },
-  instructionHeading: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '800',
-    color: '#92400E',
-  },
-  instructionBody: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: '#78350F',
-    lineHeight: 20,
-  },
-  evidenceReqWrap: {
-    marginTop: Spacing.xs,
-    gap: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#FDE68A',
-    paddingTop: Spacing.sm,
-  },
-  evidenceReqTitle: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: '#B45309',
-  },
-  evidenceReqItem: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: '#92400E',
-  },
-  gallery: {
-    gap: Spacing.sm,
-  },
-  evidenceBox: {
-    borderRadius: Radii.md,
-    overflow: 'hidden',
-    position: 'relative',
-    height: 180,
-  },
-  evidenceImg: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.neutral[200],
-  },
-  evidenceOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#000000AA',
-    padding: Spacing.sm,
-  },
-  evidenceSourceBadge: {
-    color: '#38BDF8',
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-  },
-  evidenceCaption: {
-    color: '#FFFFFF',
-    fontSize: Typography.bodySmall.fontSize,
-    marginTop: 2,
-  },
-  noEvidenceText: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-    fontStyle: 'italic',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 2,
-  },
-  metaLabel: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-  },
-  metaValue: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[800],
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
-    ...Shadows.md,
-  },
-  primaryActionBtn: {
-    backgroundColor: Colors.action[600],
-    borderRadius: Radii.md,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-  },
-  evidenceBtn: {
-    backgroundColor: '#0284C7',
-  },
-  completeBtn: {
-    backgroundColor: Colors.brand[700],
-  },
-  primaryActionText: {
-    fontSize: Typography.labelLarge.fontSize,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  completedNotice: {
-    backgroundColor: '#DCFCE7',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-  },
-  completedNoticeText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.ink,
     justifyContent: 'center',
-    gap: Spacing.md,
+    alignItems: 'center',
+    gap: 8,
+    padding: 16,
   },
-  loadingText: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[600],
+  mapLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1,
   },
-  errorTitle: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[800],
+  mapAddress: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.ink,
+    textAlign: 'center',
   },
-  backBtn: {
-    padding: Spacing.md,
+  mapCoords: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    color: Colors.muted,
   },
-  backBtnText: {
-    color: Colors.action[700],
-    fontSize: Typography.bodyMedium.fontSize,
-    fontWeight: '700',
+  actionSection: {
+    paddingHorizontal: Spacing.screenH,
+    gap: 10,
+  },
+  actionBtn: { width: '100%' },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionHalf: { flex: 1 },
+  ghostBtn: { marginTop: 4 },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  closedText: {
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: FontSizes.body,
+    color: Colors.ink,
+  },
+  closedDate: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.small,
+    color: Colors.muted,
+    marginLeft: 34,
   },
 });

@@ -1,401 +1,320 @@
-/**
- * F05 — Complete Work
- *
- * Final verification and submission step:
- * - Summarizes work completed & evidence attached
- * - Explicitly explains: "Does not close the Civic Case — moves to Citizen Verification"
- * - Clean site sign-off checklist
- * - Dispatches completion to municipal backend
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
   Alert,
-  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Radii, Shadows, Spacing } from '../../../src/theme/tokens';
+import { FontFamily } from '../../../src/theme/fonts';
 import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-} from '../../../src/constants/theme';
-import { workOrdersApi } from '../../../src/api/client';
-import type { WorkOrder } from '../../../src/types';
+  PageHeader,
+  Field,
+  Textarea,
+  Button,
+  Card,
+  PhotoTile,
+  PlaceholderPhoto,
+  HardShadow,
+  StateView,
+  useToast,
+} from '../../../src/ui';
+import { apiClient } from '../../../src/api/client';
 
-export default function CompleteWorkScreen() {
+export default function CompleteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const { show } = useToast();
+  const queryClient = useQueryClient();
 
-  const [order, setOrder] = useState<WorkOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
 
-  // Sign-off checklist
-  const [siteCleaned, setSiteCleaned] = useState(false);
-  const [hazardConesRemoved, setHazardConesRemoved] = useState(false);
-  const [readyForVerification, setReadyForVerification] = useState(false);
+  const { data: workOrder, isLoading } = useQuery({
+    queryKey: ['workOrder', id],
+    queryFn: () => apiClient.getWorkOrder(id!),
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    (async () => {
-      if (!id) return;
-      try {
-        const data = await workOrdersApi.get(id);
-        if (data) setOrder(data);
-      } catch {}
-      finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiClient.updateWorkOrder(id!, {
+        status: 'DONE',
+        note: note.trim(),
+        photos: photos,
+      }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['workOrder', id], updated);
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['kpi'] });
+      show('Work order completed!', 'success');
+      // Navigate back to the list
+      router.push('/(tabs)/' as any);
+    },
+    onError: () => show('Failed to complete work order', 'error'),
+  });
 
-  const allConfirmed = siteCleaned && hazardConesRemoved && readyForVerification;
-
-  const handleCompleteWorkOrder = async () => {
-    if (!order) return;
-    if (!allConfirmed) {
-      Alert.alert('Sign-off Required', 'Please confirm all site restoration items before submitting completion.');
+  const handleSubmit = () => {
+    if (!note.trim()) {
+      setNoteError('Resolution note is required to close this work order');
       return;
     }
+    setNoteError('');
+    Alert.alert(
+      'Mark as Resolved?',
+      'This will close the work order and notify the citizen. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark Resolved',
+          onPress: () => mutation.mutate(),
+        },
+      ]
+    );
+  };
 
-    setSubmitting(true);
-    try {
-      await workOrdersApi.complete(order.id, order.work_note);
-      Alert.alert(
-        'Work Completed!',
-        `Work Order ${order.case_number} has been marked COMPLETED.\n\nThe case has been automatically transitioned to CITIZEN VERIFICATION.`,
-        [
-          {
-            text: 'Return to Assigned Tasks',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Camera permission required', 'Please allow camera access in Settings.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets[0]) {
+      const m = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
       );
-    } catch {
-      Alert.alert('Error', 'Failed to complete work order. Please check connection.');
-    } finally {
-      setSubmitting(false);
+      setPhotos((prev) => [...prev, m.uri].slice(0, 5));
     }
   };
 
-  if (loading || !order) {
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow photo library access in Settings.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - photos.length,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      const compressed = await Promise.all(
+        result.assets.map(async (a) => {
+          const m = await ImageManipulator.manipulateAsync(
+            a.uri,
+            [{ resize: { width: 1024 } }],
+            { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          return m.uri;
+        })
+      );
+      setPhotos((prev) => [...prev, ...compressed].slice(0, 5));
+    }
+  };
+
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.brand[600]} />
+      <SafeAreaView style={styles.root}>
+        <StateView variant="loading" title="Loading..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Complete Work Order</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <PageHeader
+          title="COMPLETE WORK"
+          eyebrow="F05 — RESOLVE"
+          onBack={() => router.back()}
+        />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Verification Architecture Banner */}
-        <View style={styles.workflowNoticeBanner}>
-          <Text style={styles.noticeIcon}>ℹ️</Text>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.noticeTitle}>Civic Verification Protocol</Text>
-            <Text style={styles.noticeBody}>
-              Completing this work order does not close the Civic Case immediately. Your resolution photos will be sent to the reporting citizen and ward oversight for verification.
-            </Text>
-          </View>
-        </View>
-
-        {/* Work Order Summary Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Resolution Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Work Order:</Text>
-            <Text style={styles.summaryVal}>{order.case_number}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Task:</Text>
-            <Text style={styles.summaryVal}>{order.title}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Location:</Text>
-            <Text style={styles.summaryVal}>{order.location.address || 'HSR Layout'}</Text>
-          </View>
-          {order.work_note && (
-            <View style={styles.noteSection}>
-              <Text style={styles.summaryLabel}>Field Work Note:</Text>
-              <Text style={styles.noteBody}>{order.work_note}</Text>
-            </View>
-          )}
-          {order.materials_used && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Materials:</Text>
-              <Text style={styles.summaryVal}>{order.materials_used}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Sign-off checklist */}
-        <View style={[styles.card, styles.signoffCard]}>
-          <Text style={styles.signoffTitle}>Site Restoration Sign-off</Text>
-          <Text style={styles.signoffSub}>Confirm all site safety and cleanliness standards:</Text>
-
-          <TouchableOpacity
-            style={styles.checkRow}
-            onPress={() => setSiteCleaned(!siteCleaned)}
-          >
-            <View style={[styles.checkBox, siteCleaned && styles.checkBoxActive]}>
-              {siteCleaned && <Text style={styles.checkMark}>✓</Text>}
-            </View>
-            <View style={styles.checkTextWrap}>
-              <Text style={styles.checkTitle}>Site Cleaned & Debris Cleared</Text>
-              <Text style={styles.checkDesc}>Construction rubble, excess asphalt, or excavation spoil removed.</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.checkRow}
-            onPress={() => setHazardConesRemoved(!hazardConesRemoved)}
-          >
-            <View style={[styles.checkBox, hazardConesRemoved && styles.checkBoxActive]}>
-              {hazardConesRemoved && <Text style={styles.checkMark}>✓</Text>}
-            </View>
-            <View style={styles.checkTextWrap}>
-              <Text style={styles.checkTitle}>Traffic Safety & Cones Demobilized</Text>
-              <Text style={styles.checkDesc}>All caution tape, barricades, and cones retrieved; normal traffic restored.</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.checkRow}
-            onPress={() => setReadyForVerification(!readyForVerification)}
-          >
-            <View style={[styles.checkBox, readyForVerification && styles.checkBoxActive]}>
-              {readyForVerification && <Text style={styles.checkMark}>✓</Text>}
-            </View>
-            <View style={styles.checkTextWrap}>
-              <Text style={styles.checkTitle}>Certified Ready for Citizen Inspection</Text>
-              <Text style={styles.checkDesc}>Repair meets municipal technical standards and is safe for public use.</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Completion Button */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.completeBtn, !allConfirmed && styles.completeBtnDisabled]}
-          onPress={handleCompleteWorkOrder}
-          disabled={submitting}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.completeBtnText}>
-              {allConfirmed ? '✅ Submit & Dispatch to Verification' : 'Confirm Restoration Items Above'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {/* Work order info */}
+          {workOrder ? (
+            <Card shadow="hard" containerStyle={styles.infoCard}>
+              <Text style={styles.woTitle}>{workOrder.title}</Text>
+              <Text style={styles.woAddress}>{workOrder.address}</Text>
+            </Card>
+          ) : null}
+
+          {/* Confirm banner */}
+          <HardShadow offset={{ dx: 3, dy: 3 }} radius={Radii.lg} containerStyle={styles.confirmBanner}>
+            <View style={styles.confirmBannerInner}>
+              <Ionicons name="checkmark-circle" size={24} color={Colors.lime} />
+              <Text style={styles.confirmText}>
+                Completing this work order will notify the citizen and supervisor.
+              </Text>
+            </View>
+          </HardShadow>
+
+          {/* Resolution note */}
+          <Field
+            label="Resolution Note"
+            error={noteError}
+            required
+            hint="Describe the work done and any follow-up required"
+            style={styles.fieldGap}
+          >
+            <Textarea
+              value={note}
+              onChangeText={(t) => {
+                setNote(t);
+                if (noteError) setNoteError('');
+              }}
+              placeholder="e.g. Pothole filled with hot mix asphalt and compacted. Road surface levelled. Area cleaned."
+              numberOfLines={5}
+              hasError={!!noteError}
+            />
+          </Field>
+
+          {/* After photos */}
+          <Text style={styles.sectionLabel}>AFTER PHOTOS (recommended)</Text>
+          <View style={styles.photoRow}>
+            {photos.map((uri, index) => (
+              <PhotoTile
+                key={uri + index}
+                uri={uri}
+                size={100}
+                onRemove={() => setPhotos((prev) => prev.filter((_, i) => i !== index))}
+                style={styles.photoItem}
+              />
+            ))}
+            {photos.length < 5 ? (
+              <PlaceholderPhoto size={100} onPress={takePhoto} style={styles.photoItem} />
+            ) : null}
+          </View>
+
+          <View style={styles.captureButtons}>
+            <HardShadow offset={{ dx: 2, dy: 2 }} radius={Radii.md} containerStyle={styles.captureHalf}>
+              <Pressable style={styles.captureBtn} onPress={takePhoto}>
+                <Ionicons name="camera-outline" size={18} color={Colors.ink} />
+                <Text style={styles.captureBtnText}>CAMERA</Text>
+              </Pressable>
+            </HardShadow>
+            <HardShadow offset={{ dx: 2, dy: 2 }} radius={Radii.md} containerStyle={styles.captureHalf}>
+              <Pressable style={styles.captureBtn} onPress={pickFromGallery}>
+                <Ionicons name="images-outline" size={18} color={Colors.ink} />
+                <Text style={styles.captureBtnText}>GALLERY</Text>
+              </Pressable>
+            </HardShadow>
+          </View>
+
+          {/* Submit */}
+          <Button
+            title={mutation.isPending ? 'Completing...' : 'MARK AS RESOLVED'}
+            onPress={handleSubmit}
+            variant="wine"
+            loading={mutation.isPending}
+          />
+
+          <Button
+            title="CANCEL"
+            onPress={() => router.back()}
+            variant="ghost"
+            style={styles.cancelBtn}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  root: { flex: 1, backgroundColor: Colors.ground },
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: Spacing.screenH,
+    paddingBottom: 48,
+    gap: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
+  infoCard: { width: undefined, marginBottom: 0 },
+  woTitle: {
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: 16,
+    color: Colors.ink,
+    marginBottom: 4,
+    lineHeight: 22,
   },
-  backBtn: {
-    padding: Spacing.sm,
+  woAddress: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.muted,
   },
-  backBtnText: {
-    fontSize: Typography.bodyLarge.fontSize,
-    color: Colors.action[700],
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: 110,
-  },
-  workflowNoticeBanner: {
-    flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
-    padding: Spacing.md,
+  confirmBanner: { width: '100%' },
+  confirmBannerInner: {
+    backgroundColor: Colors.wine,
     borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    gap: Spacing.md,
-    alignItems: 'center',
-  },
-  noticeIcon: {
-    fontSize: 24,
-  },
-  noticeTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '700',
-    color: '#1E40AF',
-  },
-  noticeBody: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: '#1E3A8A',
-    lineHeight: 18,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
-  cardTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-    marginBottom: Spacing.xs,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 3,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
-  },
-  summaryLabel: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-    fontWeight: '600',
-  },
-  summaryVal: {
-    fontSize: Typography.bodySmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[800],
-    flex: 1,
-    textAlign: 'right',
-  },
-  noteSection: {
-    paddingVertical: Spacing.xs,
-    gap: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
-  },
-  noteBody: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[700],
-    lineHeight: 18,
-  },
-  signoffCard: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  signoffTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '800',
-    color: '#166534',
-  },
-  signoffSub: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: '#15803D',
-    marginBottom: Spacing.xs,
-  },
-  checkRow: {
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: '#DCFCE7',
+    gap: 12,
   },
-  checkBox: {
-    width: 24,
-    height: 24,
-    borderRadius: Radii.sm,
-    borderWidth: 2,
-    borderColor: '#15803D',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  checkBoxActive: {
-    backgroundColor: '#15803D',
-  },
-  checkMark: {
-    color: '#FFFFFF',
+  confirmText: {
+    fontFamily: FontFamily.sans,
     fontSize: 14,
-    fontWeight: '900',
-  },
-  checkTextWrap: {
+    color: Colors.onWine,
+    lineHeight: 20,
     flex: 1,
-    gap: 2,
   },
-  checkTitle: {
-    fontSize: Typography.bodyMedium.fontSize,
-    fontWeight: '700',
-    color: '#14532D',
+  fieldGap: { marginBottom: 4 },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
-  checkDesc: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: '#166534',
-    lineHeight: 18,
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
-    ...Shadows.md,
-  },
-  completeBtn: {
-    backgroundColor: Colors.brand[700],
-    paddingVertical: Spacing.md,
+  photoItem: { marginBottom: 0 },
+  captureButtons: { flexDirection: 'row', gap: 10 },
+  captureHalf: { flex: 1 },
+  captureBtn: {
+    backgroundColor: Colors.surface,
     borderRadius: Radii.md,
-    alignItems: 'center',
-  },
-  completeBtnDisabled: {
-    backgroundColor: Colors.neutral[300],
-  },
-  completeBtnText: {
-    fontSize: Typography.labelLarge.fontSize,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  centerContainer: {
-    flex: 1,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    height: 48,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
+  captureBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.ink,
+    letterSpacing: 1,
+  },
+  cancelBtn: { marginTop: 4 },
 });

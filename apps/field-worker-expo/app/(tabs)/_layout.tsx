@@ -1,14 +1,23 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Typography, Spacing } from '../../src/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../src/theme/tokens';
+import { FontFamily } from '../../src/theme/fonts';
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+function TabIcon({
+  name,
+  color,
+}: {
+  name: string;
+  color: string | any;
+  focused?: boolean;
+}) {
   return (
-    <View style={styles.tabItem}>
-      <Text style={[styles.emoji, focused && styles.emojiFocused]}>{emoji}</Text>
-      <Text style={[styles.label, focused && styles.labelFocused]}>{label}</Text>
-    </View>
+    <Ionicons
+      name={name as any}
+      size={22}
+      color={color as string}
+    />
   );
 }
 
@@ -17,66 +26,64 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarShowLabel: false,
+        tabBarActiveTintColor: Colors.wine,
+        tabBarInactiveTintColor: Colors.muted,
+        tabBarStyle: {
+          backgroundColor: Colors.ground,
+          borderTopWidth: 2,
+          borderTopColor: Colors.ink,
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontFamily: FontFamily.mono,
+          fontSize: 10,
+          fontWeight: '500',
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🛠️" label="Assigned Tasks" focused={focused} />
+          title: 'Assigned',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              name={focused ? 'list-circle' : 'list-circle-outline'}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📋" label="Work History" focused={focused} />
+          title: 'Done',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              name={focused ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👷" label="Shift & Crew" focused={focused} />
+          title: 'Me',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    height: 64,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 2,
-    borderTopColor: Colors.neutral[200],
-    paddingTop: Spacing.xs,
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  emoji: {
-    fontSize: 20,
-    opacity: 0.6,
-  },
-  emojiFocused: {
-    opacity: 1,
-    transform: [{ scale: 1.1 }],
-  },
-  label: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.neutral[500],
-    fontWeight: '600',
-  },
-  labelFocused: {
-    color: Colors.action[700],
-    fontWeight: '700',
-  },
-});

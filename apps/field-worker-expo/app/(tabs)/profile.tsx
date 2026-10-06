@@ -1,280 +1,337 @@
-/**
- * Field Worker — Shift & Profile
- *
- * Details active shift, assigned vehicle, crew members,
- * dispatch sync status, and emergency operations hotline.
- */
-
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Switch,
+  Pressable,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-} from '../../src/constants/theme';
+import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSizes, Radii, Shadows, Spacing } from '../../src/theme/tokens';
+import { FontFamily } from '../../src/theme/fonts';
+import { Card, KpiCard, HardShadow, StateView, useToast } from '../../src/ui';
+import { apiClient } from '../../src/api/client';
 
-export default function WorkerProfileScreen() {
-  const [isOnDuty, setIsOnDuty] = useState(true);
-  const [offlineSync, setOfflineSync] = useState(true);
+function ProfileRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View style={styles.profileRow}>
+      <View style={styles.profileRowIcon}>
+        <Ionicons name={icon as any} size={18} color={Colors.wine} />
+      </View>
+      <View style={styles.profileRowContent}>
+        <Text style={styles.profileRowLabel}>{label}</Text>
+        <Text style={styles.profileRowValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
 
-  const toggleDuty = (val: boolean) => {
-    if (!val) {
-      Alert.alert('End Shift', 'Are you sure you want to clock out for this shift?', [
+export default function ProfileScreen() {
+  const { show } = useToast();
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => apiClient.getProfile(),
+  });
+
+  const { data: kpi } = useQuery({
+    queryKey: ['kpi'],
+    queryFn: () => apiClient.getKpi(),
+  });
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Clock Out', onPress: () => setIsOnDuty(false) },
-      ]);
-    } else {
-      setIsOnDuty(true);
-    }
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => {
+            show('Signed out successfully', 'info');
+            router.replace('/sign-in');
+          },
+        },
+      ]
+    );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Shift & Crew Profile</Text>
-      </View>
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView variant="loading" title="Loading profile..." />
+      </SafeAreaView>
+    );
+  }
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Worker Badge Card */}
-        <View style={styles.workerCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👷</Text>
-          </View>
-          <View style={styles.workerInfo}>
-            <Text style={styles.workerName}>Ramesh Kumar (ID #FW-842)</Text>
-            <Text style={styles.department}>Roads & Civil Works Division</Text>
-            <View style={styles.badgeRow}>
-              <View style={[styles.statusBadge, isOnDuty ? styles.dutyOn : styles.dutyOff]}>
-                <Text style={[styles.statusBadgeText, isOnDuty ? styles.dutyOnText : styles.dutyOffText]}>
-                  {isOnDuty ? '● ON ACTIVE SHIFT' : '○ OFF DUTY'}
-                </Text>
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView variant="error" title="Profile not found" />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>MY ACCOUNT</Text>
+          <Text style={styles.heading}>ME</Text>
+        </View>
+
+        {/* Avatar card */}
+        <HardShadow offset={Shadows.card} radius={Radii.xl} containerStyle={styles.avatarCardWrapper}>
+          <View style={styles.avatarCard}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarInitials}>
+                {profile.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.avatarInfo}>
+              <Text style={styles.avatarName}>{profile.name}</Text>
+              <Text style={styles.avatarId}>{profile.employeeId}</Text>
+              <View style={styles.avatarBadge}>
+                <Ionicons name="shield-checkmark" size={12} color={Colors.wine} />
+                <Text style={styles.avatarBadgeText}>{profile.department}</Text>
               </View>
             </View>
           </View>
-        </View>
+        </HardShadow>
 
-        {/* Shift Duty Toggle */}
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <View>
-              <Text style={styles.sectionTitle}>Shift Status</Text>
-              <Text style={styles.sectionSub}>Clocked in at 08:00 AM • Zone East, Ward 174</Text>
+        {/* KPI summary */}
+        {kpi ? (
+          <>
+            <Text style={styles.sectionLabel}>TODAY'S STATS</Text>
+            <View style={styles.kpiRow}>
+              <KpiCard
+                value={kpi.openCount}
+                label="Open"
+                backgroundColor={Colors.wine}
+                textColor={Colors.lime}
+              />
+              <View style={{ width: 8 }} />
+              <KpiCard
+                value={kpi.doneToday}
+                label="Done"
+                backgroundColor={Colors.limeTint}
+                textColor={Colors.ink}
+              />
+              <View style={{ width: 8 }} />
+              <KpiCard
+                value={`${Math.round(kpi.slaBreachRate * 100)}%`}
+                label="SLA"
+                backgroundColor={kpi.slaBreachRate > 0.2 ? Colors.fire : Colors.surface}
+                textColor={kpi.slaBreachRate > 0.2 ? Colors.onFire : Colors.ink}
+              />
             </View>
-            <Switch
-              value={isOnDuty}
-              onValueChange={toggleDuty}
-              trackColor={{ false: Colors.neutral[300], true: Colors.action[600] }}
-            />
-          </View>
-        </View>
+          </>
+        ) : null}
 
-        {/* Crew & Equipment */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Assigned Crew & Vehicle</Text>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Vehicle:</Text>
-            <Text style={styles.metaVal}>KA-01-GA-4412 (Utility Tipper Truck)</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Crew Lead:</Text>
-            <Text style={styles.metaVal}>S. Murthy (Foreman)</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Assigned Ward:</Text>
-            <Text style={styles.metaVal}>Ward 174 (HSR Layout)</Text>
-          </View>
-        </View>
+        {/* Details */}
+        <Text style={styles.sectionLabel}>CONTACT & ASSIGNMENT</Text>
+        <Card shadow="hard" containerStyle={styles.detailCard}>
+          <ProfileRow icon="call-outline" label="Phone" value={profile.phone} />
+          <View style={styles.rowDivider} />
+          <ProfileRow icon="mail-outline" label="Email" value={profile.email} />
+          <View style={styles.rowDivider} />
+          <ProfileRow icon="map-outline" label="Ward" value={profile.ward} />
+          <View style={styles.rowDivider} />
+          <ProfileRow icon="business-outline" label="Department" value={profile.department} />
+        </Card>
 
-        {/* Dispatch & Offline Sync */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dispatch & Connectivity</Text>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.metaLabel}>Offline Queue Sync</Text>
-              <Text style={styles.sectionSub}>Auto-sync photo evidence when mobile signal returns</Text>
-            </View>
-            <Switch
-              value={offlineSync}
-              onValueChange={setOfflineSync}
-              trackColor={{ false: Colors.neutral[300], true: Colors.brand[600] }}
-            />
-          </View>
-        </View>
-
-        {/* Emergency Dispatch Hotline */}
-        <TouchableOpacity
-          style={styles.emergencyBtn}
-          onPress={() => Alert.alert('Municipal Dispatch Control', 'Calling BBMP Central Dispatch: 080-2266-0000')}
+        {/* Developer Primitives Showcase */}
+        <Text style={styles.sectionLabel}>DEVELOPER TOOLS</Text>
+        <Card
+          shadow="hard"
+          containerStyle={styles.detailCard}
+          onPress={() => router.push('/dev/primitives' as any)}
+          accessibilityLabel="Open UI Primitives Showcase"
         >
-          <Text style={styles.emergencyIcon}>📞</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.emergencyTitle}>Municipal Dispatch Control</Text>
-            <Text style={styles.emergencySub}>Direct line for heavy machinery, traffic police escort, or gas line hazard</Text>
+          <View style={styles.profileRow}>
+            <View style={styles.profileRowIcon}>
+              <Ionicons name="cube-outline" size={18} color={Colors.wine} />
+            </View>
+            <View style={styles.profileRowContent}>
+              <Text style={styles.profileRowLabel}>Design System</Text>
+              <Text style={styles.profileRowValue}>UI Primitives Showcase</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.muted} />
           </View>
-        </TouchableOpacity>
+        </Card>
+
+        {/* Logout */}
+        <HardShadow offset={Shadows.hard} radius={Radii.md} containerStyle={styles.logoutWrapper}>
+          <Pressable
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            accessibilityLabel="Sign out"
+            accessibilityRole="button"
+          >
+            <Ionicons name="log-out-outline" size={20} color={Colors.onFire} />
+            <Text style={styles.logoutText}>SIGN OUT</Text>
+          </Pressable>
+        </HardShadow>
+
+        <Text style={styles.appVersion}>CivicConnect Field Worker v1.0.0-beta</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  root: { flex: 1, backgroundColor: Colors.ground },
+  content: {
+    paddingHorizontal: Spacing.screenH,
+    paddingBottom: 48,
   },
-  header: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
+  header: { paddingTop: 20, paddingBottom: 20 },
+  eyebrow: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.wine,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
-  headerTitle: {
-    fontSize: Typography.headline.fontSize,
-    fontWeight: Typography.headline.fontWeight,
-    color: Colors.neutral[900],
+  heading: {
+    fontFamily: FontFamily.display,
+    fontSize: 32,
+    color: Colors.ink,
+    letterSpacing: -1,
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    gap: Spacing.lg,
-    paddingBottom: Spacing.xxl * 2,
-  },
-  workerCard: {
+  avatarCardWrapper: { width: '100%', marginBottom: 24 },
+  avatarCard: {
+    backgroundColor: Colors.wine,
+    borderRadius: Radii.xl,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.md,
-    ...Shadows.sm,
+    gap: 16,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.action[100],
+  avatarCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.lime,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitials: {
+    fontFamily: FontFamily.display,
+    fontSize: 22,
+    color: Colors.ink,
+  },
+  avatarInfo: { flex: 1 },
+  avatarName: {
+    fontFamily: FontFamily.display,
+    fontSize: 18,
+    color: Colors.onWine,
+    marginBottom: 2,
+  },
+  avatarId: {
+    fontFamily: FontFamily.mono,
+    fontSize: 12,
+    color: Colors.dot,
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  avatarBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.lime,
+    borderRadius: Radii.full,
+    alignSelf: 'flex-start',
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.ink,
+  },
+  avatarBadgeText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.ink,
+    letterSpacing: 0.5,
+  },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  kpiRow: { flexDirection: 'row', marginBottom: 24 },
+  detailCard: { width: '100%', marginBottom: 24 },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 12,
+  },
+  profileRowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.ground,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileRowContent: { flex: 1 },
+  profileRowLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  profileRowValue: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.body,
+    color: Colors.ink,
+  },
+  rowDivider: { height: 1, backgroundColor: Colors.dot },
+  logoutWrapper: { width: '100%', marginBottom: 24 },
+  logoutButton: {
+    backgroundColor: Colors.fire,
+    borderRadius: Radii.md,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    height: 52,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
   },
-  avatarText: {
-    fontSize: 28,
+  logoutText: {
+    fontFamily: FontFamily.display,
+    fontSize: 16,
+    color: Colors.onFire,
+    letterSpacing: 1,
   },
-  workerInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  workerName: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  department: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-  },
-  badgeRow: {
-    marginTop: 2,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radii.sm,
-  },
-  statusBadgeText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-  },
-  dutyOn: {
-    backgroundColor: '#DCFCE7',
-  },
-  dutyOnText: {
-    color: '#15803D',
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-  },
-  dutyOff: {
-    backgroundColor: Colors.neutral[200],
-  },
-  dutyOffText: {
-    color: Colors.neutral[600],
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  sectionSub: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-    marginTop: 2,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
-  },
-  metaLabel: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[600],
-  },
-  metaVal: {
-    fontSize: Typography.bodySmall.fontSize,
-    fontWeight: '600',
-    color: Colors.neutral[900],
-  },
-  emergencyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#F87171',
-    borderRadius: Radii.lg,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  emergencyIcon: {
-    fontSize: 24,
-  },
-  emergencyTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '700',
-    color: '#991B1B',
-  },
-  emergencySub: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: '#B91C1C',
-    lineHeight: 16,
-    marginTop: 2,
+  appVersion: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    color: Colors.muted,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
 });

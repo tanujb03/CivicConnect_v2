@@ -1,219 +1,201 @@
-/**
- * Field Worker — Work History
- *
- * Shows completed tasks, resolution timestamps, and verification states.
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-} from '../../src/constants/theme';
-import { workOrdersApi } from '../../src/api/client';
-import type { WorkOrder } from '../../src/types';
+import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSizes, Radii, Spacing } from '../../src/theme/tokens';
+import { FontFamily } from '../../src/theme/fonts';
+import { Card, StatusChip, PriorityChip, StateView } from '../../src/ui';
+import { apiClient } from '../../src/api/client';
+import type { WorkOrder } from '../../src/api/types';
 
-export default function WorkHistoryScreen() {
-  const router = useRouter();
-  const [completedOrders, setCompletedOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+function formatDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await workOrdersApi.list();
-        setCompletedOrders(data.filter(w => w.status === 'completed'));
-      } catch {}
-      finally {
-        setLoading(false);
-      }
-    })();
+function DoneCard({ item, onPress }: { item: WorkOrder; onPress: () => void }) {
+  return (
+    <Card shadow="hard" containerStyle={styles.cardContainer} onPress={onPress}>
+      <View style={styles.cardTop}>
+        <PriorityChip priority={item.priority} size="sm" />
+        <StatusChip status={item.status} size="sm" />
+      </View>
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+      <View style={styles.row}>
+        <Ionicons name="location-outline" size={14} color={Colors.muted} />
+        <Text style={styles.metaText} numberOfLines={1}>{item.address}</Text>
+      </View>
+      <View style={styles.cardFooter}>
+        <Text style={styles.caseId}>#{item.caseId}</Text>
+        {item.closedAt ? (
+          <Text style={styles.dateText}>Closed {formatDate(item.closedAt)}</Text>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
+export default function HistoryScreen() {
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['workOrders', 'done'],
+    queryFn: () => apiClient.getWorkOrders({ status: 'DONE' }),
+  });
+
+  const doneOrders = (data?.data ?? []).filter(
+    (wo) => wo.status === 'DONE' || wo.status === 'CANCELLED'
+  );
+
+  const handlePress = useCallback((id: string) => {
+    router.push(`/work-order/${id}` as any);
   }, []);
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Completed Work Orders</Text>
-        <Text style={styles.headerSub}>Resolved tasks awaiting citizen verification or closed</Text>
-      </View>
+  const renderItem = useCallback(
+    ({ item }: { item: WorkOrder }) => (
+      <DoneCard item={item} onPress={() => handlePress(item.id)} />
+    ),
+    [handlePress]
+  );
 
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="small" color={Colors.brand[600]} />
-        </View>
-      ) : completedOrders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>No Completed Orders Yet</Text>
-          <Text style={styles.emptySub}>Work orders you mark complete will appear here with verification status.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={completedOrders}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/work-order/${item.id}`)}
-            >
-              <View style={styles.cardTop}>
-                <Text style={styles.caseNumber}>{item.case_number}</Text>
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedText}>Awaiting Verification</Text>
-                </View>
-              </View>
+  const ListHeader = (
+    <View style={styles.header}>
+      <Text style={styles.eyebrow}>COMPLETED WORK</Text>
+      <Text style={styles.heading}>DONE</Text>
+      <Text style={styles.subCount}>
+        {doneOrders.length} resolved this session
+      </Text>
+    </View>
+  );
 
-              <Text style={styles.cardTitle}>{item.title}</Text>
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView variant="loading" title="Loading history..." />
+      </SafeAreaView>
+    );
+  }
 
-              {item.work_note && (
-                <View style={styles.noteBox}>
-                  <Text style={styles.noteLabel}>Resolution Note:</Text>
-                  <Text style={styles.noteText}>{item.work_note}</Text>
-                </View>
-              )}
-
-              <View style={styles.footerRow}>
-                <Text style={styles.footerDate}>
-                  Completed: {item.completion_time ? new Date(item.completion_time).toLocaleDateString() : 'Today'}
-                </Text>
-                <Text style={styles.arrowText}>Inspect →</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView
+          variant="error"
+          title="Failed to load"
+          actionLabel="Retry"
+          onAction={() => refetch()}
         />
-      )}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <FlatList
+        data={doneOrders}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => refetch()}
+            tintColor={Colors.wine}
+            colors={[Colors.wine]}
+          />
+        }
+        ListEmptyComponent={
+          <StateView
+            variant="empty"
+            title="Nothing resolved yet"
+            message="Completed work orders will appear here"
+          />
+        }
+        ItemSeparatorComponent={() => <View style={{ height: Spacing.cardGap }} />}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  root: { flex: 1, backgroundColor: Colors.ground },
+  listContent: { paddingHorizontal: Spacing.screenH, paddingBottom: 32 },
+  header: { paddingTop: 20, paddingBottom: 20 },
+  eyebrow: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.wine,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
-  header: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
-    gap: 4,
+  heading: {
+    fontFamily: FontFamily.display,
+    fontSize: 32,
+    color: Colors.ink,
+    letterSpacing: -1,
   },
-  headerTitle: {
-    fontSize: Typography.headline.fontSize,
-    fontWeight: Typography.headline.fontWeight,
-    color: Colors.neutral[900],
+  subCount: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.small,
+    color: Colors.muted,
+    marginTop: 4,
   },
-  headerSub: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-  },
-  listContent: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: Spacing.xxl * 2,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
+  cardContainer: { width: '100%' },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  caseNumber: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.brand[700],
-  },
-  verifiedBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  verifiedText: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: '#047857',
-    fontWeight: '700',
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '600',
-    color: Colors.neutral[800],
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: FontSizes.cardTitle,
+    color: Colors.ink,
+    marginBottom: 8,
+    lineHeight: 24,
   },
-  noteBox: {
-    backgroundColor: Colors.neutral[50],
-    padding: Spacing.sm,
-    borderRadius: Radii.md,
-    gap: 2,
+  row: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
+  metaText: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.small,
+    color: Colors.muted,
+    flex: 1,
   },
-  noteLabel: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[600],
-  },
-  noteText: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[700],
-  },
-  footerRow: {
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  footerDate: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.neutral[400],
-  },
-  arrowText: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.action[700],
-    fontWeight: '700',
-  },
-  centerContainer: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.dot,
+    paddingTop: 10,
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xxl,
-    gap: Spacing.sm,
+  caseId: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    color: Colors.wine,
+    fontWeight: '500',
   },
-  emptyEmoji: {
-    fontSize: 48,
-  },
-  emptyTitle: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[800],
-  },
-  emptySub: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[500],
-    textAlign: 'center',
+  dateText: {
+    fontFamily: FontFamily.sans,
+    fontSize: 12,
+    color: Colors.muted,
   },
 });
