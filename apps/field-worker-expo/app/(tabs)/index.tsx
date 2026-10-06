@@ -1,456 +1,471 @@
-/**
- * F01 — Field Worker Assigned Work
- *
- * Primary workbench for field crews:
- * - Lists work orders dispatched to this crew/worker
- * - Priority & SLA countdown flags
- * - One-tap access to Work Order Detail (F02) & Start Work (F03)
- */
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   RefreshControl,
-  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSizes, Radii, Shadows, Spacing } from '../../src/theme/tokens';
+import { FontFamily } from '../../src/theme/fonts';
 import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-  WORK_ORDER_STATUS_CONFIG,
-  PRIORITY_CONFIG,
-} from '../../src/constants/theme';
-import { workOrdersApi } from '../../src/api/client';
-import type { WorkOrder } from '../../src/types';
+  Card,
+  PriorityChip,
+  StatusChip,
+  SlaChip,
+  KpiCard,
+  StateView,
+  HardShadow,
+  OfflineBanner,
+} from '../../src/ui';
+import { apiClient } from '../../src/api/client';
+import type { WorkOrder } from '../../src/api/types';
+import { useNetwork } from '../../src/theme/useNetwork';
 
-export default function AssignedWorkScreen() {
-  const router = useRouter();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'active' | 'in_progress' | 'critical'>('active');
+const CATEGORIES: Record<string, string> = {
+  ROAD: 'Road',
+  WATER: 'Water',
+  SEWER: 'Sewer',
+  ELECTRICAL: 'Electrical',
+  PARKS: 'Parks',
+  DEBRIS: 'Debris',
+  OTHER: 'Other',
+};
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      const data = await workOrdersApi.list();
-      setWorkOrders(data);
-    } catch {}
-    finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchOrders();
-  };
-
-  const filteredOrders = workOrders.filter(wo => {
-    if (filter === 'critical') return wo.priority === 'critical';
-    if (filter === 'in_progress') return wo.status === 'in_progress' || wo.status === 'on_site';
-    return wo.status !== 'completed';
-  });
-
-  const activeCount = workOrders.filter(w => w.status !== 'completed').length;
-  const criticalCount = workOrders.filter(w => w.priority === 'critical' && w.status !== 'completed').length;
-
+function WorkOrderCard({ item, onPress }: { item: WorkOrder; onPress: () => void }) {
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Top Banner / Worker Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.workerBadge}>👷 CREW #4 • ZONE EAST</Text>
-            <Text style={styles.headerTitle}>Assigned Work Orders</Text>
-          </View>
-          <View style={styles.kpiPill}>
-            <Text style={styles.kpiPillVal}>{activeCount}</Text>
-            <Text style={styles.kpiPillLabel}>Active</Text>
-          </View>
+    <Card
+      shadow="card"
+      containerStyle={styles.cardContainer}
+      onPress={onPress}
+      accessibilityLabel={`Work order: ${item.title}`}
+    >
+      <View style={styles.cardTop}>
+        <View style={styles.chipRow}>
+          <PriorityChip priority={item.priority} size="sm" />
+          <View style={styles.chipGap} />
+          <StatusChip status={item.status} size="sm" />
         </View>
-
-        {criticalCount > 0 && (
-          <View style={styles.criticalAlert}>
-            <Text style={styles.criticalAlertIcon}>⚠️</Text>
-            <Text style={styles.criticalAlertText}>
-              {criticalCount} critical SLA work order{criticalCount > 1 ? 's' : ''} require immediate response!
-            </Text>
-          </View>
-        )}
-
-        {/* Filter Pills */}
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, filter === 'active' && styles.filterChipActive]}
-            onPress={() => setFilter('active')}
-          >
-            <Text style={[styles.filterText, filter === 'active' && styles.filterTextActive]}>
-              All Active ({activeCount})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, filter === 'in_progress' && styles.filterChipActive]}
-            onPress={() => setFilter('in_progress')}
-          >
-            <Text style={[styles.filterText, filter === 'in_progress' && styles.filterTextActive]}>
-              In Progress
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, filter === 'critical' && styles.filterChipActive]}
-            onPress={() => setFilter('critical')}
-          >
-            <Text style={[styles.filterText, filter === 'critical' && styles.filterTextActive]}>
-              🔥 Critical
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <SlaChip deadline={item.slaDeadline} size="sm" />
       </View>
 
-      {/* Work Orders List */}
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Colors.action[600]} />
-          <Text style={styles.loadingText}>Loading assigned work orders...</Text>
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+
+      <View style={styles.cardMeta}>
+        <Ionicons name="location-outline" size={14} color={Colors.muted} />
+        <Text style={styles.metaText} numberOfLines={1}>
+          {item.address}
+        </Text>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.categoryTag}>
+          <Text style={styles.categoryText}>{CATEGORIES[item.category] ?? item.category}</Text>
         </View>
-      ) : filteredOrders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>✅</Text>
-          <Text style={styles.emptyTitle}>No Pending Work Orders</Text>
-          <Text style={styles.emptyBody}>
-            Great job! You have no active work orders matching this filter. Check back when the dispatcher assigns new tasks.
-          </Text>
+        <Text style={styles.caseId}>#{item.caseId}</Text>
+        <Ionicons name="chevron-forward" size={16} color={Colors.muted} />
+      </View>
+    </Card>
+  );
+}
+
+function KpiStrip({ openCount, overdueCount, doneToday }: {
+  openCount: number;
+  overdueCount: number;
+  doneToday: number;
+}) {
+  return (
+    <View style={styles.kpiRow}>
+      <KpiCard
+        value={openCount}
+        label="Open"
+        backgroundColor={Colors.wine}
+        textColor={Colors.lime}
+        style={styles.kpiCardStyle}
+      />
+      <View style={styles.kpiGap} />
+      <KpiCard
+        value={overdueCount}
+        label="Overdue"
+        backgroundColor={overdueCount > 0 ? Colors.fire : Colors.surface}
+        textColor={overdueCount > 0 ? Colors.onFire : Colors.ink}
+        style={styles.kpiCardStyle}
+      />
+      <View style={styles.kpiGap} />
+      <KpiCard
+        value={doneToday}
+        label="Done"
+        backgroundColor={Colors.limeTint}
+        textColor={Colors.ink}
+        style={styles.kpiCardStyle}
+      />
+    </View>
+  );
+}
+
+export default function AssignedScreen() {
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'IN_PROGRESS'>('ALL');
+  const { isOnline } = useNetwork();
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ['workOrders', 'assigned'],
+    queryFn: () => apiClient.getWorkOrders({ status: 'active' }),
+  });
+
+  const { data: kpiData } = useQuery({
+    queryKey: ['kpi'],
+    queryFn: () => apiClient.getKpi(),
+  });
+
+  const workOrders = data?.data ?? [];
+
+  const filtered = workOrders.filter((wo) => {
+    const matchStatus =
+      filterStatus === 'ALL' ? wo.status !== 'DONE' && wo.status !== 'CANCELLED' : wo.status === filterStatus;
+    const matchSearch =
+      !search ||
+      wo.title.toLowerCase().includes(search.toLowerCase()) ||
+      wo.address.toLowerCase().includes(search.toLowerCase()) ||
+      wo.caseId.toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
+  });
+
+  const handlePress = useCallback((id: string) => {
+    router.push(`/work-order/${id}` as any);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: WorkOrder }) => (
+      <WorkOrderCard item={item} onPress={() => handlePress(item.id)} />
+    ),
+    [handlePress]
+  );
+
+  const keyExtractor = useCallback((item: WorkOrder) => item.id, []);
+
+  const ListHeader = (
+    <>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>WARD 7 — NAGPUR</Text>
+          <Text style={styles.heading}>ASSIGNED</Text>
         </View>
-      ) : (
-        <FlatList
-          data={filteredOrders}
-          keyExtractor={item => item.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const statusConfig = WORK_ORDER_STATUS_CONFIG[item.status] ?? WORK_ORDER_STATUS_CONFIG.assigned;
-            const priorityConfig = PRIORITY_CONFIG[item.priority] ?? PRIORITY_CONFIG.medium;
+        <HardShadow offset={{ dx: 2, dy: 2 }} radius={Radii.md}>
+          <Pressable
+            style={styles.settingsBtn}
+            onPress={() => router.push('/(tabs)/profile' as any)}
+            accessibilityLabel="Profile"
+          >
+            <Ionicons name="person-outline" size={20} color={Colors.ink} />
+          </Pressable>
+        </HardShadow>
+      </View>
 
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push(`/work-order/${item.id}`)}
-                activeOpacity={0.8}
-              >
-                {/* Card Header: Case number & badges */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.caseNumberWrap}>
-                    <Text style={styles.caseNumber}>{item.case_number}</Text>
-                    <Text style={styles.departmentName}>{item.department}</Text>
-                  </View>
-                  <View style={styles.badgesRow}>
-                    <View style={[styles.priorityBadge, { backgroundColor: priorityConfig.bg }]}>
-                      <Text style={[styles.priorityText, { color: priorityConfig.color }]}>
-                        {priorityConfig.label}
-                      </Text>
-                    </View>
-                    <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg, borderColor: statusConfig.border }]}>
-                      <Text style={[styles.statusText, { color: statusConfig.text }]}>
-                        {statusConfig.label}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+      {/* Offline banner */}
+      {!isOnline ? (
+        <View style={styles.offlineBannerWrapper}>
+          <OfflineBanner />
+        </View>
+      ) : null}
 
-                {/* Title & Description */}
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                {item.description && (
-                  <Text style={styles.cardDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                )}
-
-                {/* Location */}
-                <View style={styles.locationRow}>
-                  <Text style={styles.locationIcon}>📍</Text>
-                  <Text style={styles.locationText} numberOfLines={1}>
-                    {item.location.address || `${item.location.lat.toFixed(4)}, ${item.location.lng.toFixed(4)}`}
-                  </Text>
-                </View>
-
-                {/* Footer: SLA & Action Button */}
-                <View style={styles.cardFooter}>
-                  <View style={styles.slaIndicator}>
-                    <Text style={styles.slaIcon}>⏱️</Text>
-                    <Text style={styles.slaText}>
-                      SLA: {item.sla_hours ? `${item.sla_hours}h limit` : 'Standard'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.actionBtn}>
-                    <Text style={styles.actionBtnText}>
-                      {item.status === 'in_progress' ? 'Resume Work →' : 'View Details →'}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+      {/* KPI strip */}
+      {kpiData ? (
+        <KpiStrip
+          openCount={kpiData.openCount}
+          overdueCount={kpiData.overdueCount}
+          doneToday={kpiData.doneToday}
         />
-      )}
+      ) : null}
+
+      {/* Search */}
+      <HardShadow offset={Shadows.hard} radius={Radii.md} containerStyle={styles.searchWrapper}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color={Colors.muted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search work orders..."
+            placeholderTextColor={Colors.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            accessibilityLabel="Search work orders"
+          />
+          {search ? (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={Colors.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+      </HardShadow>
+
+      {/* Filter pills */}
+      <View style={styles.filterRow}>
+        {(['ALL', 'OPEN', 'IN_PROGRESS'] as const).map((f) => (
+          <Pressable
+            key={f}
+            onPress={() => setFilterStatus(f)}
+            style={[
+              styles.filterPill,
+              filterStatus === f && styles.filterPillActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filterStatus === f && styles.filterTextActive,
+              ]}
+            >
+              {f === 'ALL' ? 'All' : f === 'IN_PROGRESS' ? 'In Progress' : 'Open'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.countLabel}>
+        {filtered.length} WORK ORDER{filtered.length !== 1 ? 'S' : ''}
+      </Text>
+    </>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView variant="loading" title="Loading work orders..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <StateView
+          variant="error"
+          title="Failed to load"
+          message="Could not fetch work orders"
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <FlatList
+        data={filtered}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => refetch()}
+            tintColor={Colors.wine}
+            colors={[Colors.wine]}
+          />
+        }
+        ListEmptyComponent={
+          <StateView
+            variant="empty"
+            title="All clear!"
+            message="No work orders match your filter"
+          />
+        }
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
-    gap: Spacing.sm,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  workerBadge: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-    color: Colors.action[700],
-    letterSpacing: 0.5,
-  },
-  headerTitle: {
-    fontSize: Typography.headline.fontSize,
-    fontWeight: Typography.headline.fontWeight,
-    color: Colors.neutral[900],
-    marginTop: 2,
-  },
-  kpiPill: {
-    backgroundColor: Colors.neutral[100],
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-  },
-  kpiPillVal: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.neutral[900],
-  },
-  kpiPillLabel: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.neutral[500],
-  },
-  criticalAlert: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.md,
-    gap: Spacing.sm,
-  },
-  criticalAlertIcon: {
-    fontSize: 16,
-  },
-  criticalAlertText: {
-    fontSize: Typography.bodySmall.fontSize,
-    fontWeight: '700',
-    color: '#B91C1C',
-    flex: 1,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    marginTop: 2,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.full,
-    backgroundColor: Colors.neutral[100],
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-  },
-  filterChipActive: {
-    backgroundColor: Colors.action[600],
-    borderColor: Colors.action[600],
-  },
-  filterText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '600',
-    color: Colors.neutral[700],
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    backgroundColor: Colors.ground,
   },
   listContent: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: Spacing.xxl * 2,
+    paddingHorizontal: Spacing.screenH,
+    paddingBottom: 32,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.md,
-  },
-  cardHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    paddingTop: 20,
+    paddingBottom: 16,
   },
-  caseNumberWrap: {
-    gap: 2,
+  eyebrow: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.wine,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
-  caseNumber: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '800',
-    color: Colors.neutral[900],
+  heading: {
+    fontFamily: FontFamily.display,
+    fontSize: 32,
+    color: Colors.ink,
+    letterSpacing: -1,
   },
-  departmentName: {
-    fontSize: Typography.labelSmall.fontSize,
-    color: Colors.neutral[500],
+  settingsBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: Radii.md,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 6,
   },
-  badgesRow: {
+  offlineBannerWrapper: {
+    marginBottom: 16,
+  },
+  kpiRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    marginBottom: 16,
   },
-  priorityBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radii.sm,
+  kpiGap: {
+    width: 8,
   },
-  priorityText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
+  kpiCardStyle: {
+    minHeight: 80,
+    justifyContent: 'center',
   },
-  statusBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
+  searchWrapper: {
+    marginBottom: 12,
   },
-  statusText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-  },
-  cardTitle: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  cardDescription: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[600],
-    lineHeight: 18,
-  },
-  locationRow: {
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    backgroundColor: Colors.neutral[50],
-    padding: Spacing.sm,
+    backgroundColor: Colors.surface,
     borderRadius: Radii.md,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    paddingHorizontal: 12,
+    height: 46,
+    gap: 8,
   },
-  locationIcon: {
-    fontSize: 14,
+  searchInput: {
+    flex: 1,
+    fontFamily: FontFamily.sans,
+    fontSize: 15,
+    color: Colors.ink,
+    height: '100%',
   },
-  locationText: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[700],
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: Radii.full,
+    borderWidth: 1.5,
+    borderColor: Colors.ink,
+    backgroundColor: Colors.surface,
+  },
+  filterPillActive: {
+    backgroundColor: Colors.wine,
+    borderColor: Colors.wine,
+  },
+  filterText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.ink,
+  },
+  filterTextActive: {
+    color: Colors.onWine,
+  },
+  countLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  cardContainer: {
+    width: '100%',
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chipGap: {
+    width: 6,
+  },
+  cardTitle: {
+    fontFamily: FontFamily.sansSemiBold,
+    fontSize: FontSizes.cardTitle,
+    color: Colors.ink,
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 12,
+  },
+  metaText: {
+    fontFamily: FontFamily.sans,
+    fontSize: FontSizes.small,
+    color: Colors.muted,
     flex: 1,
   },
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: Colors.neutral[100],
+    borderTopColor: Colors.dot,
+    paddingTop: 10,
+    gap: 8,
   },
-  slaIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  slaIcon: {
-    fontSize: 14,
-  },
-  slaText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '600',
-    color: Colors.neutral[600],
-  },
-  actionBtn: {
-    backgroundColor: Colors.action[50],
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radii.md,
-    borderWidth: 1,
-    borderColor: Colors.action[200],
-  },
-  actionBtnText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.action[800],
-  },
-  centerContainer: {
+  categoryTag: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    padding: Spacing.xl,
   },
-  loadingText: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[600],
+  categoryText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xxl,
-    gap: Spacing.sm,
+  caseId: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    color: Colors.wine,
+    fontWeight: '500',
   },
-  emptyEmoji: {
-    fontSize: 48,
-  },
-  emptyTitle: {
-    fontSize: Typography.titleLarge.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[800],
-  },
-  emptyBody: {
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[500],
-    textAlign: 'center',
-    lineHeight: 20,
+  separator: {
+    height: Spacing.cardGap,
   },
 });

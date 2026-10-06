@@ -1,456 +1,307 @@
-/**
- * F04 — Resolution Evidence
- *
- * Mandatory evidence capture for field work:
- * - After-repair photographs (camera / gallery)
- * - Optional video / inspection clip
- * - Work note describing technical fix
- * - Materials and parts inventory consumed
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Image,
   Alert,
-  ActivityIndicator,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Radii, Shadows, Spacing } from '../../../src/theme/tokens';
+import { FontFamily } from '../../../src/theme/fonts';
 import {
-  Colors,
-  Typography,
-  Spacing,
-  Radii,
-  Shadows,
-} from '../../../src/constants/theme';
-import { workOrdersApi } from '../../../src/api/client';
-import type { WorkOrder } from '../../../src/types';
+  PageHeader,
+  Field,
+  Textarea,
+  Button,
+  PhotoTile,
+  PlaceholderPhoto,
+  HardShadow,
+  StateView,
+  useToast,
+} from '../../../src/ui';
+import { apiClient } from '../../../src/api/client';
 
-export default function ResolutionEvidenceScreen() {
+const MAX_PHOTOS = 5;
+
+export default function EvidenceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const { show } = useToast();
+  const queryClient = useQueryClient();
 
-  const [order, setOrder] = useState<WorkOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Form State
   const [photos, setPhotos] = useState<string[]>([]);
-  const [workNote, setWorkNote] = useState('');
-  const [materialsUsed, setMaterialsUsed] = useState('');
+  const [note, setNote] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      if (!id) return;
-      try {
-        const data = await workOrdersApi.get(id);
-        if (data) {
-          setOrder(data);
-          if (data.work_note) setWorkNote(data.work_note);
-          if (data.materials_used) setMaterialsUsed(data.materials_used);
-        }
-      } catch {}
-      finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiClient.updateWorkOrder(id!, {
+        note: note.trim() || undefined,
+        photos: photos,
+      }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['workOrder', id], updated);
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+      show('Evidence saved', 'success');
+      router.back();
+    },
+    onError: () => show('Failed to save evidence', 'error'),
+  });
 
-  const handleCapturePhoto = async () => {
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission required',
+        'Please allow access to your photo library in Settings.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_PHOTOS - photos.length,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const compressed = await Promise.all(
+        result.assets.map(async (asset) => {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 1024 } }],
+            { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          return manipulated.uri;
+        })
+      );
+      setPhotos((prev) => [...prev, ...compressed].slice(0, MAX_PHOTOS));
+    }
+  };
+
+  const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Camera Permission', 'Camera permission is required to capture resolution evidence photos.');
+      Alert.alert(
+        'Camera permission required',
+        'Please allow camera access in Settings.',
+        [{ text: 'OK' }]
+      );
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
       quality: 0.8,
+      allowsEditing: false,
     });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotos(prev => [...prev, result.assets[0].uri]);
+    if (!result.canceled && result.assets[0]) {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      setPhotos((prev) => [...prev, manipulated.uri].slice(0, MAX_PHOTOS));
     }
   };
 
-  const handlePickFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets) {
-      const uris = result.assets.map(a => a.uri);
-      setPhotos(prev => [...prev, ...uris]);
-    }
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmitEvidence = async () => {
-    if (!order) return;
-    if (photos.length === 0) {
-      Alert.alert('Photo Required', 'At least one "After Repair" photograph is mandatory for municipal verification.');
+  const handleSubmit = () => {
+    if (photos.length === 0 && !note.trim()) {
+      show('Add at least one photo or note', 'warning');
       return;
     }
-    if (!workNote.trim()) {
-      Alert.alert('Work Note Required', 'Please enter a brief note describing the repair work completed.');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await workOrdersApi.uploadEvidence(order.id, photos, workNote, materialsUsed);
-      Alert.alert('Evidence Saved', 'Resolution photos and notes have been registered for this work order.', [
-        {
-          text: 'Proceed to Complete Work',
-          onPress: () => router.push(`/work-order/complete/${order.id}`),
-        },
-      ]);
-    } catch {
-      Alert.alert('Error', 'Failed to save evidence. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    mutation.mutate();
   };
-
-  if (loading || !order) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.action[600]} />
-      </SafeAreaView>
-    );
-  }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Resolution Evidence</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <PageHeader
+          title="ADD EVIDENCE"
+          eyebrow="F04 — EVIDENCE"
+          onBack={() => router.back()}
+        />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Case Strip */}
-        <View style={styles.orderStrip}>
-          <Text style={styles.caseNumber}>{order.case_number}</Text>
-          <Text style={styles.orderTitle}>{order.title}</Text>
-        </View>
-
-        {/* Photo Upload Section */}
-        <View style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitle}>1. After-Repair Photos (Mandatory)</Text>
-            <Text style={styles.photoCountText}>{photos.length} attached</Text>
-          </View>
-          <Text style={styles.cardDesc}>
-            Take clear photos of the fixed site. These photos will be presented to citizens and ward supervisors for verification.
-          </Text>
-
-          {/* Action Buttons */}
-          <View style={styles.photoButtonsRow}>
-            <TouchableOpacity style={styles.cameraBtn} onPress={handleCapturePhoto}>
-              <Text style={styles.cameraBtnIcon}>📷</Text>
-              <Text style={styles.cameraBtnText}>Take Live Photo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.galleryBtn} onPress={handlePickFromGallery}>
-              <Text style={styles.galleryBtnIcon}>🖼️</Text>
-              <Text style={styles.galleryBtnText}>Select Photos</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Photos Grid */}
-          {photos.length > 0 && (
-            <View style={styles.photoGrid}>
-              {photos.map((uri, idx) => (
-                <View key={idx} style={styles.photoThumbWrap}>
-                  <Image source={{ uri }} style={styles.photoThumb} />
-                  <TouchableOpacity
-                    style={styles.deletePhotoBtn}
-                    onPress={() => handleRemovePhoto(idx)}
-                  >
-                    <Text style={styles.deletePhotoText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Work Note */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>2. Work & Repair Notes</Text>
-          <Text style={styles.cardDesc}>
-            Explain the root cause and the specific corrective work undertaken by the crew.
-          </Text>
-          <TextInput
-            style={styles.textArea}
-            multiline
-            numberOfLines={4}
-            placeholder="e.g., Excavated 1.2m, sealed broken coupling with heavy-duty sleeve, backfilled and compacted asphalt."
-            placeholderTextColor={Colors.neutral[400]}
-            value={workNote}
-            onChangeText={setWorkNote}
-          />
-        </View>
-
-        {/* Materials & Parts Consumed */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>3. Materials & Equipment Consumed</Text>
-          <Text style={styles.cardDesc}>
-            Log supplies used from municipal inventory for audit and restocking.
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 2 bags cold bitumen mix, 1x 4-inch PVC joint, 4 bolts"
-            placeholderTextColor={Colors.neutral[400]}
-            value={materialsUsed}
-            onChangeText={setMaterialsUsed}
-          />
-        </View>
-      </ScrollView>
-
-      {/* Submit / Proceed Button */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.submitBtn, photos.length === 0 && styles.submitBtnDisabled]}
-          onPress={handleSubmitEvidence}
-          disabled={submitting}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitBtnText}>
-              Save Evidence & Proceed to Completion (F05) →
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {/* Photo capture actions */}
+          <Text style={styles.sectionLabel}>PHOTOS</Text>
+          <Text style={styles.hint}>
+            Add up to {MAX_PHOTOS} photos. Tap to remove.
+          </Text>
+
+          <View style={styles.photoRow}>
+            {photos.map((uri, index) => (
+              <PhotoTile
+                key={uri + index}
+                uri={uri}
+                size={100}
+                onRemove={() => removePhoto(index)}
+                style={styles.photoItem}
+              />
+            ))}
+            {photos.length < MAX_PHOTOS ? (
+              <PlaceholderPhoto
+                size={100}
+                onPress={takePhoto}
+                style={styles.photoItem}
+              />
+            ) : null}
+          </View>
+
+          <View style={styles.captureButtons}>
+            <HardShadow offset={{ dx: 2, dy: 2 }} radius={Radii.md} containerStyle={styles.captureHalf}>
+              <Pressable
+                style={styles.captureBtn}
+                onPress={takePhoto}
+                disabled={photos.length >= MAX_PHOTOS}
+                accessibilityLabel="Take photo with camera"
+              >
+                <Ionicons name="camera-outline" size={20} color={Colors.ink} />
+                <Text style={styles.captureBtnText}>CAMERA</Text>
+              </Pressable>
+            </HardShadow>
+
+            <HardShadow offset={{ dx: 2, dy: 2 }} radius={Radii.md} containerStyle={styles.captureHalf}>
+              <Pressable
+                style={styles.captureBtn}
+                onPress={pickFromGallery}
+                disabled={photos.length >= MAX_PHOTOS}
+                accessibilityLabel="Choose photos from gallery"
+              >
+                <Ionicons name="images-outline" size={20} color={Colors.ink} />
+                <Text style={styles.captureBtnText}>GALLERY</Text>
+              </Pressable>
+            </HardShadow>
+          </View>
+
+          {/* Note */}
+          <Field
+            label="Note (optional)"
+            hint="Describe what you observed"
+            style={styles.fieldGap}
+          >
+            <Textarea
+              value={note}
+              onChangeText={setNote}
+              placeholder="e.g. Pothole depth approx 15cm, approx 1m diameter..."
+              numberOfLines={4}
+            />
+          </Field>
+
+          {/* Photo count indicator */}
+          {photos.length > 0 ? (
+            <View style={styles.countRow}>
+              <Ionicons name="images" size={14} color={Colors.wine} />
+              <Text style={styles.countText}>
+                {photos.length} / {MAX_PHOTOS} photos attached
+              </Text>
+            </View>
+          ) : null}
+
+          <Button
+            title={mutation.isPending ? 'Saving...' : 'SAVE EVIDENCE'}
+            onPress={handleSubmit}
+            variant="wine"
+            loading={mutation.isPending}
+          />
+
+          <Button
+            title="CANCEL"
+            onPress={() => router.back()}
+            variant="ghost"
+            style={styles.cancelBtn}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  root: { flex: 1, backgroundColor: Colors.ground },
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: Spacing.screenH,
+    paddingBottom: 48,
+    gap: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '500',
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
-  backBtn: {
-    padding: Spacing.sm,
+  hint: {
+    fontFamily: FontFamily.sans,
+    fontSize: 13,
+    color: Colors.muted,
+    marginBottom: 8,
   },
-  backBtnText: {
-    fontSize: Typography.bodyLarge.fontSize,
-    color: Colors.action[700],
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: Typography.titleMedium.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    gap: Spacing.md,
-    paddingBottom: 110,
-  },
-  orderStrip: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.md,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: 2,
-    ...Shadows.sm,
-  },
-  caseNumber: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '800',
-    color: Colors.action[700],
-  },
-  orderTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.lg,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardTitle: {
-    fontSize: Typography.titleSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.neutral[900],
-  },
-  photoCountText: {
-    fontSize: Typography.labelSmall.fontSize,
-    fontWeight: '700',
-    color: Colors.action[700],
-  },
-  cardDesc: {
-    fontSize: Typography.bodySmall.fontSize,
-    color: Colors.neutral[500],
-    lineHeight: 18,
-  },
-  photoButtonsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  cameraBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.action[600],
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.md,
-    gap: Spacing.xs,
-  },
-  cameraBtnIcon: {
-    fontSize: 18,
-  },
-  cameraBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: Typography.labelMedium.fontSize,
-  },
-  galleryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.neutral[100],
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.md,
-    gap: Spacing.xs,
-  },
-  galleryBtnIcon: {
-    fontSize: 18,
-  },
-  galleryBtnText: {
-    color: Colors.neutral[700],
-    fontWeight: '700',
-    fontSize: Typography.labelMedium.fontSize,
-  },
-  photoGrid: {
+  photoRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    gap: 12,
+    marginBottom: 4,
   },
-  photoThumbWrap: {
-    width: 90,
-    height: 90,
-    borderRadius: Radii.md,
-    overflow: 'hidden',
-    position: 'relative',
+  photoItem: {
+    marginBottom: 0,
   },
-  photoThumb: {
-    width: '100%',
-    height: '100%',
+  captureButtons: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  deletePhotoBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#000000CC',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deletePhotoText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  textArea: {
-    backgroundColor: Colors.neutral[50],
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    borderRadius: Radii.md,
-    padding: Spacing.md,
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[900],
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  input: {
-    backgroundColor: Colors.neutral[50],
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    borderRadius: Radii.md,
-    padding: Spacing.md,
-    fontSize: Typography.bodyMedium.fontSize,
-    color: Colors.neutral[900],
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
-    ...Shadows.md,
-  },
-  submitBtn: {
-    backgroundColor: '#0284C7',
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.md,
-    alignItems: 'center',
-  },
-  submitBtnDisabled: {
-    backgroundColor: Colors.neutral[300],
-  },
-  submitBtnText: {
-    fontSize: Typography.labelLarge.fontSize,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  centerContainer: {
+  captureHalf: {
     flex: 1,
+  },
+  captureBtn: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    height: 52,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
+  captureBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 12,
+    fontWeight: '500',
+    color: Colors.ink,
+    letterSpacing: 1,
+  },
+  fieldGap: { marginBottom: 4 },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  countText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 12,
+    color: Colors.wine,
+    fontWeight: '500',
+  },
+  cancelBtn: { marginTop: 4 },
 });
