@@ -16,7 +16,6 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inAppGroup = segments[0] === '(app)';
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/welcome');
@@ -34,6 +33,7 @@ function RootLayoutNav() {
 }
 
 import { View, StyleSheet, Platform } from 'react-native';
+import { Colors } from '../src/constants/theme';
 
 export default function RootLayout() {
   return (
@@ -59,12 +59,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   rootGesture: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.ground,
   },
   shellOuter: {
     flex: 1,
     width: '100%',
-    backgroundColor: Platform.OS === 'web' ? '#0F172A' : '#F8FAFC',
+    backgroundColor: Platform.OS === 'web' ? Colors.ink : Colors.ground,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -72,14 +72,13 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 480 : undefined,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.ground,
     overflow: 'hidden',
     ...(Platform.OS === 'web'
       ? {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.3,
-          shadowRadius: 20,
+          borderLeftWidth: 3,
+          borderRightWidth: 3,
+          borderColor: Colors.ink,
         }
       : {}),
   },

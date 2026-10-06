@@ -1,26 +1,13 @@
 /**
  * C02 — Authentication (Login)
- *
- * Phone/email input → OTP → verify
- * Supports both phone and email flows.
+ * Direction A aesthetic: ink borders, hard shadows, lime/wine/fire palette.
  */
 
 import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Colors, Typography, Spacing, Radii, Shadows } from '../../src/constants/theme';
+import { Colors, Typography, Spacing, Radii } from '../../src/constants/theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import TransitionScreen from '../../src/components/TransitionScreen';
@@ -34,8 +21,7 @@ export default function LoginScreen() {
 
   const [step, setStep] = useState<LoginStep>('input');
   const [inputMode, setInputMode] = useState<InputMode>('phone');
-  const [selectedRole, setSelectedRole] = useState<'citizen' | 'field_worker'>('citizen');
-  const [name, setName] = useState('');
+  const [selectedRole] = useState<'citizen' | 'field_worker'>('citizen');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -54,9 +40,7 @@ export default function LoginScreen() {
     setError(null);
     setStep('loading');
     try {
-      await requestOtp(
-        inputMode === 'phone' ? { phone: phone.trim() } : { email: email.trim() }
-      );
+      await requestOtp(inputMode === 'phone' ? { phone: phone.trim() } : { email: email.trim() });
       setStep('otp');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
@@ -90,7 +74,6 @@ export default function LoginScreen() {
           ? { phone: phone.trim(), otp: code }
           : { email: email.trim(), otp: code }
       );
-      // Show transition screen briefly; navigation happens via auth guard in _layout.tsx
       setShowTransition(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid OTP. Please try again.');
@@ -102,9 +85,8 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
-      {/* Transition overlay — shown after successful login */}
       <Modal visible={showTransition} transparent animationType="fade">
         <TransitionScreen
           role={selectedRole}
@@ -115,184 +97,164 @@ export default function LoginScreen() {
         />
       </Modal>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        {/* Header */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => {
               if (step === 'otp') { setStep('input'); setOtp(['','','','','','']); }
               else router.back();
             }}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
+            style={styles.backBtn}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <Text style={styles.backBtnText}>←</Text>
           </TouchableOpacity>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoEmoji}>🏙️</Text>
-          </View>
           <Text style={styles.headerTitle}>CivicConnect</Text>
+          <View style={{ width: 44 }} />
         </View>
 
         <View style={styles.body}>
           {step === 'loading' ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.brand[500]} />
+              <ActivityIndicator size="large" color={Colors.ink} />
               <Text style={styles.loadingText}>Please wait…</Text>
             </View>
           ) : step === 'input' ? (
             <>
-              <Text style={styles.title}>Sign in to continue</Text>
+              <Text style={styles.title}>SIGN IN</Text>
               <Text style={styles.subtitle}>
                 Enter your phone number or email. We'll send you a one-time code.
               </Text>
 
-              {/* Mode toggle */}
               <View style={styles.modeToggle}>
                 <TouchableOpacity
                   style={[styles.modeTab, inputMode === 'phone' && styles.modeTabActive]}
                   onPress={() => setInputMode('phone')}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: inputMode === 'phone' }}
                 >
-                  <Text style={[styles.modeTabText, inputMode === 'phone' && styles.modeTabTextActive]}>
-                    📱 Phone
-                  </Text>
+                  <Text style={[styles.modeTabText, inputMode === 'phone' && styles.modeTabTextActive]}>📱 Phone</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeTab, inputMode === 'email' && styles.modeTabActive]}
                   onPress={() => setInputMode('email')}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: inputMode === 'email' }}
                 >
-                  <Text style={[styles.modeTabText, inputMode === 'email' && styles.modeTabTextActive]}>
-                    ✉️ Email
-                  </Text>
+                  <Text style={[styles.modeTabText, inputMode === 'email' && styles.modeTabTextActive]}>✉️ Email</Text>
                 </TouchableOpacity>
               </View>
 
-              {inputMode === 'phone' ? (
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputPrefix}>+91</Text>
+              <View style={styles.inputOuter}>
+                <View style={styles.inputShadow} />
+                {inputMode === 'phone' ? (
+                  <View style={styles.inputWrapper}>
+                    <Text style={styles.inputPrefix}>+91</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder="9876543210"
+                      placeholderTextColor={Colors.muted}
+                      keyboardType="phone-pad"
+                      autoFocus
+                      maxLength={15}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSendOtp}
+                    />
+                  </View>
+                ) : (
                   <TextInput
-                    style={styles.textInput}
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="9876543210"
-                    placeholderTextColor={Colors.neutral[400]}
-                    keyboardType="phone-pad"
+                    style={[styles.inputWrapper, { paddingLeft: Spacing[4] }]}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor={Colors.muted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                     autoFocus
-                    maxLength={15}
-                    accessibilityLabel="Phone number"
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
                   />
-                </View>
-              ) : (
-                <TextInput
-                  style={[styles.inputWrapper, { paddingLeft: Spacing[4] }]}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={Colors.neutral[400]}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoFocus
-                  accessibilityLabel="Email address"
-                  returnKeyType="done"
-                  onSubmitEditing={handleSendOtp}
-                />
-              )}
+                )}
+              </View>
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 
-              <TouchableOpacity
-                style={[styles.primaryButton, !isInputValid && styles.primaryButtonDisabled]}
-                onPress={handleSendOtp}
-                disabled={!isInputValid}
-                accessibilityRole="button"
-                accessibilityLabel="Send OTP"
-                accessibilityState={{ disabled: !isInputValid }}
-              >
-                <Text style={styles.primaryButtonText}>Send OTP →</Text>
-              </TouchableOpacity>
+              <View style={styles.sendBtnOuter}>
+                <View style={styles.sendBtnShadow} />
+                <TouchableOpacity
+                  style={[styles.sendBtn, !isInputValid && styles.sendBtnDisabled]}
+                  onPress={handleSendOtp}
+                  disabled={!isInputValid}
+                >
+                  <Text style={styles.sendBtnText}>Send OTP</Text>
+                  <View style={styles.sendBtnArrow}>
+                    <Text style={styles.sendBtnArrowText}>→</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
 
-              {/* Demo Mode / Instant Test Access */}
               <TouchableOpacity
                 style={styles.demoButton}
                 onPress={async () => {
                   setStep('loading');
                   try {
                     await demoLogin();
-                    // Show transition briefly; auth guard in _layout.tsx handles navigation
                     setShowTransition(true);
                   } catch {
                     setStep('input');
                   }
                 }}
-                accessibilityRole="button"
-                accessibilityLabel="Quick Demo Login"
               >
-                <Text style={styles.demoButtonEmoji}>⚡</Text>
+                <Text style={styles.demoEmoji}>⚡</Text>
                 <View>
-                  <Text style={styles.demoButtonTitle}>Quick Demo Login (Ramesh Kumar)</Text>
-                  <Text style={styles.demoButtonSubtitle}>Explore all citizen features instantly</Text>
+                  <Text style={styles.demoTitle}>Quick Demo Login (Ramesh Kumar)</Text>
+                  <Text style={styles.demoSub}>Explore all citizen features instantly</Text>
                 </View>
               </TouchableOpacity>
-
-              <View style={styles.helpRow}>
-                <TouchableOpacity accessibilityRole="link">
-                  <Text style={styles.helpLink}>Need help?</Text>
-                </TouchableOpacity>
-              </View>
             </>
           ) : (
             <>
-              <Text style={styles.title}>Enter the code</Text>
+              <Text style={styles.title}>ENTER CODE</Text>
               <Text style={styles.subtitle}>
                 We sent a 6-digit code to{'\n'}
                 <Text style={styles.subtitleBold}>{inputValue}</Text>
               </Text>
 
-              {/* OTP boxes */}
               <View style={styles.otpRow}>
                 {otp.map((digit, i) => (
-                  <TextInput
-                    key={i}
-                    ref={ref => { otpRefs.current[i] = ref; }}
-                    style={[styles.otpBox, digit !== '' && styles.otpBoxFilled]}
-                    value={digit}
-                    onChangeText={v => handleOtpChange(v.replace(/\D/g, '').slice(-1), i)}
-                    onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    textAlign="center"
-                    accessibilityLabel={`OTP digit ${i + 1}`}
-                    autoFocus={i === 0}
-                  />
+                  <View key={i} style={styles.otpBoxOuter}>
+                    <View style={styles.otpBoxShadow} />
+                    <TextInput
+                      ref={ref => { otpRefs.current[i] = ref; }}
+                      style={[styles.otpBox, digit !== '' && styles.otpBoxFilled]}
+                      value={digit}
+                      onChangeText={v => handleOtpChange(v.replace(/\D/g, '').slice(-1), i)}
+                      onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      textAlign="center"
+                      autoFocus={i === 0}
+                    />
+                  </View>
                 ))}
               </View>
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 
-              <TouchableOpacity
-                style={[styles.primaryButton, otp.join('').length < 6 && styles.primaryButtonDisabled]}
-                onPress={handleVerifyOtp}
-                disabled={otp.join('').length < 6}
-                accessibilityRole="button"
-                accessibilityLabel="Verify OTP"
-              >
-                <Text style={styles.primaryButtonText}>Verify →</Text>
-              </TouchableOpacity>
+              <View style={styles.sendBtnOuter}>
+                <View style={styles.sendBtnShadow} />
+                <TouchableOpacity
+                  style={[styles.sendBtn, otp.join('').length < 6 && styles.sendBtnDisabled]}
+                  onPress={handleVerifyOtp}
+                  disabled={otp.join('').length < 6}
+                >
+                  <Text style={styles.sendBtnText}>Verify</Text>
+                  <View style={styles.sendBtnArrow}>
+                    <Text style={styles.sendBtnArrowText}>→</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
                 style={styles.resendButton}
                 onPress={() => { setStep('input'); setOtp(['','','','','','']); }}
-                accessibilityRole="button"
               >
                 <Text style={styles.resendText}>Change number / Resend OTP</Text>
               </TouchableOpacity>
@@ -305,216 +267,44 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.brand[800] },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[5],
-    paddingTop: Spacing[4],
-    paddingBottom: Spacing[5],
-    gap: Spacing[3],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.md,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: { color: '#fff', fontSize: 20 },
-  logoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: Radii.sm,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoEmoji: { fontSize: 20 },
-  headerTitle: {
-    color: '#fff',
-    fontSize: Typography.md,
-    fontWeight: Typography.bold,
-    letterSpacing: -0.4,
-  },
-  body: {
-    flex: 1,
-    backgroundColor: Colors.neutral[50],
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: Spacing[6],
-    paddingTop: Spacing[8],
-  },
-  title: {
-    fontSize: Typography['2xl'],
-    fontWeight: Typography.extrabold,
-    color: Colors.neutral[900],
-    marginBottom: Spacing[2],
-    letterSpacing: -0.6,
-  },
-  subtitle: {
-    fontSize: Typography.base,
-    color: Colors.neutral[500],
-    lineHeight: 22,
-    marginBottom: Spacing[6],
-  },
-  subtitleBold: {
-    fontWeight: Typography.bold,
-    color: Colors.neutral[700],
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: Colors.neutral[100],
-    borderRadius: Radii.lg,
-    padding: 4,
-    marginBottom: Spacing[5],
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: Spacing[2.5],
-    alignItems: 'center',
-    borderRadius: Radii.md,
-  },
-  modeTabActive: {
-    backgroundColor: '#fff',
-    ...Shadows.sm,
-  },
-  modeTabText: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-    color: Colors.neutral[500],
-  },
-  modeTabTextActive: {
-    color: Colors.brand[700],
-    fontWeight: Typography.semibold,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: Colors.brand[200],
-    borderRadius: Radii.lg,
-    paddingRight: Spacing[4],
-    marginBottom: Spacing[5],
-    ...Shadows.sm,
-  },
-  inputPrefix: {
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[4],
-    fontSize: Typography.base,
-    color: Colors.neutral[700],
-    fontWeight: Typography.semibold,
-    borderRightWidth: 1,
-    borderRightColor: Colors.neutral[200],
-    marginRight: Spacing[2],
-  },
-  textInput: {
-    flex: 1,
-    fontSize: Typography.base,
-    color: Colors.neutral[900],
-    paddingVertical: Spacing[4],
-  },
-  otpRow: {
-    flexDirection: 'row',
-    gap: Spacing[2],
-    marginBottom: Spacing[6],
-    justifyContent: 'space-between',
-  },
-  otpBox: {
-    flex: 1,
-    height: 56,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: Colors.neutral[200],
-    borderRadius: Radii.lg,
-    fontSize: Typography.xl,
-    fontWeight: Typography.bold,
-    color: Colors.neutral[900],
-    ...Shadows.sm,
-  },
-  otpBoxFilled: {
-    borderColor: Colors.brand[400],
-    backgroundColor: Colors.brand[50],
-  },
-  errorText: {
-    fontSize: Typography.sm,
-    color: Colors.error,
-    marginBottom: Spacing[4],
-    fontWeight: Typography.medium,
-  },
-  primaryButton: {
-    backgroundColor: Colors.brand[600],
-    borderRadius: Radii.xl,
-    paddingVertical: Spacing[4],
-    alignItems: 'center',
-    ...Shadows.civic,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: Colors.neutral[300],
-    shadowOpacity: 0,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: Typography.base,
-    fontWeight: Typography.bold,
-    letterSpacing: -0.3,
-  },
-  demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: Radii.xl,
-    paddingVertical: Spacing[3.5],
-    paddingHorizontal: Spacing[4],
-    marginTop: Spacing[3],
-    borderWidth: 1.5,
-    borderColor: Colors.brand[200],
-    gap: Spacing[3],
-    ...Shadows.sm,
-  },
-  demoButtonEmoji: {
-    fontSize: 22,
-  },
-  demoButtonTitle: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.bold,
-    color: Colors.brand[800],
-  },
-  demoButtonSubtitle: {
-    fontSize: Typography.xs,
-    color: Colors.neutral[500],
-    marginTop: 1,
-  },
-  helpRow: {
-    alignItems: 'center',
-    marginTop: Spacing[5],
-  },
-  helpLink: {
-    color: Colors.brand[600],
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-  },
-  resendButton: {
-    alignItems: 'center',
-    marginTop: Spacing[5],
-    paddingVertical: Spacing[3],
-  },
-  resendText: {
-    color: Colors.brand[600],
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing[4],
-  },
-  loadingText: {
-    color: Colors.neutral[500],
-    fontSize: Typography.base,
-    fontWeight: Typography.medium,
-  },
+  container: { flex: 1, backgroundColor: Colors.ground },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[4], paddingVertical: Spacing[4] },
+  backBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: Colors.ink, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  backBtnText: { fontSize: 18, color: Colors.ink },
+  headerTitle: { fontSize: 16, fontWeight: Typography.bold, color: Colors.ink },
+  body: { flex: 1, paddingHorizontal: Spacing[5], paddingTop: Spacing[6] },
+  title: { fontSize: 42, fontWeight: Typography.black, color: Colors.ink, letterSpacing: -1, marginBottom: Spacing[2] },
+  subtitle: { fontSize: 15, color: Colors.muted, lineHeight: 22, marginBottom: Spacing[6] },
+  subtitleBold: { fontWeight: Typography.bold, color: Colors.ink },
+  modeToggle: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radii.lg, padding: 4, marginBottom: Spacing[5], borderWidth: 2, borderColor: Colors.ink },
+  modeTab: { flex: 1, paddingVertical: Spacing[2.5], alignItems: 'center', borderRadius: Radii.md },
+  modeTabActive: { backgroundColor: Colors.lime },
+  modeTabText: { fontSize: 14, fontWeight: Typography.medium, color: Colors.muted },
+  modeTabTextActive: { color: Colors.ink, fontWeight: Typography.bold },
+  inputOuter: { marginBottom: Spacing[5] },
+  inputShadow: { position: 'absolute', top: 4, left: 4, right: -4, bottom: -4, backgroundColor: Colors.ink, borderRadius: Radii.lg },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderWidth: 2, borderColor: Colors.ink, borderRadius: Radii.lg, paddingRight: Spacing[4] },
+  inputPrefix: { paddingHorizontal: Spacing[4], paddingVertical: Spacing[4], fontSize: 15, color: Colors.ink, fontWeight: Typography.bold, borderRightWidth: 2, borderRightColor: Colors.ink, marginRight: Spacing[2] },
+  textInput: { flex: 1, fontSize: 15, color: Colors.ink, paddingVertical: Spacing[4] },
+  errorText: { fontSize: 13, color: Colors.fire, marginBottom: Spacing[4], fontWeight: Typography.medium },
+  sendBtnOuter: { marginBottom: Spacing[4] },
+  sendBtnShadow: { position: 'absolute', top: 4, left: 4, right: -4, bottom: -4, backgroundColor: Colors.ink, borderRadius: Radii.lg },
+  sendBtn: { backgroundColor: Colors.lime, borderRadius: Radii.lg, paddingVertical: Spacing[3], paddingHorizontal: Spacing[4], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 2, borderColor: Colors.ink },
+  sendBtnDisabled: { backgroundColor: Colors.dot, opacity: 0.6 },
+  sendBtnText: { color: Colors.ink, fontSize: 18, fontWeight: Typography.bold },
+  sendBtnArrow: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.ink, alignItems: 'center', justifyContent: 'center' },
+  sendBtnArrowText: { color: Colors.lime, fontWeight: Typography.bold, fontSize: 16 },
+  demoButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radii.lg, paddingVertical: Spacing[3.5], paddingHorizontal: Spacing[4], marginTop: Spacing[2], borderWidth: 2, borderColor: Colors.ink, gap: Spacing[3] },
+  demoEmoji: { fontSize: 22 },
+  demoTitle: { fontSize: 14, fontWeight: Typography.bold, color: Colors.ink },
+  demoSub: { fontSize: 12, color: Colors.muted, marginTop: 1 },
+  otpRow: { flexDirection: 'row', gap: Spacing[2], marginBottom: Spacing[6], justifyContent: 'space-between' },
+  otpBoxOuter: { flex: 1 },
+  otpBoxShadow: { position: 'absolute', top: 3, left: 3, right: -3, bottom: -3, backgroundColor: Colors.ink, borderRadius: Radii.lg },
+  otpBox: { height: 56, backgroundColor: Colors.surface, borderWidth: 2, borderColor: Colors.ink, borderRadius: Radii.lg, fontSize: 20, fontWeight: Typography.bold, color: Colors.ink },
+  otpBoxFilled: { backgroundColor: Colors.limeTint },
+  resendButton: { alignItems: 'center', marginTop: Spacing[3], paddingVertical: Spacing[3] },
+  resendText: { color: Colors.ink, fontSize: 14, fontWeight: Typography.medium, textDecorationLine: 'underline' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing[4] },
+  loadingText: { color: Colors.muted, fontSize: 15, fontWeight: Typography.medium },
 });
