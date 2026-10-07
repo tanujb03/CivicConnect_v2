@@ -16,7 +16,7 @@ param(
     [string]$Container = "civic-db",
     [string]$Volume = "civic-pgdata",
     [int]$Port = 5433,
-    [string]$Password = "postgres",
+    [string]$Password = $(if ($env:POSTGRES_PASSWORD) { $env:POSTGRES_PASSWORD } else { "civic_dev_pwd" }),
     [string]$Database = "civicconnect",
     [switch]$ResetData
 )
