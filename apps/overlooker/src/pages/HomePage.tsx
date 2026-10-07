@@ -11,6 +11,7 @@ import {
   MapPin, AlertTriangle, Clock, BarChart3, TrendingUp,
   Users, Bell, ChevronRight, Brain,
 } from 'lucide-react';
+import CivicLeafletMap from '../components/common/CivicLeafletMap';
 
 // Mock city pulse data
 const cityPulse = [
@@ -152,18 +153,16 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Quick Map Placeholder ────────────────────────────────────── */}
+      {/* ── Quick Map ────────────────────────────────────────────────── */}
       <section className="cc-card p-5 cc-fade-up" style={{ '--stagger-index': 6 } as React.CSSProperties}>
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin className="h-4 w-4" style={{ color: 'var(--wine)' }} />
-          <h3 className="font-display text-sm text-ink">City Map</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" style={{ color: 'var(--wine)' }} />
+            <h3 className="font-display text-sm text-ink">City Map</h3>
+          </div>
+          <span className="cc-chip text-[9px] py-0 px-1.5 font-mono bg-lime-tint">Live</span>
         </div>
-        <div
-          className="bg-ground border-2 border-dot rounded-md flex items-center justify-center text-muted font-mono text-xs"
-          style={{ height: '300px' }}
-        >
-          Map loads when Leaflet tiles are available
-        </div>
+        <CivicLeafletMap height="300px" compact={true} />
         <p className="text-[10px] font-mono text-muted mt-2">
           Read-only view — overlays show active cases and heat zones.
         </p>
