@@ -62,7 +62,9 @@ Paste the output. This is the only proof that M1 (Gemini) and M2 (Groq Whisper) 
 ```powershell
 python -m ai.training.src.text_corpus.build --gold-template D:/civic/gold.csv
 ```
-Fill `text,language,label_id` with real-sounding complaints written **by you** (aim for ~100–200 per language, hi / mr / en / hi-Latn, spread over the 27 labels; see the template's example rows and `label_id` values). It is never trained on — it is the honest score of M6.
+Fill `text,language,label_id` with real-sounding complaints written **by you** (aim for ~100–200 per language, hi / mr / en / hi-Latn, spread over the 27 labels; see the template's example rows and `label_id` values) and put `human` in the `provenance` column of every line you wrote yourself. It is never trained on — it is the honest score of M6.
+
+**Provenance is never assumed.** Only rows marked `human` count as human gold. A row marked `llm_authored_<model>` (or carrying that marker in `notes`) is LLM-written; a row with no or an unrecognised provenance is `unspecified`. `gold.jsonl` and the corpus manifest carry it (`gold.by_provenance`), and every M6 result block is named by it: `gold[human, n=..]`, `gold[llm_authored_claude, n=..]`, `gold[unspecified, n=..]` — reported separately, never pooled. `ai/training/gold/gold_llm_authored_claude_v1.csv` (336 lines written by Claude, a different model family from the corpus generators) is a cross-family sanity set, not a human gold set; its Hindi and Marathi lines need the native-speaker review in `docs/I18N_REVIEW.md`. Corpora built before this change have no provenance in `gold.jsonl`: rebuild them.
 
 ## 3 · Generate the training corpus (free LLM calls) **[you, ~hours of waiting]**
 
@@ -83,7 +85,7 @@ Local (RTX 4050): `jupyter lab` → open `ai/training/notebooks/07_text_models_m
 3. Unzip the bundle into `ai/artifacts/` so you get `ai/artifacts/civic_text_m6/<ver>` and `ai/artifacts/civic_embed_m7/<ver>`.
 
 ## 5 · Notebook 06 — road-damage detector (M5) **[you]**
-Kaggle (recommended; overnight): the four datasets from notebook 05 attached, GPU on, Internet on. `SMOKE = True` first (~10–15 min), paste output, then `SMOKE = False` + Save & Run All (Commit). Local alternative: set `CIVIC_PATHS_JSON` to the dataset folders and `CIVIC_YOLO_DEVICE=0`, batch ~16. Unzip the bundle so that `ai/artifacts/road_damage/road_damage/best.onnx` (with `model_card.json`) exists.
+Kaggle (recommended; overnight): the four datasets from notebook 05 attached, GPU on (T4 ×2 uses both GPUs; checklist and single-GPU switch in `docs/KAGGLE_RUNBOOK.md`), Internet on. `SMOKE = True` first (~10–15 min), paste output, then `SMOKE = False` + Save & Run All (Commit). Local alternative: set `CIVIC_PATHS_JSON` to the dataset folders and `CIVIC_YOLO_DEVICE=0`, batch ~16. Unzip the bundle so that `ai/artifacts/road_damage/road_damage/best.onnx` (with `model_card.json`) exists.
 
 ## 6 · Plug the models in
 

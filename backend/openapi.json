@@ -52,7 +52,7 @@
           "health"
         ],
         "summary": "Ready",
-        "description": "§51A.17 readiness: required dependencies (database, object storage) must work; Redis is optional infrastructure and is reported as ``degraded`` when absent.\nThe body contains no citizen data.",
+        "description": "§51A.17 readiness: required dependencies (database, object storage) must work; Redis is optional infrastructure and is reported as ``degraded`` when absent.\n``vector_search`` says whether pgvector similarity search is available (optional, never affects readiness). The body contains no citizen data.",
         "operationId": "ready_api_v1_health_ready_get",
         "responses": {
           "200": {
@@ -3129,12 +3129,95 @@
         }
       }
     },
+    "/api/v1/analytics/trends": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Analytics Trends",
+        "description": "Cases created per day or ISO week (Monday, UTC) by category and status, plus created / resolved / critical totals per bucket. Grouped in SQL, scoped to the caller's role.",
+        "operationId": "analytics_trends_api_v1_analytics_trends_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "daily",
+                "weekly"
+              ],
+              "type": "string",
+              "default": "daily",
+              "title": "Granularity"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "default": 30,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/analytics/departments/{department_id}": {
       "get": {
         "tags": [
           "analytics"
         ],
         "summary": "Analytics Department",
+        "description": "A07: incoming and resolved over the last ``days`` days, median resolution, SLA compliance, open workload by severity, backlog age, reopened, recurring cases.",
         "operationId": "analytics_department_api_v1_analytics_departments__department_id__get",
         "security": [
           {
@@ -3150,6 +3233,18 @@
               "type": "string",
               "title": "Department Id"
             }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "default": 30,
+              "title": "Days"
+            }
           }
         ],
         "responses": {
@@ -3157,7 +3252,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentStatsOut"
+                }
               }
             }
           },
@@ -3181,21 +3278,47 @@
         ],
         "summary": "Analytics Departments",
         "operationId": "analytics_departments_api_v1_analytics_departments_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentStatsList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
+        }
       }
     },
     "/api/v1/analytics/wards": {
@@ -3204,22 +3327,57 @@
           "analytics"
         ],
         "summary": "Analytics Wards",
+        "description": "A09: per ward cases, open, critical, backlog, median resolution days, recurring sites and the category distribution.",
         "operationId": "analytics_wards_api_v1_analytics_wards_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 3650,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "only cases created in the last N days (default: all time)",
+              "title": "Days"
+            },
+            "description": "only cases created in the last N days (default: all time)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/WardStatsList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
+        }
       }
     },
     "/api/v1/analytics/hotspots": {
@@ -3544,6 +3702,489 @@
             "OAuth2PasswordBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/reference/taxonomy": {
+      "get": {
+        "tags": [
+          "reference"
+        ],
+        "summary": "Get Taxonomy",
+        "description": "Categories and subcategories exactly as in the AI taxonomy, plus severities, priorities, SLA classes and the taxonomy's departments. ETag + Cache-Control.",
+        "operationId": "get_taxonomy_api_v1_reference_taxonomy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxonomyOut"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified: the If-None-Match ETag is current."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reference/departments": {
+      "get": {
+        "tags": [
+          "reference"
+        ],
+        "summary": "Get Departments",
+        "operationId": "get_departments_api_v1_reference_departments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentRefList"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified: the If-None-Match ETag is current."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reference/wards": {
+      "get": {
+        "tags": [
+          "reference"
+        ],
+        "summary": "Get Wards",
+        "operationId": "get_wards_api_v1_reference_wards_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "boundary",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "``boundary`` adds each ward's GeoJSON boundary",
+              "title": "Include"
+            },
+            "description": "``boundary`` adds each ward's GeoJSON boundary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WardRefList"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified: the If-None-Match ETag is current."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_api_v1_admin_users_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "department_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department Id"
+            }
+          },
+          {
+            "name": "ward_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ward Id"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "substring of name, email or phone",
+              "title": "Q"
+            },
+            "description": "substring of name, email or phone"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create User",
+        "description": "Creates a staff account and returns its generated one-time password ONCE. Deliberately not idempotency-keyed: a replay would have to store the password.",
+        "operationId": "create_user_api_v1_admin_users_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserCreateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Patch User",
+        "operationId": "patch_user_api_v1_admin_users__user_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1).",
+              "title": "Idempotency-Key"
+            },
+            "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPatchIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAdminOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/settings": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_v1_admin_settings_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Put Settings",
+        "operationId": "put_settings_api_v1_admin_settings_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1).",
+              "title": "Idempotency-Key"
+            },
+            "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/": {
@@ -4494,6 +5135,76 @@
         "title": "CasePatch",
         "description": "Only the fields the caller's role may change are accepted; anything else is refused with FIELD_NOT_PERMITTED."
       },
+      "CategoryCount": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "count"
+        ],
+        "title": "CategoryCount"
+      },
+      "CategoryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "department_id": {
+            "type": "string",
+            "title": "Department Id"
+          },
+          "subcategories": {
+            "items": {
+              "$ref": "#/components/schemas/SubcategoryOut"
+            },
+            "type": "array",
+            "title": "Subcategories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "department_id",
+          "subcategories"
+        ],
+        "title": "CategoryOut"
+      },
+      "Centroid": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "Centroid"
+      },
       "CitationOut": {
         "properties": {
           "type": {
@@ -4799,6 +5510,165 @@
         },
         "type": "object",
         "title": "CopilotScopeIn"
+      },
+      "DepartmentRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name_i18n": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Name I18N",
+            "default": {}
+          },
+          "category_coverage": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Category Coverage",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DepartmentRef"
+      },
+      "DepartmentRefList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DepartmentRef"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "DepartmentRefList"
+      },
+      "DepartmentStatsList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DepartmentStatsOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "DepartmentStatsList"
+      },
+      "DepartmentStatsOut": {
+        "properties": {
+          "department_id": {
+            "type": "string",
+            "title": "Department Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "incoming": {
+            "type": "integer",
+            "title": "Incoming"
+          },
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "resolved": {
+            "type": "integer",
+            "title": "Resolved"
+          },
+          "median_resolution_hours": {
+            "type": "number",
+            "title": "Median Resolution Hours"
+          },
+          "sla_compliance_pct": {
+            "type": "number",
+            "title": "Sla Compliance Pct"
+          },
+          "reopened": {
+            "type": "integer",
+            "title": "Reopened"
+          },
+          "backlog_age_days": {
+            "type": "number",
+            "title": "Backlog Age Days"
+          },
+          "recurring_cases": {
+            "type": "integer",
+            "title": "Recurring Cases"
+          },
+          "by_severity": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityCount"
+            },
+            "type": "array",
+            "title": "By Severity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_id",
+          "name",
+          "days",
+          "incoming",
+          "active",
+          "resolved",
+          "median_resolution_hours",
+          "sla_compliance_pct",
+          "reopened",
+          "backlog_age_days",
+          "recurring_cases",
+          "by_severity"
+        ],
+        "title": "DepartmentStatsOut"
       },
       "EvidenceOut": {
         "properties": {
@@ -5645,6 +6515,39 @@
             },
             "type": "array",
             "title": "Evidence Refs"
+          },
+          "title_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Local"
+          },
+          "summary_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Local"
+          },
+          "local_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Language"
           }
         },
         "type": "object",
@@ -5889,6 +6792,37 @@
           "items"
         ],
         "title": "Page[WorkOrderOut]"
+      },
+      "PriorityOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "default_sla_class": {
+            "type": "string",
+            "title": "Default Sla Class"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "rank",
+          "default_sla_class",
+          "label"
+        ],
+        "title": "PriorityOut"
       },
       "ProfileOut": {
         "properties": {
@@ -6139,6 +7073,185 @@
         ],
         "title": "SessionOut"
       },
+      "SettingList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SettingList"
+      },
+      "SettingOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "default",
+          "is_default",
+          "description"
+        ],
+        "title": "SettingOut"
+      },
+      "SettingsUpdateIn": {
+        "properties": {
+          "values": {
+            "additionalProperties": true,
+            "type": "object",
+            "minProperties": 1,
+            "title": "Values",
+            "description": "key -> new value; all values are validated first, one bad value changes nothing"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "SettingsUpdateIn"
+      },
+      "SeverityCount": {
+        "properties": {
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "severity",
+          "count"
+        ],
+        "title": "SeverityCount"
+      },
+      "SeverityOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "rank",
+          "label"
+        ],
+        "title": "SeverityOut"
+      },
+      "SlaClassOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "hours": {
+            "type": "integer",
+            "title": "Hours"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "hours",
+          "label"
+        ],
+        "title": "SlaClassOut"
+      },
       "StatusOut": {
         "properties": {
           "status": {
@@ -6149,6 +7262,48 @@
         },
         "type": "object",
         "title": "StatusOut"
+      },
+      "SubcategoryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "base_severity": {
+            "type": "string",
+            "title": "Base Severity"
+          },
+          "safety_critical": {
+            "type": "boolean",
+            "title": "Safety Critical"
+          },
+          "department_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "base_severity",
+          "safety_critical"
+        ],
+        "title": "SubcategoryOut"
       },
       "SyncChange": {
         "properties": {
@@ -6356,6 +7511,106 @@
         ],
         "title": "SyncResult"
       },
+      "TaxonomyDepartmentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "category_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Category Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "label",
+          "category_ids"
+        ],
+        "title": "TaxonomyDepartmentOut"
+      },
+      "TaxonomyOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "supported_languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Languages"
+          },
+          "severities": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityOut"
+            },
+            "type": "array",
+            "title": "Severities"
+          },
+          "priorities": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityOut"
+            },
+            "type": "array",
+            "title": "Priorities"
+          },
+          "sla_classes": {
+            "items": {
+              "$ref": "#/components/schemas/SlaClassOut"
+            },
+            "type": "array",
+            "title": "Sla Classes"
+          },
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonomyDepartmentOut"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryOut"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "status",
+          "supported_languages",
+          "severities",
+          "priorities",
+          "sla_classes",
+          "departments",
+          "categories"
+        ],
+        "title": "TaxonomyOut"
+      },
       "TimelineItem": {
         "properties": {
           "id": {
@@ -6414,6 +7669,111 @@
           "refresh_token"
         ],
         "title": "TokenPair"
+      },
+      "TrendPoint": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "title": "Bucket",
+            "description": "YYYY-MM-DD (UTC): the day, or the Monday of the week"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "category",
+          "status",
+          "count"
+        ],
+        "title": "TrendPoint"
+      },
+      "TrendTotal": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "title": "Bucket"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "resolved": {
+            "type": "integer",
+            "title": "Resolved"
+          },
+          "critical": {
+            "type": "integer",
+            "title": "Critical"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "created",
+          "resolved",
+          "critical"
+        ],
+        "title": "TrendTotal"
+      },
+      "TrendsOut": {
+        "properties": {
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Granularity"
+          },
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "until": {
+            "type": "string",
+            "title": "Until"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/TrendTotal"
+            },
+            "type": "array",
+            "title": "Totals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "granularity",
+          "from",
+          "until",
+          "scope",
+          "series",
+          "totals"
+        ],
+        "title": "TrendsOut"
       },
       "TriageAnalyzeResponse": {
         "properties": {
@@ -6769,6 +8129,122 @@
         ],
         "title": "UploadInitOut"
       },
+      "UserAdminOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "department_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Id"
+          },
+          "ward_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ward Id"
+          },
+          "preferred_language": {
+            "type": "string",
+            "title": "Preferred Language",
+            "default": "en"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "cases_reported": {
+            "type": "integer",
+            "title": "Cases Reported",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "is_active",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UserAdminOut"
+      },
       "UserBrief": {
         "properties": {
           "id": {
@@ -6791,6 +8267,196 @@
           "role"
         ],
         "title": "UserBrief"
+      },
+      "UserCreateIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Role",
+            "description": "FIELD_WORKER, OPERATOR, DEPARTMENT_MANAGER, WARD_OFFICER, OVERLOOKER, CITY_ADMIN or SYSTEM_ADMIN"
+          },
+          "department_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Id"
+          },
+          "ward_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ward Id"
+          },
+          "preferred_language": {
+            "type": "string",
+            "maxLength": 16,
+            "title": "Preferred Language",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "UserCreateIn"
+      },
+      "UserCreateOut": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserAdminOut"
+          },
+          "temporary_password": {
+            "type": "string",
+            "title": "Temporary Password",
+            "description": "Shown once; only its hash is stored."
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "temporary_password"
+        ],
+        "title": "UserCreateOut"
+      },
+      "UserPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserAdminOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "UserPage"
+      },
+      "UserPatchIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "department_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Id"
+          },
+          "ward_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ward Id"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "UserPatchIn",
+        "description": "Every field is optional; ``department_id`` / ``ward_id`` accept ``null`` to clear them."
       },
       "ValidationError": {
         "properties": {
@@ -6909,6 +8575,174 @@
           "created_at"
         ],
         "title": "VerificationOut"
+      },
+      "WardRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "centroid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Centroid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox"
+          },
+          "boundary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "WardRef"
+      },
+      "WardRefList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WardRef"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "WardRefList"
+      },
+      "WardStatsList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WardStatsOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "WardStatsList"
+      },
+      "WardStatsOut": {
+        "properties": {
+          "ward_id": {
+            "type": "string",
+            "title": "Ward Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "cases": {
+            "type": "integer",
+            "title": "Cases"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "sla_breached": {
+            "type": "integer",
+            "title": "Sla Breached"
+          },
+          "reopened": {
+            "type": "integer",
+            "title": "Reopened"
+          },
+          "critical": {
+            "type": "integer",
+            "title": "Critical"
+          },
+          "backlog": {
+            "type": "integer",
+            "title": "Backlog"
+          },
+          "median_resolution_days": {
+            "type": "number",
+            "title": "Median Resolution Days"
+          },
+          "recurrence": {
+            "type": "integer",
+            "title": "Recurrence"
+          },
+          "by_category": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryCount"
+            },
+            "type": "array",
+            "title": "By Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ward_id",
+          "label",
+          "name",
+          "cases",
+          "open",
+          "sla_breached",
+          "reopened",
+          "critical",
+          "backlog",
+          "median_resolution_days",
+          "recurrence",
+          "by_category"
+        ],
+        "title": "WardStatsOut"
       },
       "WorkOrderComplete": {
         "properties": {

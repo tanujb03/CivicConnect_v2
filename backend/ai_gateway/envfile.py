@@ -32,8 +32,11 @@ def parse(text: str) -> dict[str, str]:
 
 
 def load_env_file(paths: list[Path] | None = None, environ: dict | None = None) -> list[str]:
-    """Export missing variables from the first ``.env`` found; returns the names it set (never the values)."""
+    """Export missing variables from the first ``.env`` found; returns the names it set (never the values). With ``CIVIC_IGNORE_ENV_FILE`` set (tests) the default
+    search is disabled; explicit ``paths`` are still read."""
     env = os.environ if environ is None else environ
+    if paths is None and os.environ.get("CIVIC_IGNORE_ENV_FILE"):
+        return []
     for p in paths or [Path.cwd() / ".env", REPO_ROOT / ".env"]:
         if p.is_file():
             set_names = []

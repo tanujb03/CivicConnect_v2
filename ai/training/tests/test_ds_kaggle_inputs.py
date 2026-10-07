@@ -1,5 +1,6 @@
 """Discovery of attached Kaggle inputs: found by name AND structure, explicit overrides, and precise 'what is missing' messages."""
 import os
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,7 @@ def test_all_three_kaggle_mount_layouts_are_scanned(tmp_path):
     (tmp_path / "datasets" / "owner" / "slug").mkdir(parents=True)
     (tmp_path / "competitions" / "comp-slug").mkdir(parents=True)
     (tmp_path / "stray.txt").write_text("x", encoding="utf-8")
-    names = [str(p.relative_to(tmp_path)) for p in mounted_dirs(tmp_path)]
+    names = [p.relative_to(tmp_path).as_posix() for p in mounted_dirs(tmp_path)]
     assert names == ["competitions/comp-slug", "datasets/owner/slug", "flat-slug"]
     assert mounted_dirs(tmp_path / "missing") == []
 
@@ -150,7 +151,7 @@ def test_discovery_only_reads_never_modifies_the_input_tree(tmp_path):
 
 def test_describe_inputs_lists_mounts_with_coarse_counts(tmp_path):
     root = make_fake_kaggle_input(tmp_path / "in")
-    d = {x["mount"].rsplit("/", 1)[-1]: x for x in describe_inputs(root)}
+    d = {Path(x["mount"]).name: x for x in describe_inputs(root)}
     assert d["rdd-2022"]["images"] == 40 and d["rdd-2022"]["xml_annotation_files"] == 40
 
 

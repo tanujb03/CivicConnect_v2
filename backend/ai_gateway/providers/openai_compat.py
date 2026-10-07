@@ -206,7 +206,7 @@ class ChatCompletionsProvider:
         model = self._require("transcription")
         if audio.data is None:
             raise ProviderResponseInvalid("audio bytes are required for transcription")
-        form: dict[str, str] = {"model": model, "response_format": "json"}
+        form: dict[str, str] = {"model": model, "response_format": "verbose_json"}      # verbose_json also carries the detected language (OpenAI-style; plain json has none)
         if language_hint and language_hint in {"en", "hi", "mr"}:
             form["language"] = language_hint
         files = {"file": (f"{audio.evidence_id}.webm", audio.data, audio.mime_type or "audio/webm")}

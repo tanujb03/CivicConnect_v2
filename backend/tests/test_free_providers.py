@@ -226,8 +226,7 @@ def test_env_file_loader_exports_only_missing_variables_and_treats_comment_value
 def test_settings_do_not_crash_on_extra_variables_in_dotenv(tmp_path, monkeypatch):
     from backend.core.config import Settings
     (tmp_path / ".env").write_text("GEMINI_API_KEY=x\nPOSTGRES_DB=demo\n", encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-    assert Settings().POSTGRES_DB == "demo"
+    assert Settings(_env_file=tmp_path / ".env").POSTGRES_DB == "demo"                      # explicit file: the test run ignores any implicit .env (root conftest.py)
 
 
 def test_list_models_normalises_ids():

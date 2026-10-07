@@ -157,18 +157,18 @@ def scan_tree(path: Path, cap: int = SCAN_FILE_CAP) -> dict:
         if e == ".xml" and "annotations" in {x.lower() for x in p.parts}:
             xml_in_annotations += 1
         if e in TABULAR_EXTS and len(tabular) < 50:
-            tabular.append({"relpath": str(p.relative_to(path)), "bytes": size})
+            tabular.append({"relpath": p.relative_to(path).as_posix(), "bytes": size})
         kind = None
         if e not in _KNOWN_EXTS and sniffs < MAX_SNIFFS:
             sniffs += 1
             kind = sniff_kind(p)
             by_magic[kind or "unrecognised"] = by_magic.get(kind or "unrecognised", 0) + 1
             if kind in ARCHIVE_KINDS or e in (".zip", ".tar", ".tgz", ".7z", ".rar", ".gz"):
-                archive_files.append({"relpath": str(p.relative_to(path)), "kind": kind, "bytes": size})
+                archive_files.append({"relpath": p.relative_to(path).as_posix(), "kind": kind, "bytes": size})
         elif e in (".zip", ".tar", ".tgz", ".7z", ".rar", ".gz") and len(archive_files) < 50:
-            archive_files.append({"relpath": str(p.relative_to(path)), "kind": sniff_kind(p), "bytes": size})
+            archive_files.append({"relpath": p.relative_to(path).as_posix(), "kind": sniff_kind(p), "bytes": size})
         if len(sample) < 15:
-            item = {"relpath": str(p.relative_to(path)), "bytes": size, "extension": e or "(none)", "content_type": kind}
+            item = {"relpath": p.relative_to(path).as_posix(), "bytes": size, "extension": e or "(none)", "content_type": kind}
             if kind in ("text", "html", "json", "xml") and 0 <= size <= 5_000_000 and sum("preview" in x for x in sample) < 3:
                 item.update(text_preview(p))
             sample.append(item)
@@ -227,7 +227,7 @@ def _structure_problem(spec: DatasetSpec, st: dict) -> str | None:
 
 def locate(spec: DatasetSpec, root: Path | None = None, override: str | Path | None = None) -> Location:
     r = input_root(root)
-    attached = [str(p.relative_to(r)) if r in p.parents else str(p) for p in mounted_dirs(r)]
+    attached = [p.relative_to(r).as_posix() if r in p.parents else str(p) for p in mounted_dirs(r)]
     if override:
         p = Path(override)
         if not p.exists():

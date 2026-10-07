@@ -14,6 +14,7 @@ from backend.core.permissions import CITY_WIDE_ROLES, DEPARTMENT_ROLES, STAFF_RO
 from backend.models import CaseCounter, CivicCase, Support, User, Ward, WorkOrder
 from backend.models.types import new_id
 from backend.schemas.case import CaseCreate, CasePatch
+from backend.services import classification
 from backend.services import evidence as evidence_service
 from backend.services import taxonomy as tx
 from backend.services.audit import record_audit
@@ -129,6 +130,11 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
     if not (body.title or body.description or body.evidence_ids):
         raise CivicConnectException("VALIDATION_ERROR", "A case needs a title, a description or evidence.", 422, {"fields": ["title", "description", "evidence_ids"]})
     category, subcategory = tx.resolve_category(body.category, body.subcategory)
+    suggestion = None
+    if not (body.category and body.category.strip()):            # a category given by a human is never replaced; only a missing one is suggested
+        suggestion = classification.suggest("\n".join(x for x in (body.title, body.description) if x and x.strip()))
+        if suggestion.applied:
+            category, subcategory = suggestion.category, suggestion.subcategory
     now = _now()
     lat, lon = body.location.latitude, body.location.longitude
     case = CivicCase(id=new_id(), support_count=0, reopen_count=0, recurrence_count=0, location_tags=[], priority_score=0, case_number=next_case_number(db, now.year), client_case_id=body.client_case_id, title=(body.title or (body.description or "")[:80] or "Civic issue report"),
@@ -150,6 +156,8 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
     db.add(ReportSignal(case_id=case.id, reporter_id=user.id, original_text=body.description or body.title, original_language=body.language, is_primary=True,
                         latitude=lat, longitude=lon, source_type="SMARTPHONE"))
     add_event(db, case.id, "CASE_CREATED", actor_id=user.id, actor_role=user.role, metadata={"case_number": case.case_number, "source": body.source})
+    if suggestion is not None:
+        classification.record(db, case, suggestion)
     if body.evidence_ids:
         evidence_service.attach(db, user, body.evidence_ids, case, purpose="REPORT")
     # SUBMITTED -> AI_PROCESSING -> NEEDS_REVIEW: the deterministic assessment above already ran; the model-based enrichment (fusion / triage suggestion)
@@ -163,13 +171,18 @@ def create_case(db: Session, user: User, body: CaseCreate) -> tuple[CivicCase, b
 def _queue_ai_enrichment(db: Session, case: CivicCase) -> None:
     """Queue the AI jobs once the case is COMMITTED (a worker that read it earlier would not find it). A rolled-back request queues nothing."""
     from sqlalchemy import event
+
+    from backend.models import EvidenceItem
     case_id, number = case.id, case.case_number
+    has_audio = db.execute(select(EvidenceItem.id).where(EvidenceItem.case_id == case_id, EvidenceItem.media_type == "AUDIO").limit(1)).first() is not None
+    # order matters (one worker, in order): speech-to-text first (the transcript is case text), then the embedding (AI-2 compares vectors), then triage and fusion
+    jobs = (["transcribe"] if has_audio else []) + ["embed", "triage", "fusion"]
 
     def _emit(_session) -> None:
         try:
             from backend.events import emit_ai_job
-            emit_ai_job("triage", case_id, None, {"case_number": number})
-            emit_ai_job("fusion", case_id, None, {"case_number": number})
+            for job in jobs:
+                emit_ai_job(job, case_id, None, {"case_number": number})
         except Exception:
             pass                                                  # events are optional infrastructure
     event.listen(db, "after_commit", _emit, once=True)
@@ -316,7 +329,8 @@ def add_contributor(db: Session, actor: User, case: CivicCase, user_id: str) -> 
     if target is None or not target.is_active:
         raise CivicConnectException("USER_NOT_FOUND", "That user does not exist.", 404)
     s, _ = add_support(db, target, case, role="CONTRIBUTOR")
-    notify(db, [target.id], "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": f"You were added to case {case.case_number}", "message": ""})
+    notify(db, [target.id], "CASE_UPDATED", {"case_id": case.id, "case_number": case.case_number, "title": f"You were added to case {case.case_number}", "message": ""},
+           template="case.contributor_added", params={"case_number": case.case_number})
     return s
 
 

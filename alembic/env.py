@@ -30,9 +30,9 @@ def include_object(obj, name, type_, reflected, compare_to):
     """PostGIS ships its own tables; they are not ours to create or drop."""
     if type_ == "table" and name in POSTGIS_TABLES:
         return False
-    if type_ == "column" and name == "geog":                       # generated PostGIS columns / indexes live in migration 0002, not in the ORM models
+    if type_ == "column" and name in {"geog", "embedding_vec"}:    # generated PostGIS columns (0002) and the pgvector column (0003) are not in the ORM models
         return False
-    if type_ == "index" and name in {"ix_civic_cases_geog", "ix_civic_cases_fts"}:
+    if type_ == "index" and (name in {"ix_civic_cases_geog", "ix_civic_cases_fts"} or name.startswith("ix_case_embeddings_vec_")):
         return False
     return True
 

@@ -11,6 +11,12 @@ import pytest
 pytest.importorskip("ultralytics")
 pytest.importorskip("onnxruntime")
 PIL = pytest.importorskip("PIL.Image")
+torch = pytest.importorskip("torch")
+
+HAS_CUDA = torch.cuda.is_available()
+# "cpu": the plumbing everywhere. "0": one real GPU. The multi-GPU (Ultralytics DDP) launch cannot run here: the Windows torch wheel has no libuv and torch.distributed.run's static
+# rendezvous then fails before any worker starts, and there is only one GPU anyway. It can only be verified on Kaggle T4 x2 (docs/KAGGLE_RUNBOOK.md checklist); the batch / device arithmetic is covered in test_hardware.py.
+DEVICES = ["cpu", pytest.param("0", marks=pytest.mark.skipif(not HAS_CUDA, reason="needs a CUDA GPU"))]
 
 NB = Path(__file__).resolve().parents[1] / "notebooks" / "06_road_damage_detector_kaggle.ipynb"
 W, H = 640, 480
@@ -63,16 +69,17 @@ def inputs(tmp_path):
 
 
 @pytest.mark.slow
-def test_notebook_06_runs_end_to_end_in_smoke_mode_and_writes_a_complete_bundle(inputs, tmp_path, monkeypatch):
+@pytest.mark.parametrize("device", DEVICES)
+def test_notebook_06_runs_end_to_end_in_smoke_mode_and_writes_a_complete_bundle(inputs, tmp_path, monkeypatch, device):
     from nbclient import NotebookClient
     work = tmp_path / "work"
     for k, v in {"CIVIC_WORKDIR": str(work), "CIVIC_PATHS_JSON": json.dumps({k: str(v) for k, v in inputs.items()}), "CIVIC_YOLO_MODEL": "yolov8n.yaml",
-                 "CIVIC_YOLO_DEVICE": "cpu"}.items():
+                 "CIVIC_YOLO_DEVICE": device}.items():
         monkeypatch.setenv(k, v)
     nb = nbformat.read(NB, as_version=4)
     NotebookClient(nb, timeout=1500, kernel_name="python3", resources={"metadata": {"path": str(NB.parent)}}).execute()
     out = "\n".join(o.get("text", "") for c in nb.cells if c.cell_type == "code" for o in c.get("outputs", []))
-    assert "Traceback" not in out and "DECODED:" in out and "backend decoder vs Ultralytics" in out
+    assert "Traceback" not in out and "DECODED:" in out and "backend decoder vs Ultralytics" in out and "GPUs: " in out
     zips = list(work.glob("civic_road_damage_smoke-*.zip"))
     assert len(zips) == 1
     names = zipfile.ZipFile(zips[0]).namelist()
@@ -84,3 +91,7 @@ def test_notebook_06_runs_end_to_end_in_smoke_mode_and_writes_a_complete_bundle(
     assert card["provenance_and_licences"]["rdd2020"]["licence_status"] == "VERIFIED_PRIMARY" and card["provenance_and_licences"]["bharatpothole"]["licence_status"] == "UNVERIFIED"
     assert set(card["maharashtra_domain_check"]) == {"Pothole in Rainy Season", "Plain Road"} and card["backend_decoder_parity"]["images_with_detections"] >= 0
     assert "limits" in card and any("non-commercial" in x for x in card["limits"])
+    hw = card["training"]["hardware"]                               # new keys only; "batch" keeps its meaning (the total batch)
+    n = {"cpu": 0, "0": 1}[device]
+    assert card["training"]["batch"] == 16 and hw["gpu_count"] == n and hw["batch_effective"] == 16 and hw["batch_per_gpu"] == 16 // max(n, 1) and hw["world_size"] == max(n, 1)
+    assert hw["parallel"] == "none" and hw["wall_seconds"] > 0 and len(hw["epoch_seconds"]) == 1 and hw["epoch_seconds"][0] > 0

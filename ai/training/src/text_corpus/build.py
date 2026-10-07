@@ -3,8 +3,9 @@
     python -m ai.training.src.text_corpus.build --shards D:/civic_corpus/shards --out D:/civic_corpus/corpus [--templates ai/artifacts/datasets/synthetic_v1] [--gold gold.csv]
 
 Splits are GROUP-safe: every item of one generation request (same label, language and style) lands on the same side, so near-paraphrases from one request never straddle train and
-test. Template rows only ever go to train/val (the original template test families stay the untouched ``intake_eval.v1`` set). The gold set (written by the team, never seen in
-training) is written to ``gold.jsonl`` and used only for evaluation. Everything here is SYNTHETIC or team-authored: none of it is real citizen data.
+test. Template rows only ever go to train/val (the original template test families stay the untouched ``intake_eval.v1`` set). The gold set (never seen in
+training) is written to ``gold.jsonl`` and used only for evaluation; every gold row carries its provenance (``human`` only when explicitly marked, else ``llm_authored_*`` or ``unspecified``,
+see ``ai.evaluation.gold``) and the manifest counts rows by provenance. Everything here is SYNTHETIC or team-authored: none of it is real citizen data.
 """
 from __future__ import annotations
 
@@ -16,13 +17,14 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from ai.evaluation.gold import count_by_provenance, is_synthetic, label_origin, read_provenance
 from ai.inference.config import load_taxonomy
 from ai.training.src.data_sources.splits import hash_fraction
 
 from .spec import LANGUAGES
 from .validate import clean_items, dedupe_key
 
-GOLD_HEADER = ["text", "label_id", "language", "notes"]
+GOLD_HEADER = ["text", "label_id", "language", "notes", "provenance"]       # old 4-column CSVs still load (provenance then comes from an llm_authored_* marker in notes, else "unspecified")
 
 
 def _row(i: int, text: str, lang: str, label_id: str, **extra) -> dict:
@@ -74,9 +76,10 @@ def gold_template(path: Path) -> None:
     t = load_taxonomy()
     labels = "\n".join(f"#   {lid}  =  {s.label.get('en')}" for lid, s in sorted(((f'{s.category_id}/{sid}', s) for sid, s in t.subcategories.items())))
     header = (f"# GOLD TEST SET. Write complaints the way real people would, in YOUR words (not copied from a model). 4-8 per label per language is plenty; more is better.\n"
-              f"# Columns: {','.join(GOLD_HEADER)}.  language is one of: en, hi, mr, hi-Latn.  label_id is one of:\n{labels}\n# Delete these comment lines and the EXAMPLE rows when done.\n")
-    rows = [["EXAMPLE: there is a huge pothole outside the school gate and two bikes have already fallen", "roads/pothole", "en", "example - delete"],
-            ["रस्त्यावर मोठा खड्डा पडला आहे, शाळेसमोर", "roads/pothole", "mr", "example - delete"]]
+              f"# Columns: {','.join(GOLD_HEADER)}.  language is one of: en, hi, mr, hi-Latn.  provenance: write `human` for lines YOU wrote; rows left blank are reported as 'unspecified', never as human.  label_id is one of:\n{labels}\n"
+              f"# Delete these comment lines and the EXAMPLE rows when done.\n")
+    rows = [["EXAMPLE: there is a huge pothole outside the school gate and two bikes have already fallen", "roads/pothole", "en", "example - delete", "human"],
+            ["रस्त्यावर मोठा खड्डा पडला आहे, शाळेसमोर", "roads/pothole", "mr", "example - delete", "human"]]
     with path.open("w", encoding="utf-8", newline="") as f:
         f.write(header)
         csv.writer(f).writerows([GOLD_HEADER, *rows])
@@ -99,7 +102,8 @@ def load_gold(path: Path) -> tuple[list[dict], dict]:
             bad["duplicate"] += 1
         else:
             seen.add(dedupe_key(tx))
-            rows.append({"text": tx, "language": lang, "label_id": lab, "style": "gold", "group": "gold", "source": "gold", "backend": None, "model": None})
+            prov, how = read_provenance(r.get("provenance"), r.get("notes"))
+            rows.append({"text": tx, "language": lang, "label_id": lab, "style": "gold", "group": "gold", "source": "gold", "backend": None, "model": None, "provenance": prov, "provenance_source": how})
     return rows, dict(bad)
 
 
@@ -144,11 +148,12 @@ def build(shards: Path, out: Path, *, templates: Path | None = None, templates_p
     gold_info = None
     if gold:
         g, bad = load_gold(gold)
-        body = "\n".join(json.dumps({**_row(i, r["text"], r["language"], r["label_id"], prefix="gold"), "style": "gold", "source": "gold", "synthetic": False, "label_origin": "team_authored"}, ensure_ascii=False, separators=(",", ":")) for i, r in enumerate(g)) + "\n"
+        body = "\n".join(json.dumps({**_row(i, r["text"], r["language"], r["label_id"], prefix="gold"), "style": "gold", "source": "gold", "provenance": r["provenance"], "provenance_source": r["provenance_source"],
+                                     "synthetic": is_synthetic(r["provenance"]), "label_origin": label_origin(r["provenance"])}, ensure_ascii=False, separators=(",", ":")) for i, r in enumerate(g)) + "\n"
         (out / "gold.jsonl").write_text(body, encoding="utf-8")
         files["gold.jsonl"] = hashlib.sha256(body.encode()).hexdigest()
-        gold_info = {"rows": len(g), "by_language": dict(Counter(r["language"] for r in g)), "rejected": bad, "labels": len({r["label_id"] for r in g})}
-    manifest = {"dataset": "civic_text_corpus", "version": "1", "synthetic": True, "notice": "LLM-written and template text; NOT real citizen reports. gold.jsonl (if present) is team-authored test text.",
+        gold_info = {"rows": len(g), "by_language": dict(Counter(r["language"] for r in g)), "rejected": bad, "labels": len({r["label_id"] for r in g}), **count_by_provenance(g)}
+    manifest = {"dataset": "civic_text_corpus", "version": "1", "synthetic": True, "notice": "LLM-written and template text; NOT real citizen reports. gold.jsonl (if present) is evaluation-only text whose rows each carry a provenance (see gold.by_provenance): only rows marked human are team-written.",
                 "seed": seed, "fractions": {"val": val, "test": test}, "splits": counts, "generation": {k: (dict(v) if isinstance(v, Counter) else v) for k, v in stats.items()}, "gold": gold_info, "files": files,
                 "leakage_rule": "all items of one generation request share a group and stay on one side; templates never enter test; gold is evaluation-only"}
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

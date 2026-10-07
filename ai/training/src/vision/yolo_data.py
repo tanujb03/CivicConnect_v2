@@ -8,11 +8,16 @@ Design rules (same as the rest of the data framework): nothing is guessed, split
 """
 from __future__ import annotations
 
+import logging
+import os
 import re
+import shutil
 from collections import Counter, defaultdict
 from typing import Iterable, Sequence
 
 from ai.training.src.data_sources.splits import hash_fraction
+
+log = logging.getLogger(__name__)
 
 CLASSES = ["D00", "D10", "D20", "D40"]          # longitudinal crack, transverse crack, alligator crack, pothole
 CLASS_MEANING = {"D00": "longitudinal crack", "D10": "transverse crack", "D20": "alligator crack", "D40": "pothole"}
@@ -194,12 +199,27 @@ def collect_yolo(root, id_to_class: dict[int, str], *, source: str, group_fn, co
     return items, dict(stats)
 
 
+def link_or_copy(src, dst) -> str:
+    """Make ``dst`` an image of ``src`` and return the method used: ``symlink`` (Linux/Kaggle, and Windows with Developer Mode), else ``hardlink`` (same volume),
+    else ``copy``. Windows without the symlink privilege raises WinError 1314; read-only inputs on another volume cannot be hardlinked."""
+    for method, make in (("symlink", os.symlink), ("hardlink", os.link), ("copy", shutil.copyfile)):
+        try:
+            make(src, dst)
+            return method
+        except OSError as exc:
+            if method == "copy":
+                raise
+            log.debug("%s %s -> %s failed (%s); trying the next method", method, src, dst, exc)
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
 def assemble(out, items: Sequence[dict], *, seed: int = 42, val: float = 0.1, test: float = 0.1) -> dict:
-    """Write an Ultralytics dataset under ``out`` (images are SYMLINKS to the read-only inputs; labels are written). Duplicated stems across sources (RDD2020 is
-    contained in RDD2022) keep the FIRST item and are counted. Empty label files are kept (background images). Returns a manifest with counts per split/source/class."""
-    import os
+    """Write an Ultralytics dataset under ``out`` (images are SYMLINKS to the read-only inputs, or hardlinks/copies where symlinks are not allowed, see
+    ``link_or_copy``; labels are written). Duplicated stems across sources (RDD2020 is contained in RDD2022) keep the FIRST item and are counted. Empty label
+    files are kept (background images). Returns a manifest with counts per split/source/class."""
     from pathlib import Path
     out = Path(out)
+    methods: Counter = Counter()
     seen, kept, dup = set(), [], 0
     for it in items:
         key = it["stem"] if it["source"].startswith("rdd") else f"{it['source']}:{it['stem']}"
@@ -220,12 +240,14 @@ def assemble(out, items: Sequence[dict], *, seed: int = 42, val: float = 0.1, te
         name = f"{it['source']}__{it['stem']}"
         link = out / "images" / sp / f"{name}{Path(it['image']).suffix.lower()}"
         if not link.exists():
-            os.symlink(Path(it["image"]).resolve(), link)
+            methods[link_or_copy(Path(it["image"]).resolve(), link)] += 1
         (out / "labels" / sp / f"{name}.txt").write_text("\n".join(it["label_lines"]) + ("\n" if it["label_lines"] else ""), encoding="utf-8")
         split_counts[sp] += 1
         by_source[it["source"]][sp] += 1
         for ln in it["label_lines"]:
             class_by_split[sp][CLASSES[int(ln.split()[0])]] += 1
+    if methods:
+        (log.info if set(methods) == {"symlink"} else log.warning)("assemble: images placed by %s", dict(methods))
     straddling = sum(1 for s in groups.values() if len(s) > 1)
     yaml = "path: " + str(out.resolve()) + "\ntrain: images/train\nval: images/val\ntest: images/test\nnames:\n" + "".join(f"  {i}: {c}\n" for i, c in enumerate(CLASSES))
     (out / "data.yaml").write_text(yaml, encoding="utf-8")

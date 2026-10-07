@@ -34,3 +34,30 @@ class IdempotencyKey(Base):
     response_json: Mapped[dict | list | None] = mapped_column(JSONType, nullable=True)
     resource_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+
+
+class SystemSetting(Base):
+    """Runtime-editable settings (key -> JSON value), e.g. feature switches; ``updated_by`` is the admin who last changed it."""
+
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value_json: Mapped[dict | list | str | int | float | bool | None] = mapped_column(JSONType, nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class DeviceToken(Base):
+    """An Expo push token of one installed app instance of a user (citizen and field-worker apps are Expo). Revoked tokens are kept, never reused."""
+
+    __tablename__ = "device_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    platform: Mapped[str] = mapped_column(String(16), nullable=False)                      # Expo Platform.OS: "ios" | "android" | "web"
+    expo_push_token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    device_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    locale: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    last_seen_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
+    revoked_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)

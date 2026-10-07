@@ -144,7 +144,7 @@ def test_with_explicit_extraction_only_useful_members_are_unpacked_and_the_rest_
     names = zipfile.ZipFile(kr.bundle(cfg)).namelist()
     assert s["datasets"]["rdd2022"]["status"] == "OK" and not any("extracted" in n or n.endswith((".jpg", ".txt", ".yaml")) for n in names)
     again = kr.run_dataset(cfg, "rdd2022")
-    assert stage(again, "extraction")["detail"]["reused"].endswith("extracted/rdd2022")                              # marker match: not re-copied
+    assert Path(stage(again, "extraction")["detail"]["reused"]).as_posix().endswith("extracted/rdd2022")                              # marker match: not re-copied
     cfg_v = cfg_for(tmp_path / "v", root, extract={"rdd2022": True}, extract_include_videos=True, image=YOLO_CFG)
     assert stage(kr.run_dataset(cfg_v, "rdd2022"), "extraction")["detail"]["files_extracted"] == ex["files_extracted"] + 1
 

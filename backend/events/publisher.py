@@ -29,6 +29,22 @@ _redis_down_until: float = 0.0          # after a failed connection attempt, do 
 REDIS_RETRY_SECONDS = 30.0
 
 
+PUBLISH_CONNECT_TIMEOUT_S = 2.0         # a request must never wait long for a Redis that is down
+PUBLISH_SOCKET_TIMEOUT_S = 5.0          # redis-py >= 8 defaults to 5 s; explicit so the value does not depend on the library version
+HEALTH_CHECK_INTERVAL_S = 30            # ping connections idle for longer than this before reusing them (stale after a Redis restart)
+
+
+def make_client(*, connect_timeout: float, socket_timeout: float, health_check_interval: int = HEALTH_CHECK_INTERVAL_S) -> redis_lib.Redis:
+    """A Redis client with explicit timeouts (the publish path and the blocking worker readers need different ones)."""
+    return redis_lib.from_url(
+        settings.REDIS_URL,
+        decode_responses=True,
+        socket_connect_timeout=connect_timeout,
+        socket_timeout=socket_timeout,
+        health_check_interval=health_check_interval,
+    )
+
+
 def get_redis() -> redis_lib.Redis | None:
     """Return a Redis client, or None if the server is unreachable."""
     global _redis_client
@@ -38,11 +54,7 @@ def get_redis() -> redis_lib.Redis | None:
     if time.monotonic() < _redis_down_until:
         return None
     try:
-        client = redis_lib.from_url(
-            settings.REDIS_URL,
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
+        client = make_client(connect_timeout=PUBLISH_CONNECT_TIMEOUT_S, socket_timeout=PUBLISH_SOCKET_TIMEOUT_S)
         client.ping()
         _redis_client = client
         log.info("Redis connected: %s", settings.REDIS_URL)

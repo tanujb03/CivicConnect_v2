@@ -44,7 +44,7 @@ def _agreement(a: Path, b: Path, tok, texts: list[str], prefix: str, max_len: in
 
 
 def export_classifier(model, tok, info: dict, out_dir: Path, *, version: str, sample_texts: list[str], quantize: bool = True, extra: dict | None = None) -> Path:
-    """``model`` is the trained ``Classifier`` module. Writes classifier.onnx (+ classifier.int8.onnx when it agrees with fp32 on >= 99% of the sample), tokenizer.json, manifest.json."""
+    """``model`` is the trained ``Classifier`` module, UNWRAPPED (never a DataParallel wrapper; ``train`` returns it that way) and on CPU. Writes classifier.onnx (+ classifier.int8.onnx when it agrees with fp32 on >= 99% of the sample), tokenizer.json, manifest.json."""
     import onnxruntime as ort
     import torch
     out = Path(out_dir)
@@ -71,7 +71,7 @@ def export_classifier(model, tok, info: dict, out_dir: Path, *, version: str, sa
     manifest = {"artifact_schema": SCHEMA, "kind": "classifier", "model_name": "civic-text-m6", "model_version": version, "base_model": info["model_name"], "labels": info["labels"],
                 "max_len": info["max_len"], "prefix": info["prefix"], "temperature": info["temperature"], **tokinfo, "inputs": ["input_ids", "attention_mask"], "output": "logits",
                 "files": files, "torch_onnx_parity": parity, "int8": int8, "results": info["results"], "history": info["history"], "hyperparameters": info["hyperparameters"],
-                "synthetic_training_data": True, **(extra or {})}
+                "synthetic_training_data": True, "training_hardware": info.get("hardware"), **(extra or {})}
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return out
 
@@ -108,6 +108,7 @@ def export_embedder(model_name_or_dir: str, tok, out_dir: Path, *, version: str,
         got = ort.InferenceSession(str(out / "embedder.onnx"), providers=["CPUExecutionProvider"]).run(None, {"input_ids": enc["input_ids"].numpy(), "attention_mask": enc["attention_mask"].numpy()})[0]
         parity = {"max_abs_diff": float(np.abs(ref - got).max()), "n": len(sample_texts)}
     manifest = {"artifact_schema": SCHEMA, "kind": "embedder", "model_name": "civic-embed-m7", "model_version": version, "base_model": str(model_name_or_dir), "prefix": prefix, "max_len": max_len,
-                "dimension": int(enc_model.config.hidden_size), **tokinfo, "inputs": ["input_ids", "attention_mask"], "output": "embeddings", "files": files, "torch_onnx_parity": parity}
+                "dimension": int(enc_model.config.hidden_size), **tokinfo, "inputs": ["input_ids", "attention_mask"], "output": "embeddings", "files": files, "torch_onnx_parity": parity,
+                "fine_tuned": False}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
     return out
