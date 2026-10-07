@@ -1,229 +1,171 @@
+/**
+ * Overlooker Login — O01-Login
+ * Split panel: left wine brand panel with headline pop, right login form.
+ * Same Direction A aesthetic as admin but with OVERLOOKER chip.
+ */
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, EyeOff, MapPin, Shield, Sparkles, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     jurisdiction: '',
-    department: ''
   });
-  
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     setTimeout(() => {
       if (formData.username && formData.password && formData.jurisdiction) {
         localStorage.setItem('civic_auth_token', 'demo-token-123');
         localStorage.setItem('civic_user_role', 'overlooker');
         localStorage.setItem('civic_user_name', formData.username);
         localStorage.setItem('civic_user_jurisdiction', formData.jurisdiction);
-        
-        if (rememberMe) {
-          localStorage.setItem('civic_remember_user', 'true');
-        }
-        
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${formData.username}!`,
-        });
-        
-        navigate('/');
-      } else {
-        toast({
-          title: "Login Failed",
-          description: "Please fill in all required fields.",
-          variant: "destructive",
-        });
+        window.location.href = '/';
       }
       setIsLoading(false);
-    }, 1500);
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-         style={{ background: 'linear-gradient(145deg, #051a08 0%, #0d4a1a 30%, #1a6b2e 60%, #2a8a42 100%)' }}>
-      
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-16 left-16 w-80 h-80 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(39,169,74,0.1) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-16 right-16 w-96 h-96 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(108,199,122,0.08) 0%, transparent 70%)', animationDelay: '2s', animationDuration: '8s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)', animationDelay: '4s' }} />
-        
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-[0.03]"
-             style={{
-               backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                                 linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-               backgroundSize: '60px 60px',
-             }} />
-      </div>
-
-      <div className="w-full max-w-md space-y-6 relative z-10">
-        {/* Logo and Branding */}
-        <div className="text-center text-white space-y-3 page-enter">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/10 mb-3">
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs text-white/60 font-medium">Government Oversight Portal</span>
-          </div>
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center border border-white/15"
-                 style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))', backdropFilter: 'blur(10px)' }}>
-              <img src="/images/CivicConnect_logo.jpg" alt="CivicConnect Logo" className="w-10 h-10 rounded-xl" />
+    <div className="min-h-screen flex" style={{ background: 'var(--ground)' }}>
+      {/* ── Left: Wine brand panel ────────────────────────────────────── */}
+      <div
+        className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12"
+        style={{ background: 'var(--wine)', color: 'var(--on-wine)' }}
+      >
+        <div>
+          {/* Logo mark */}
+          <div className="flex items-center gap-3 mb-12">
+            <div
+              className="w-10 h-10 rounded-md border-2 border-on-wine/30 flex items-center justify-center font-display text-lg"
+              style={{ background: 'var(--rust-deep)' }}
+            >
+              CC
             </div>
+            <span className="font-display text-lg">CivicConnect</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>CivicConnect</h1>
-          <h2 className="text-lg font-semibold text-white/80">Overlooker Portal</h2>
-          <p className="text-white/40 text-sm">Government of Jharkhand</p>
+
+          {/* Headline */}
+          <h1 className="font-display text-4xl leading-tight cc-headline-pop">
+            City Oversight<br />
+            Dashboard
+          </h1>
+          <p className="text-on-wine/60 mt-4 text-sm max-w-sm cc-fade-up" style={{ '--stagger-index': 1 } as React.CSSProperties}>
+            Monitor city operations in real-time. Read-only access to all municipal data,
+            analytics, and AI-powered insights.
+          </p>
+
+          {/* Sticker */}
+          <div className="mt-8 cc-fade-up" style={{ '--stagger-index': 2 } as React.CSSProperties}>
+            <span className="cc-chip text-[11px] border-on-wine/30 bg-rust-deep/50 text-on-wine/80 tracking-wider uppercase">
+              OVERLOOKER PORTAL
+            </span>
+          </div>
         </div>
 
-        {/* Login Form */}
-        <Card className="bg-white/95 backdrop-blur-xl border-0 rounded-3xl page-enter" style={{ animationDelay: '0.1s', boxShadow: '0 30px 80px rgba(0,0,0,0.3)' }}>
-          <CardHeader className="text-left pb-2">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                   style={{ background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)' }}>
-                <Lock className="w-4 h-4 text-white" />
-              </div>
-              <CardTitle className="text-xl font-bold text-gray-900">Sign In</CardTitle>
+        {/* Bottom stat */}
+        <div className="cc-fade-up" style={{ '--stagger-index': 3 } as React.CSSProperties}>
+          <p className="text-on-wine/40 text-xs font-mono">
+            Read-only access. No case mutations allowed.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right: Login form ────────────────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Mobile header */}
+          <div className="lg:hidden text-center mb-8">
+            <div
+              className="w-12 h-12 rounded-md border-2 border-ink mx-auto mb-4 flex items-center justify-center font-display text-lg"
+              style={{ background: 'var(--wine)', color: 'var(--on-wine)' }}
+            >
+              CC
             </div>
-            <CardDescription className="text-gray-500">
-              Access your oversight dashboard
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <h1 className="font-display text-2xl text-ink">CivicConnect</h1>
+            <span className="cc-chip text-[9px] mt-2 bg-lime-tint">OVERLOOKER</span>
+          </div>
+
+          <div className="cc-card p-8">
+            <h2 className="font-display text-xl text-ink mb-1">Sign in</h2>
+            <p className="text-xs font-mono text-muted mb-6">Overlooker read-only access</p>
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* Username */}
               <div className="space-y-1.5">
-                <Label htmlFor="username" className="text-sm font-semibold text-gray-700">Username</Label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    required
-                    className="pl-10 h-11 rounded-xl border-gray-200 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 transition-all"
-                  />
-                </div>
+                <label className="text-[10px] font-mono text-muted uppercase">Username</label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Enter username"
+                  className="w-full px-4 py-3 bg-ground border-2 border-ink rounded-md text-sm text-ink placeholder-muted"
+                  style={{ minHeight: '44px' }}
+                  required
+                  autoFocus
+                />
               </div>
 
+              {/* Password */}
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-semibold text-gray-700">Password</Label>
+                <label className="text-[10px] font-mono text-muted uppercase">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                  <input
+                    type={showPassword ? 'text' : 'password'}
                     value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter password"
+                    className="w-full px-4 py-3 pr-12 bg-ground border-2 border-ink rounded-md text-sm text-ink placeholder-muted"
+                    style={{ minHeight: '44px' }}
                     required
-                    className="pl-10 pr-10 h-11 rounded-xl border-gray-200 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
- 
+
+              {/* Jurisdiction */}
               <div className="space-y-1.5">
-                <Label htmlFor="department-jurisdiction" className="text-sm font-semibold text-gray-700">Department/Jurisdiction</Label>
-                <Select onValueChange={(value) => setFormData({...formData, jurisdiction: value, department: value})} required>
-                  <SelectTrigger className="h-11 rounded-xl border-gray-200 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all">
-                    <SelectValue placeholder="Select department or jurisdiction" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-gray-200 shadow-lg">
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Jurisdiction</SelectLabel>
-                      <SelectItem value="ranchi" className="rounded-lg">Ranchi Municipal Corporation</SelectItem>
-                      <SelectItem value="jamshedpur" className="rounded-lg">Jamshedpur Notified Area Committee</SelectItem>
-                      <SelectItem value="dhanbad" className="rounded-lg">Dhanbad Municipal Corporation</SelectItem>
-                      <SelectItem value="bokaro" className="rounded-lg">Bokaro Steel City</SelectItem>
-                      <SelectItem value="deoghar" className="rounded-lg">Deoghar Municipality</SelectItem>
-                    </SelectGroup>
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Department (Optional)</SelectLabel>
-                      <SelectItem value="all" className="rounded-lg">All Departments</SelectItem>
-                      <SelectItem value="roads" className="rounded-lg">Roads & Transportation</SelectItem>
-                      <SelectItem value="electrical" className="rounded-lg">Electrical Department</SelectItem>
-                      <SelectItem value="sanitation" className="rounded-lg">Sanitation Department</SelectItem>
-                      <SelectItem value="garbage" className="rounded-lg">Garbage Management</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <label className="text-[10px] font-mono text-muted uppercase">Jurisdiction</label>
+                <select
+                  value={formData.jurisdiction}
+                  onChange={(e) => setFormData(prev => ({ ...prev, jurisdiction: e.target.value }))}
+                  className="w-full px-4 py-3 bg-ground border-2 border-ink rounded-md text-sm text-ink"
+                  style={{ minHeight: '44px' }}
+                  required
+                >
+                  <option value="">Select jurisdiction</option>
+                  <option value="ranchi">Ranchi Municipal Corporation</option>
+                  <option value="jamshedpur">Jamshedpur Municipal</option>
+                  <option value="dhanbad">Dhanbad Municipal</option>
+                </select>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                  className="border-gray-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
-                />
-                <Label htmlFor="remember" className="text-sm text-gray-500 font-normal cursor-pointer">
-                  Remember me for 30 days
-                </Label>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 rounded-xl text-white font-bold text-[15px] transition-all duration-300"
-                style={{ 
-                  background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)',
-                  boxShadow: '0 4px 20px rgba(22, 163, 74, 0.3)',
-                }}
+              <button
+                type="submit"
+                className="cc-btn cc-btn-primary w-full justify-center text-sm"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
-              </Button>
-
-              <div className="text-left">
-                <button
-                  type="button"
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-                  onClick={() => toast({
-                    title: "Password Reset",
-                    description: "Please contact your system administrator for password reset.",
-                  })}
-                >
-                  Forgot your password?
-                </button>
-              </div>
+                {isLoading ? 'Signing in...' : 'Sign in to Overlooker'}
+              </button>
             </form>
-          </CardContent>
-        </Card>
 
-        {/* Footer */}
-        <div className="text-center page-enter" style={{ animationDelay: '0.2s' }}>
-          <p className="text-white/30 text-xs font-medium">CivicConnect v2.0 | Government of Jharkhand</p>
-          <p className="flex items-center justify-center mt-1 text-white/20 text-xs">
-            <Sparkles className="w-3 h-3 mr-1" />
-            Powered by Digital India Initiative
-          </p>
+            <p className="text-[10px] font-mono text-muted text-center mt-4">
+              Contact city admin for access credentials.
+            </p>
+          </div>
         </div>
       </div>
     </div>

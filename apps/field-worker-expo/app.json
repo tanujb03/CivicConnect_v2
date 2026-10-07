@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "CivicConnect Field Worker",
+    "slug": "civicconnect-field-worker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#580D14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.civicconnect.fieldworker",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CivicConnect needs camera access to document work orders",
+        "NSPhotoLibraryUsageDescription": "CivicConnect needs photo library access to attach images to work orders",
+        "NSLocationWhenInUseUsageDescription": "CivicConnect uses your location to verify work order sites"
+      }
+    },
+    "android": {
+      "package": "com.civicconnect.fieldworker",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CivicConnect needs camera access to document work orders"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "CivicConnect uses your location to verify work order sites"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CivicConnect needs photo library access to attach images to work orders"
+        }
+      ],
+      "expo-font",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-splash-screen",
+      "expo-status-bar"
+    ],
+    "scheme": "civicconnect-worker",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "93cc2880-81f1-4835-96ea-245d5473d308"
+      }
+    }
+  }
+}

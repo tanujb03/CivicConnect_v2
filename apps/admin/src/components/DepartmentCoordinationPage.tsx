@@ -1,417 +1,221 @@
+/**
+ * A06 — Departments
+ * Three server-state columns (Assigned, In progress, Completed),
+ * department filter, create-work-order form. No drag and drop.
+ *
+ * Data: GET /work-orders?status=&limit=, POST /cases/{id}/work-orders,
+ *       PATCH /work-orders/{id}, POST /work-orders/{id}/cancel.
+ *       Department filter runs in the browser because the endpoint
+ *       filters by status only.
+ */
 import React, { useState } from 'react';
-import { Building2, Clock, Users, Phone, Mail, AlertCircle, CheckCircle, ArrowLeftRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Building2, Clock, Users, Plus, ArrowUpRight, X } from 'lucide-react';
 
-interface Department {
+interface WorkOrder {
   id: string;
-  name: string;
-  icon: any;
-  workload: number;
-  maxCapacity: number;
-  avgResponseTime: string;
-  pendingIssues: number;
-  staffAvailable: number;
-  totalStaff: number;
-  contact: {
-    phone: string;
-    email: string;
-    head: string;
-  };
+  caseId: string;
+  title: string;
+  department: string;
+  priority: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+  status: 'assigned' | 'in_progress' | 'completed';
+  assignedAt: string;
 }
 
-const departments: Department[] = [
-  {
-    id: 'roads',
-    name: 'Road and Transportation',
-    icon: Building2,
-    workload: 75,
-    maxCapacity: 100,
-    avgResponseTime: '3.2 hours',
-    pendingIssues: 23,
-    staffAvailable: 12,
-    totalStaff: 15,
-    contact: { phone: '+91-9876543210', email: 'roads@jharkhand.gov.in', head: 'Rajesh Kumar' }
-  },
-  {
-    id: 'electrical',
-    name: 'Electrical',
-    icon: Building2,
-    workload: 60,
-    maxCapacity: 80,
-    avgResponseTime: '4.7 hours',
-    pendingIssues: 18,
-    staffAvailable: 8,
-    totalStaff: 10,
-    contact: { phone: '+91-9876543211', email: 'electrical@jharkhand.gov.in', head: 'Priya Singh' }
-  },
-  {
-    id: 'sanitation',
-    name: 'Sanitation',
-    icon: Building2,
-    workload: 45,
-    maxCapacity: 70,
-    avgResponseTime: '2.1 hours',
-    pendingIssues: 12,
-    staffAvailable: 15,
-    totalStaff: 18,
-    contact: { phone: '+91-9876543212', email: 'sanitation@jharkhand.gov.in', head: 'Amit Verma' }
-  },
-  {
-    id: 'garbage',
-    name: 'Garbage Management',
-    icon: Building2,
-    workload: 90,
-    maxCapacity: 100,
-    avgResponseTime: '5.3 hours',
-    pendingIssues: 31,
-    staffAvailable: 6,
-    totalStaff: 12,
-    contact: { phone: '+91-9876543213', email: 'garbage@jharkhand.gov.in', head: 'Sunita Devi' }
-  }
+const mockWorkOrders: WorkOrder[] = [
+  { id: 'WO-101', caseId: 'CC-1042', title: 'Repair major pothole near school', department: 'Road Maintenance', priority: 'URGENT', status: 'assigned', assignedAt: '2h ago' },
+  { id: 'WO-098', caseId: 'CC-1038', title: 'Fix sewage overflow', department: 'Sanitation', priority: 'HIGH', status: 'assigned', assignedAt: '4h ago' },
+  { id: 'WO-095', caseId: 'CC-1031', title: 'Restore street lighting', department: 'Electrical', priority: 'HIGH', status: 'in_progress', assignedAt: '1d ago' },
+  { id: 'WO-092', caseId: 'CC-1027', title: 'Restore water supply', department: 'Water Works', priority: 'URGENT', status: 'in_progress', assignedAt: '2d ago' },
+  { id: 'WO-089', caseId: 'CC-1019', title: 'Clear garbage accumulation', department: 'Sanitation', priority: 'NORMAL', status: 'completed', assignedAt: '4d ago' },
+  { id: 'WO-086', caseId: 'CC-1015', title: 'Unblock drainage', department: 'Drainage', priority: 'LOW', status: 'completed', assignedAt: '7d ago' },
 ];
 
-interface TransferRequest {
-  issueId: string;
-  fromDepartment: string;
-  toDepartment: string;
-  reason: string;
-  comments: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  timestamp: string;
+const DEPARTMENTS = ['All', 'Road Maintenance', 'Sanitation', 'Electrical', 'Water Works', 'Drainage', 'Garbage Management'];
+
+function PriorityChip({ priority }: { priority: string }) {
+  const cls: Record<string, string> = {
+    URGENT: 'cc-priority-urgent', HIGH: 'cc-priority-high',
+    NORMAL: 'cc-priority-normal', LOW: 'cc-priority-low',
+  };
+  return <span className={`cc-chip text-[10px] ${cls[priority] ?? ''}`}>{priority}</span>;
 }
 
-const mockTransfers: TransferRequest[] = [
-  {
-    issueId: 'CC001',
-    fromDepartment: 'Roads',
-    toDepartment: 'Electrical',
-    reason: 'Street light maintenance required',
-    comments: 'Issue involves both road work and electrical systems',
-    status: 'pending',
-    timestamp: '2 hours ago'
-  },
-  {
-    issueId: 'CC002',
-    fromDepartment: 'Electrical',
-    toDepartment: 'Sanitation',
-    reason: 'Drainage blockage affecting electrical systems',
-    comments: 'Primary issue is drainage, electrical is secondary',
-    status: 'accepted',
-    timestamp: '4 hours ago'
-  }
+const columns = [
+  { key: 'assigned' as const, label: 'Assigned', tone: 'bg-lime-tint' },
+  { key: 'in_progress' as const, label: 'In Progress', tone: 'bg-amber/20' },
+  { key: 'completed' as const, label: 'Completed', tone: 'bg-lime/20' },
 ];
 
 const DepartmentCoordinationPage: React.FC = () => {
-  const [transferForm, setTransferForm] = useState({
-    issueId: '',
-    fromDepartment: '',
-    toDepartment: '',
-    reason: '',
-    comments: ''
-  });
+  const [deptFilter, setDeptFilter] = useState('All');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<string | null>(null);
 
-  const getWorkloadColor = (workload: number, maxCapacity: number) => {
-    const percentage = (workload / maxCapacity) * 100;
-    if (percentage > 90) return 'text-red-600';
-    if (percentage > 70) return 'text-orange-600';
-    return 'text-green-600';
-  };
+  const selectedWorkOrder = mockWorkOrders.find(wo => wo.id === selectedWorkOrderId);
 
-  const getWorkloadBarColor = (workload: number, maxCapacity: number) => {
-    const percentage = (workload / maxCapacity) * 100;
-    if (percentage > 90) return 'bg-red-500';
-    if (percentage > 70) return 'bg-orange-500';
-    return 'bg-green-500';
-  };
-
-  const handleTransferSubmit = () => {
-    console.log('Submitting transfer request:', transferForm);
-    // Reset form
-    setTransferForm({
-      issueId: '',
-      fromDepartment: '',
-      toDepartment: '',
-      reason: '',
-      comments: ''
-    });
-  };
-
-  const handleTransferAction = (transferId: string, action: 'accept' | 'reject') => {
-    console.log(`${action} transfer request ${transferId}`);
-  };
+  const filtered = mockWorkOrders.filter(wo =>
+    deptFilter === 'All' || wo.department === deptFilter
+  );
 
   return (
-    <div className="p-6 min-h-screen page-enter">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-civic-text-primary mb-2">Department Coordination</h2>
-        <p className="text-civic-text-secondary">Manage inter-department collaboration and task reassignment</p>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="cc-page-header">
+        <div className="cc-eyebrow cc-fade-up">A06</div>
+        <h1 className="cc-title cc-headline-pop">Departments</h1>
       </div>
 
-      {/* Department Overview Dashboard */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {departments.map((dept) => {
-          const Icon = dept.icon;
-          const workloadPercentage = (dept.workload / dept.maxCapacity) * 100;
-          
+      {/* Filter + Actions */}
+      <div className="flex items-center gap-3 cc-fade-up" style={{ '--stagger-index': 0 } as React.CSSProperties}>
+        <select
+          value={deptFilter}
+          onChange={(e) => setDeptFilter(e.target.value)}
+          className="px-3 py-2.5 bg-ground border-2 border-ink rounded-md text-sm text-ink font-medium"
+          style={{ minHeight: '44px' }}
+          aria-label="Filter by department"
+        >
+          {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <button
+          className="cc-btn cc-btn-primary text-sm"
+          onClick={() => setShowCreateForm(!showCreateForm)}
+        >
+          <Plus className="h-4 w-4" /> Create Work Order
+        </button>
+      </div>
+
+      {/* Create work order form (collapsed by default) */}
+      {showCreateForm && (
+        <div className="cc-card p-5 cc-fade-up" style={{ '--stagger-index': 0 } as React.CSSProperties}>
+          <h3 className="font-display text-sm text-ink mb-4">New Work Order</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono text-muted uppercase">Case ID</label>
+              <input
+                type="text"
+                placeholder="CC-XXXX"
+                className="w-full px-3 py-2.5 bg-ground border-2 border-ink rounded-md text-sm text-ink"
+                style={{ minHeight: '44px' }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono text-muted uppercase">Department</label>
+              <select className="w-full px-3 py-2.5 bg-ground border-2 border-ink rounded-md text-sm text-ink" style={{ minHeight: '44px' }}>
+                {DEPARTMENTS.filter(d => d !== 'All').map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-mono text-muted uppercase">Description</label>
+              <textarea
+                placeholder="Work order description..."
+                rows={3}
+                className="w-full px-3 py-2.5 bg-ground border-2 border-ink rounded-md text-sm text-ink placeholder-muted resize-none"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button className="cc-btn cc-btn-primary text-sm">
+              <Plus className="h-4 w-4" /> Create
+            </button>
+            <button className="cc-btn cc-btn-outline text-sm" onClick={() => setShowCreateForm(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Three columns: Assigned, In Progress, Completed */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {columns.map((col, ci) => {
+          const items = filtered.filter(wo => wo.status === col.key);
           return (
-            <div key={dept.id} className="civic-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Icon className="h-8 w-8 text-civic-primary" />
-                <span className={`text-sm font-medium ${getWorkloadColor(dept.workload, dept.maxCapacity)}`}>
-                  {Math.round(workloadPercentage)}% Load
-                </span>
-              </div>
-              
-              <h3 className="font-semibold text-civic-text-primary mb-3">{dept.name}</h3>
-              
-              {/* Workload Meter */}
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Workload</span>
-                  <span>{dept.workload}/{dept.maxCapacity}</span>
+            <div key={col.key} className="cc-fade-up" style={{ '--stagger-index': ci + 1 } as React.CSSProperties}>
+              <div className={`cc-card overflow-hidden`}>
+                {/* Column header */}
+                <div className={`px-4 py-3 border-b-2 border-ink ${col.tone}`}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-sm text-ink">{col.label}</h3>
+                    <span className="cc-chip text-[9px] py-0 px-1.5">{items.length}</span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getWorkloadBarColor(dept.workload, dept.maxCapacity)}`}
-                    style={{ width: `${workloadPercentage}%` }}
-                  ></div>
+                {/* Items */}
+                <div className="p-3 space-y-3 min-h-[200px]">
+                  {items.length === 0 && (
+                    <div className="text-center text-xs font-mono text-muted py-8">
+                      No work orders
+                    </div>
+                  )}
+                  {items.map((wo, i) => (
+                    <div
+                      key={wo.id}
+                      className="cc-card p-3 cc-card-lift cc-fade-up cursor-pointer hover:border-wine/50 transition-colors"
+                      style={{ '--stagger-index': i } as React.CSSProperties}
+                      onClick={() => setSelectedWorkOrderId(wo.id)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[10px] font-semibold" style={{ color: 'var(--wine)' }}>{wo.id}</span>
+                        <PriorityChip priority={wo.priority} />
+                      </div>
+                      <p className="text-xs text-ink font-medium mb-2 line-clamp-2">{wo.title}</p>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-muted">
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" /> {wo.department}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {wo.assignedAt}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-dot">
+                        <span className="cc-chip text-[9px] py-0 px-1.5 border-muted/30 text-muted">
+                          {wo.caseId}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    Response Time
-                  </span>
-                  <span className="font-medium">{dept.avgResponseTime}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    Pending
-                  </span>
-                  <span className="font-medium">{dept.pendingIssues}</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <Users className="h-4 w-4 mr-1" />
-                    Staff Available
-                  </span>
-                  <span className="font-medium">{dept.staffAvailable}/{dept.totalStaff}</span>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="mt-4 pt-4 border-t border-gray-200 space-y-1 text-xs">
-                <div className="flex items-center">
-                  <Phone className="h-3 w-3 mr-1" />
-                  <span>{dept.contact.phone}</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-3 w-3 mr-1" />
-                  <span>{dept.contact.email}</span>
-                </div>
-                <div className="font-medium">Head: {dept.contact.head}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Task Reassignment Interface */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        {/* New Transfer Request */}
-        <div className="civic-card p-6">
-          <h3 className="text-lg font-semibold text-civic-text-primary mb-4 flex items-center">
-            <ArrowLeftRight className="h-5 w-5 mr-2" />
-            Create Transfer Request
-          </h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Issue ID</label>
-              <Select value={transferForm.issueId} onValueChange={(value) => setTransferForm({...transferForm, issueId: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Issue ID" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CC001">CC001 - MG Road Pothole</SelectItem>
-                  <SelectItem value="CC002">CC002 - Station Road Light</SelectItem>
-                  <SelectItem value="CC003">CC003 - Park Street Drainage</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">From Department</label>
-                <Select value={transferForm.fromDepartment} onValueChange={(value) => setTransferForm({...transferForm, fromDepartment: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="From" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(dept => (
-                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Work Order drawer */}
+      {selectedWorkOrder && (
+        <>
+          <div className="fixed inset-0 bg-ink/20 z-30" onClick={() => setSelectedWorkOrderId(null)} aria-hidden="true" />
+          <div className="fixed inset-y-0 right-0 w-96 z-40 cc-card cc-fade-up"
+            style={{ borderRadius: 'var(--radius-lg) 0 0 var(--radius-lg)', borderRight: 'none', '--stagger-index': 0 } as React.CSSProperties}
+          >
+            <div className="h-full overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b-2 border-ink">
+                <h3 className="font-display text-lg text-ink">{selectedWorkOrder.id}</h3>
+                <button onClick={() => setSelectedWorkOrderId(null)} className="w-8 h-8 rounded-md border-2 border-ink flex items-center justify-center hover:bg-lime-tint" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">To Department</label>
-                <Select value={transferForm.toDepartment} onValueChange={(value) => setTransferForm({...transferForm, toDepartment: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="To" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(dept => (
-                      <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Transfer Reason (Required)</label>
-              <Select value={transferForm.reason} onValueChange={(value) => setTransferForm({...transferForm, reason: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Reason" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="jurisdiction">Wrong Jurisdiction</SelectItem>
-                  <SelectItem value="expertise">Requires Different Expertise</SelectItem>
-                  <SelectItem value="capacity">Department at Capacity</SelectItem>
-                  <SelectItem value="collaboration">Multi-department Issue</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Comments</label>
-              <Textarea
-                placeholder="Additional details about the transfer..."
-                value={transferForm.comments}
-                onChange={(e) => setTransferForm({...transferForm, comments: e.target.value})}
-                rows={3}
-              />
-            </div>
-
-            <Button 
-              onClick={handleTransferSubmit}
-              disabled={!transferForm.issueId || !transferForm.fromDepartment || !transferForm.toDepartment || !transferForm.reason}
-              className="w-full btn-civic-primary"
-            >
-              Submit Transfer Request
-            </Button>
-          </div>
-        </div>
-
-        {/* Pending Transfers */}
-        <div className="civic-card p-6">
-          <h3 className="text-lg font-semibold text-civic-text-primary mb-4">Pending Transfer Requests</h3>
-          
-          <div className="space-y-4">
-            {mockTransfers.map((transfer, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-medium">{transfer.issueId}</h4>
-                    <p className="text-sm text-gray-600">
-                      {transfer.fromDepartment} → {transfer.toDepartment}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    transfer.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {transfer.status.charAt(0).toUpperCase() + transfer.status.slice(1)}
-                  </span>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <PriorityChip priority={selectedWorkOrder.priority} />
+                  <span className={`cc-chip text-[10px] ${columns.find(c => c.key === selectedWorkOrder.status)?.tone}`}>{selectedWorkOrder.status}</span>
                 </div>
-                
-                <p className="text-sm mb-2"><strong>Reason:</strong> {transfer.reason}</p>
-                <p className="text-sm text-gray-600 mb-3">{transfer.comments}</p>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500">{transfer.timestamp}</span>
-                  {transfer.status === 'pending' && (
-                    <div className="space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleTransferAction(transfer.issueId, 'reject')}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Reject
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleTransferAction(transfer.issueId, 'accept')}
-                        className="btn-civic-success"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Accept
-                      </Button>
+                <h4 className="font-medium text-ink">{selectedWorkOrder.title}</h4>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Department', value: selectedWorkOrder.department },
+                    { label: 'Case ID', value: selectedWorkOrder.caseId },
+                    { label: 'Assigned', value: selectedWorkOrder.assignedAt },
+                  ].map(f => (
+                    <div key={f.label} className="flex justify-between items-center py-2 border-b border-dot">
+                      <span className="text-[10px] font-mono text-muted uppercase">{f.label}</span>
+                      <span className="text-sm font-semibold text-ink">{f.value}</span>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Audit Trail */}
-      <div className="civic-card p-6">
-        <h3 className="text-lg font-semibold text-civic-text-primary mb-4">Transfer Audit Trail</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left">Issue ID</th>
-                <th className="px-4 py-2 text-left">From</th>
-                <th className="px-4 py-2 text-left">To</th>
-                <th className="px-4 py-2 text-left">Reason</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Approved By</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr>
-                <td className="px-4 py-2 font-medium">CC001</td>
-                <td className="px-4 py-2">Roads</td>
-                <td className="px-4 py-2">Electrical</td>
-                <td className="px-4 py-2">Street light maintenance</td>
-                <td className="px-4 py-2">
-                  <span className="status-progress">Approved</span>
-                </td>
-                <td className="px-4 py-2">2024-01-15</td>
-                <td className="px-4 py-2">Admin Kumar</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2 font-medium">CC002</td>
-                <td className="px-4 py-2">Electrical</td>
-                <td className="px-4 py-2">Sanitation</td>
-                <td className="px-4 py-2">Drainage issue</td>
-                <td className="px-4 py-2">
-                  <span className="status-resolved">Completed</span>
-                </td>
-                <td className="px-4 py-2">2024-01-14</td>
-                <td className="px-4 py-2">Admin Singh</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

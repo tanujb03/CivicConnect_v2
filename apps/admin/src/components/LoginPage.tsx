@@ -1,17 +1,32 @@
 /**
  * A01 — Admin Login
- * Role-aware authentication entry point.
- * On success: stores token in localStorage, navigates to dashboard.
- * On integration: calls authApi.login() instead of mock.
+ * Split screen: wine brand panel (headline pop, three counters, ticker)
+ * and a sign-in card. Intro curtain plays once per session.
+ *
+ * Data: POST /auth/login with identifier and password, then GET /auth/me.
+ * Demo buttons that prefill demo accounts appear only in development.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Loader2, Shield, Sparkles, Lock, Mail } from 'lucide-react';
+import { AlertCircle, Loader2, Lock, Mail, ArrowUpRight } from 'lucide-react';
 import { setTokens } from '../lib/api';
+
+// Demo accounts shown only in development mode
+const DEMO_ACCOUNTS = [
+  { label: 'City Admin', identifier: 'admin@ranchi.gov.in', password: 'demo1234' },
+  { label: 'Dept. Operator', identifier: 'operator@ranchi.gov.in', password: 'demo1234' },
+  { label: 'Ward Officer', identifier: 'ward@ranchi.gov.in', password: 'demo1234' },
+];
+
+// Ticker items — in production these come from real incidents and hotspots
+const TICKER_ITEMS = [
+  '12 new cases in last hour',
+  'Ward W12 hotspot alert — road damage cluster',
+  'SLA breach approaching in 3 cases',
+  'Sanitation backlog in W18 above baseline',
+  'Field crew dispatched to W07 lighting failure',
+  'Resolution evidence pending for CC-1042',
+];
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,9 +35,20 @@ const LoginPage: React.FC = () => {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCurtain, setShowCurtain] = useState(false);
+
+  // Intro curtain plays once per session
+  useEffect(() => {
+    const curtainShown = sessionStorage.getItem('cc-curtain-shown');
+    if (!curtainShown) {
+      setShowCurtain(true);
+      sessionStorage.setItem('cc-curtain-shown', '1');
+      const timer = setTimeout(() => setShowCurtain(false), 1800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,156 +58,256 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // TODO: replace mock with real API call when backend is ready:
+      // TODO: replace with real API call: POST /auth/login
       // const session = await authApi.login(identifier, password);
       // setTokens(session.access_token, session.refresh_token);
-
-      // Mock: store a placeholder token so ProtectedRoute lets us through
       setTokens('mock-access-token', 'mock-refresh-token');
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      setError(e?.message ?? 'Login failed. Please check your credentials.');
+      const e = err as { message?: string; code?: string };
+      // Show a message per error.code as the plan specifies
+      if (e?.code === 'INVALID_CREDENTIALS') {
+        setError('Invalid username or password. Please try again.');
+      } else if (e?.code === 'ACCOUNT_LOCKED') {
+        setError('Account temporarily locked. Try again in 15 minutes.');
+      } else {
+        setError(e?.message ?? 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const prefillDemo = (account: typeof DEMO_ACCOUNTS[0]) => {
+    setIdentifier(account.identifier);
+    setPassword(account.password);
+    setError(null);
+  };
+
+  const isDev = import.meta.env.DEV;
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-         style={{ background: 'linear-gradient(145deg, #051a08 0%, #0d4a1a 30%, #1a6b2e 60%, #2a8a42 100%)' }}>
-      
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(39,169,74,0.1) 0%, transparent 70%)', animationDelay: '0s' }} />
-        <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(108,199,122,0.08) 0%, transparent 70%)', animationDelay: '2s', animationDuration: '8s' }} />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full animate-float"
-             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)', animationDelay: '4s', animationDuration: '10s' }} />
-        
-        {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-[0.03]"
-             style={{
-               backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                                 linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-               backgroundSize: '80px 80px',
-             }} />
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Branding */}
-        <div className="text-center mb-8 page-enter">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/10 mb-5">
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs text-white/60 font-medium">Secure Government Portal</span>
-          </div>
-          <h1 className="text-4xl font-extrabold text-white tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
-            CivicConnect
-          </h1>
-          <p className="text-emerald-300/40 mt-2 text-sm font-medium">Municipal Operations Platform · Jharkhand</p>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 page-enter" style={{ animationDelay: '0.1s', boxShadow: '0 30px 80px rgba(0,0,0,0.3), 0 0 1px rgba(0,0,0,0.1)' }}>
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                 style={{ background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)' }}>
-              <Lock className="w-4 h-4 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800">Admin Sign In</h2>
-          </div>
-
-          {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-700 rounded-xl p-3.5 mb-5 text-sm animate-scale-in">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="identifier" className="text-sm font-semibold text-gray-700">Username or Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="identifier"
-                  type="text"
-                  autoComplete="username"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="admin@jharkhand.gov.in"
-                  required
-                  disabled={loading}
-                  className="pl-10 h-12 rounded-xl border-gray-200 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 transition-all"
-                />
+    <>
+      {/* Intro curtain — wine panel with rosette and wordmark, slides up once */}
+      {showCurtain && (
+        <div className="cc-curtain">
+          <div className="text-center">
+            <div className="relative inline-block mb-4">
+              <div
+                className="w-16 h-16 rounded-xl border-2 border-on-wine/30 flex items-center justify-center mx-auto"
+                style={{ background: 'var(--rust-deep)' }}
+              >
+                <span className="text-on-wine font-display text-xl">CC</span>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="pl-10 h-12 rounded-xl border-gray-200 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(v) => setRememberMe(v as boolean)}
-                disabled={loading}
-                className="border-gray-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+              <div
+                className="absolute inset-[-8px] rounded-2xl border-2 border-dashed border-on-wine/20 cc-rosette pointer-events-none"
+                aria-hidden="true"
               />
-              <Label htmlFor="remember" className="text-sm font-normal text-gray-500 cursor-pointer">
-                Remember me for 7 days
-              </Label>
             </div>
+            <h1 className="font-display text-3xl text-on-wine tracking-tight">CivicConnect</h1>
+            <p className="font-mono text-xs text-on-wine/50 uppercase tracking-widest mt-2">
+              Municipal Operations Platform
+            </p>
+          </div>
+        </div>
+      )}
 
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-xl text-white font-bold text-[15px] transition-all duration-300 hover:shadow-lg"
-              style={{ 
-                background: 'linear-gradient(145deg, #0d4a1a, #1a7a2e)',
-                boxShadow: '0 4px 20px rgba(22, 163, 74, 0.3)',
-              }}
-              disabled={loading || !identifier || !password}
+      {/* Main login screen — split layout */}
+      <div className="min-h-screen flex" style={{ background: 'var(--ground)' }}>
+        {/* Left: wine brand panel */}
+        <div
+          className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
+          style={{ background: 'var(--wine)' }}
+        >
+          {/* Top: logo */}
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-lg border-2 border-on-wine/30 flex items-center justify-center"
+              style={{ background: 'var(--rust-deep)' }}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-          </form>
+              <span className="text-on-wine font-display text-sm">CC</span>
+            </div>
+            <div>
+              <h2 className="font-display text-lg text-on-wine tracking-tight">CivicConnect</h2>
+              <p className="text-[10px] font-mono text-on-wine/40 uppercase tracking-wider">Admin Portal</p>
+            </div>
+          </div>
 
-          <p className="mt-6 text-center text-xs text-gray-400">
-            Access restricted to authorized government personnel only.
-          </p>
+          {/* Center: headline pop with three counters */}
+          <div className="flex-1 flex flex-col justify-center">
+            <h1 className="cc-headline-pop font-display text-on-wine leading-[1.05]" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)' }}>
+              Civic Intelligence.
+              <br />
+              <span className="font-script text-lime" style={{ fontSize: '0.7em', transform: 'rotate(-2deg)', display: 'inline-block' }}>
+                Real Action.
+              </span>
+            </h1>
+
+            {/* Three counters */}
+            <div className="flex gap-6 mt-10">
+              {[
+                { value: '12K+', label: 'Cases Resolved' },
+                { value: '34', label: 'Active Wards' },
+                { value: '98%', label: 'SLA Compliance' },
+              ].map((stat, i) => (
+                <div key={stat.label} className="cc-fade-up" style={{ '--stagger-index': i } as React.CSSProperties}>
+                  <div className="font-display text-2xl text-lime">{stat.value}</div>
+                  <div className="font-mono text-[10px] text-on-wine/50 uppercase tracking-wider mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom: ticker */}
+          <div className="cc-ticker border-t-2 border-on-wine/10 pt-4 -mx-12 px-12">
+            <div className="cc-ticker-track gap-8">
+              {/* Two identical groups for seamless loop */}
+              {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+                <span key={i} className="flex items-center gap-2 text-on-wine/40 text-xs font-mono whitespace-nowrap shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" />
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Decorative sticker */}
+          <div className="cc-sticker-fly absolute top-8 right-8">
+            <div className="cc-sticker" style={{ fontSize: '10px' }}>
+              Direction A
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-6 page-enter" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center justify-center gap-2 text-white/30 text-xs">
-            <Sparkles className="w-3 h-3" />
-            <span>Powered by Digital India Initiative</span>
+        {/* Right: sign-in card */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
+            {/* Mobile-only branding (shown when wine panel is hidden) */}
+            <div className="lg:hidden text-center mb-8 cc-fade-up">
+              <div
+                className="w-12 h-12 rounded-lg border-2 border-ink flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'var(--wine)' }}
+              >
+                <span className="text-on-wine font-display text-base">CC</span>
+              </div>
+              <h1 className="font-display text-2xl text-ink">CivicConnect</h1>
+              <p className="font-mono text-xs text-muted uppercase tracking-wider mt-1">Admin Portal</p>
+            </div>
+
+            {/* Sign-in card */}
+            <div className="cc-card p-8 cc-fade-up" style={{ '--stagger-index': 1 } as React.CSSProperties}>
+              <div className="flex items-center gap-3 mb-6">
+                <div
+                  className="w-9 h-9 rounded-md border-2 border-ink flex items-center justify-center"
+                  style={{ background: 'var(--ink)' }}
+                >
+                  <Lock className="w-4 h-4" style={{ color: 'var(--on-wine)' }} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-display text-ink">Sign In</h2>
+                  <p className="text-xs font-mono text-muted">Authorized personnel only</p>
+                </div>
+              </div>
+
+              {/* Error banner */}
+              {error && (
+                <div className="cc-banner-error flex items-start gap-2 mb-5 text-sm">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="identifier" className="text-sm font-semibold text-ink">
+                    Username or Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      id="identifier"
+                      type="text"
+                      autoComplete="username"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="admin@ranchi.gov.in"
+                      required
+                      disabled={loading}
+                      className="w-full pl-10 pr-4 py-3 bg-ground border-2 border-ink rounded-md text-sm text-ink placeholder-muted disabled:opacity-50"
+                      style={{ minHeight: '44px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="text-sm font-semibold text-ink">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      id="password"
+                      type="password"
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="w-full pl-10 pr-4 py-3 bg-ground border-2 border-ink rounded-md text-sm text-ink placeholder-muted disabled:opacity-50"
+                      style={{ minHeight: '44px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Submit button with roll effect */}
+                <button
+                  type="submit"
+                  disabled={loading || !identifier || !password}
+                  className="cc-btn cc-btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ minHeight: '48px' }}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <ArrowUpRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Demo prefill buttons — only in development */}
+              {isDev && (
+                <div className="mt-6 pt-5 border-t-2 border-dot">
+                  <p className="text-xs font-mono text-muted uppercase tracking-wider mb-3">Demo Accounts</p>
+                  <div className="flex flex-wrap gap-2">
+                    {DEMO_ACCOUNTS.map((account) => (
+                      <button
+                        key={account.label}
+                        type="button"
+                        onClick={() => prefillDemo(account)}
+                        className="cc-chip hover:bg-lime-tint transition-colors cursor-pointer"
+                      >
+                        {account.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <p className="text-center text-xs font-mono text-muted mt-6 cc-fade-up" style={{ '--stagger-index': 2 } as React.CSSProperties}>
+              Access restricted to authorized government personnel.
+            </p>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
