@@ -78,12 +78,21 @@ def _local() -> LocalStorage:
     return store
 
 
+def _require_awaiting_upload(db: Session, key: str) -> None:
+    """The signed PUT writes only while the evidence row is still PENDING upload: after ``complete`` (READY / REJECTED) the object is immutable, so the bytes that
+    were hashed and scanned cannot be swapped (409 EVIDENCE_LOCKED). A key without an evidence row is not an upload session either."""
+    status = db.execute(select(EvidenceItem.status).where(EvidenceItem.object_key == key).execution_options(populate_existing=True)).scalar_one_or_none()
+    if status != "PENDING":
+        raise CivicConnectException("EVIDENCE_LOCKED", "This upload is closed; start a new upload to send a different file.", 409)
+
+
 @router.put("/blob/{token}", include_in_schema=False)
-async def put_blob(token: str, request: Request):
+async def put_blob(token: str, request: Request, db: Session = Depends(get_db)):
     store = _local()
     claims = verify_blob_token(token, "PUT")
     if claims is None:
         raise CivicConnectException("SIGNED_URL_INVALID", "The upload link is invalid or expired.", 403)
+    _require_awaiting_upload(db, claims["k"])
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > settings.MAX_UPLOAD_BYTES:
         raise CivicConnectException("PAYLOAD_TOO_LARGE", "The file is larger than the allowed size.", 413)
@@ -94,6 +103,7 @@ async def put_blob(token: str, request: Request):
         body += chunk
         if len(body) > settings.MAX_UPLOAD_BYTES:
             raise CivicConnectException("PAYLOAD_TOO_LARGE", "The file is larger than the allowed size.", 413)
+    _require_awaiting_upload(db, claims["k"])                   # again: `complete` may have run while the body was streaming in
     store.put(claims["k"], body)
     return Response(status_code=204)
 
@@ -105,6 +115,8 @@ def get_blob(token: str, db: Session = Depends(get_db)):
     if claims is None:
         raise CivicConnectException("SIGNED_URL_INVALID", "The download link is invalid or expired.", 403)
     ev = db.execute(select(EvidenceItem).where(EvidenceItem.object_key == claims["k"])).scalar_one_or_none()
+    if ev is not None:
+        evidence_service.require_downloadable(ev)               # quarantine gate: a link signed before the verdict is refused too (EVIDENCE_QUARANTINED / EVIDENCE_SCAN_PENDING)
     try:
         data = store.get(claims["k"])
     except FileNotFoundError:

@@ -90,7 +90,7 @@ def detail(db: Session, user: User, wo: WorkOrder) -> dict:
     out = serialize(wo, case.case_number if case else None)
     out["case"] = {"id": case.id, "case_number": case.case_number, "title": case.title, "description": case.description, "category": case.category, "subcategory": case.subcategory,
                    "priority": case.priority, "severity": case.severity, "status": case.status, "location": case_service.location_of(case), "sla_deadline": case.sla_deadline}
-    evs = evidence_service.list_for_case(db, case.id)
+    evs = evidence_service.list_for_case(db, case.id, include_infected=user.role in STAFF_ROLES)      # WP6: field workers never see quarantined evidence
     out["evidence"] = [evidence_service.serialize(e, with_url=True, with_location=True) for e in evs]
     out["resolution_review"] = None
     if user.role in STAFF_ROLES:

@@ -39,3 +39,4 @@ class EvidenceOut(BaseModel):
     location: Optional[Location] = None
     download_url: Optional[str] = None
     expires_at: Optional[datetime] = None
+    scan_status: str = "UNSCANNED"            # PENDING | CLEAN | INFECTED | UNSCANNED | ERROR; download_url is omitted unless the file may be served

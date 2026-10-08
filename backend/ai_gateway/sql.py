@@ -236,6 +236,8 @@ class SqlEvidenceResolver:
             ev = db.get(EvidenceItem, evidence_id)
             if ev is None or ev.status != "READY" or ev.media_type == "VIDEO":
                 return None
+            if ev.scan_status == "INFECTED":                    # WP6: bytes of a known-infected file never leave the store, not even for the system actor (PENDING is allowed: AI jobs run before the scan)
+                return None
             if actor_id != SYSTEM_USER_ID:
                 user = db.get(User, actor_id)
                 if user is None or not evidence_service.can_view(db, user, ev):

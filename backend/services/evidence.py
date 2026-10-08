@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.config import settings
 from backend.core.exceptions import CivicConnectException
+from backend.core.permissions import STAFF_ROLES
 from backend.models import CivicCase, EvidenceItem, User
 from backend.schemas.evidence import UploadInit
 from backend.services.workflow import add_event
@@ -77,6 +78,7 @@ def init_upload(db: Session, user: User, body: UploadInit) -> tuple[EvidenceItem
     key = f"evidence/{now:%Y/%m}/{uuid.uuid4().hex}{_ext(body.filename)}"        # generated, never derived from user input
     ev = EvidenceItem(uploader_id=user.id, purpose=body.purpose, object_key=key, filename=body.filename[:300], media_type=media_type_of(mime), mime_type=mime,
                       size_bytes=body.size_bytes, sha256=body.sha256.lower(), status="PENDING", source=body.source, captured_at=body.captured_at,
+                      scan_status=initial_scan_status(),
                       latitude=body.location.latitude if body.location else None, longitude=body.location.longitude if body.location else None)
     db.add(ev)
     db.flush()
@@ -126,8 +128,38 @@ def store_direct(db: Session, user: User, *, filename: str, mime: str, data: byt
     return ev
 
 
+def initial_scan_status() -> str:
+    """PENDING when the malware scan runs (SCAN_ENABLED), UNSCANNED otherwise, so the stored state never lies."""
+    from backend.services.malware_scan import initial_status
+    return initial_status()
+
+
+def download_block(ev: EvidenceItem) -> str | None:
+    """Error code that forbids serving the bytes of ``ev`` (quarantine gate), or None. INFECTED is always refused; while scanning is on PENDING is refused as
+    ``EVIDENCE_SCAN_PENDING`` (transient) and ERROR as ``EVIDENCE_SCAN_FAILED`` (final unless re-queued)."""
+    if ev.scan_status == "INFECTED":
+        return "EVIDENCE_QUARANTINED"
+    if settings.SCAN_ENABLED and ev.scan_status == "PENDING":
+        return "EVIDENCE_SCAN_PENDING"
+    if settings.SCAN_ENABLED and ev.scan_status == "ERROR":
+        return "EVIDENCE_SCAN_FAILED"
+    return None
+
+
+_BLOCK_MESSAGES = {"EVIDENCE_QUARANTINED": "This file was quarantined by the malware scan.", "EVIDENCE_SCAN_PENDING": "This file has not passed the malware scan yet.",
+                   "EVIDENCE_SCAN_FAILED": "The malware scan of this file failed, so it cannot be served."}
+
+
+def require_downloadable(ev: EvidenceItem) -> None:
+    code = download_block(ev)
+    if code:
+        raise CivicConnectException(code, _BLOCK_MESSAGES[code], 403, {"evidence_id": ev.id, "scan_status": ev.scan_status})
+
+
 def can_view(db: Session, user: User, ev: EvidenceItem) -> bool:
     from backend.services.cases import case_visible
+    if ev.scan_status == "INFECTED" and user.role not in STAFF_ROLES:
+        return False                                            # quarantined files are hidden from everyone but staff (they still see the metadata)
     if ev.uploader_id == user.id:
         return True
     if not ev.case_id:
@@ -149,10 +181,11 @@ def get_visible(db: Session, user: User, evidence_id: str) -> EvidenceItem:
 
 def serialize(ev: EvidenceItem, *, with_url: bool = False, with_location: bool = False) -> dict:
     out = {"id": ev.id, "case_id": ev.case_id, "media_type": ev.media_type, "mime_type": ev.mime_type, "size_bytes": ev.size_bytes, "status": ev.status,
-           "purpose": ev.purpose, "filename": ev.filename, "captured_at": ev.captured_at, "uploaded_at": ev.uploaded_at, "location": None, "download_url": None, "expires_at": None}
+           "purpose": ev.purpose, "filename": ev.filename, "captured_at": ev.captured_at, "uploaded_at": ev.uploaded_at, "location": None, "download_url": None, "expires_at": None,
+           "scan_status": ev.scan_status or "UNSCANNED"}
     if with_location and ev.latitude is not None and ev.longitude is not None:
         out["location"] = {"latitude": ev.latitude, "longitude": ev.longitude}
-    if with_url and ev.status == "READY":
+    if with_url and ev.status == "READY" and download_block(ev) is None:
         ttl = settings.SIGNED_URL_TTL_SECONDS
         out["download_url"] = get_storage().download_url(ev.object_key, ttl)
         out["expires_at"] = _now() + timedelta(seconds=ttl)
@@ -168,6 +201,10 @@ def attach(db: Session, user: User, evidence_ids: list[str], case: CivicCase, pu
             raise CivicConnectException("EVIDENCE_NOT_FOUND", "Evidence not found or not available.", 404, {"evidence_id": eid})
         if ev.status != "READY":
             raise CivicConnectException("EVIDENCE_NOT_READY", "Finish the upload (POST /evidence/{id}/complete) before attaching it.", 409, {"evidence_id": eid})
+        if ev.scan_status == "INFECTED":
+            if user.role not in STAFF_ROLES:                    # same answer as GET /evidence/{id}: no information
+                raise CivicConnectException("EVIDENCE_NOT_FOUND", "Evidence not found or not available.", 404, {"evidence_id": eid})
+            raise CivicConnectException("EVIDENCE_QUARANTINED", _BLOCK_MESSAGES["EVIDENCE_QUARANTINED"], 409, {"evidence_id": eid})
         if ev.case_id and ev.case_id != case.id:
             raise CivicConnectException("EVIDENCE_ALREADY_ATTACHED", "That evidence belongs to another case.", 409, {"evidence_id": eid})
         ev.case_id = case.id
@@ -182,8 +219,11 @@ def attach(db: Session, user: User, evidence_ids: list[str], case: CivicCase, pu
     return out
 
 
-def list_for_case(db: Session, case_id: str, purpose: str | None = None) -> list[EvidenceItem]:
+def list_for_case(db: Session, case_id: str, purpose: str | None = None, *, include_infected: bool = True) -> list[EvidenceItem]:
+    """READY evidence of a case. Callers that serve non-staff pass ``include_infected=False`` (or filter with ``can_view``)."""
     q = select(EvidenceItem).where(EvidenceItem.case_id == case_id, EvidenceItem.status == "READY").order_by(EvidenceItem.created_at)
+    if not include_infected:
+        q = q.where(EvidenceItem.scan_status != "INFECTED")
     if purpose:
         q = q.where(EvidenceItem.purpose == purpose)
     return list(db.execute(q).scalars())
