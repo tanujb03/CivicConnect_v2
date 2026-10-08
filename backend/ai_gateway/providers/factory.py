@@ -5,6 +5,8 @@
                                          AI_COPILOT_MODEL, AI_EMBEDDING_MODEL, AI_TRANSCRIPTION_MODEL; fallbacks as in ai.inference.config)
     AI_ROUTES="intake=gemini,transcription=groq"   optional task -> backend overrides; default: transcription -> groq if keyed, everything else -> the first keyed backend
                                          in the order gemini, groq, openrouter, cloudflare, openai
+    AI_EMBEDDING_DIM                     optional: ask the embedding model for this many dimensions (e.g. 768 for gemini-embedding-001); the length is checked and the vector
+                                         is L2-normalised
     AI_<BACKEND>_RPM                     requests-per-minute throttle for that backend (free tiers are rate limited), e.g. AI_GEMINI_RPM=10
     AI_<BACKEND>_BASE_URL                override a preset's base URL
     AI_<BACKEND>_STRUCTURED=json_object  for backends/models that reject json_schema response formats
@@ -45,6 +47,15 @@ def _models(env: Mapping[str, str]) -> dict[str, str]:
     return out
 
 
+def _embedding_dim(env: Mapping[str, str]) -> int | None:
+    raw = (env.get("AI_EMBEDDING_DIM") or "").strip()
+    if not raw:
+        return None
+    if not raw.isdigit() or int(raw) < 1:
+        raise ValueError("AI_EMBEDDING_DIM must be a positive integer (for example 768)")
+    return int(raw)
+
+
 def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatCompletionsProvider | None:
     p = PRESETS[name]
     key = env.get(p["key"])
@@ -57,8 +68,9 @@ def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatC
         log.error("%s: base URL incomplete (set CLOUDFLARE_ACCOUNT_ID or AI_%s_BASE_URL)", name, name.upper())
         return None
     rpm = env.get(f"AI_{name.upper()}_RPM")
+    dim = _embedding_dim(env)
     return ChatCompletionsProvider(name, base, key, models, rpm=float(rpm) if rpm else p["rpm"], structured_mode=env.get(f"AI_{name.upper()}_STRUCTURED", "json_schema"),
-                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")))
+                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")), embedding_dim=dim)
 
 
 def build_backends_from_env(env: Mapping[str, str] | None = None) -> dict[str, ChatCompletionsProvider]:

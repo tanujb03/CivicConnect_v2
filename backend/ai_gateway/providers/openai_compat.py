@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import math
 import time
 from typing import Any, Callable, Sequence
 
@@ -24,13 +25,15 @@ from ai.inference.schemas import EvidenceInput
 log = logging.getLogger("civicconnect.ai.compat")
 
 _RETRYABLE = {429, 500, 502, 503, 504}
+QUOTA_COOLDOWN_S = 60.0          # after a call ends in HTTP 429 the model is not called again for this long (or its Retry-After): requests degrade at once instead of queueing for 15 s
 _EMBED_BATCH = 64
 
 
 class ChatCompletionsProvider:
     def __init__(self, name: str, base_url: str, api_key: str | None, models: dict[str, str], *, rpm: float | None = None, timeout_s: float = 45.0,
                  max_retries: int = 2, structured_mode: str = "json_schema", extra_headers: dict[str, str] | None = None,
-                 client: httpx.Client | None = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic):
+                 client: httpx.Client | None = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
+                 embedding_dim: int | None = None):
         if not api_key:
             raise ProviderNotConfigured(f"{name}: API key is not set")
         if structured_mode not in ("json_schema", "json_object"):
@@ -42,6 +45,8 @@ class ChatCompletionsProvider:
         self._sleep, self._clock = sleep, clock
         self._min_gap = 60.0 / rpm if rpm else 0.0
         self._last = -1e9
+        self._blocked_until: dict[str, float] = {}       # model -> monotonic time until which calls fail fast (quota / rate limit cooldown)
+        self._embedding_dim = embedding_dim              # AI_EMBEDDING_DIM: asked from the provider (Matryoshka models), then checked and L2-normalised here
 
     def __repr__(self) -> str:      # never expose the key
         return f"ChatCompletionsProvider(name={self.name!r}, base_url={self._base!r}, models={self._models})"
@@ -66,7 +71,12 @@ class ChatCompletionsProvider:
     def _post(self, path: str, *, json_body: dict | None = None, data: dict | None = None, files: dict | None = None) -> tuple[dict, int]:
         url = self._base + path
         headers = {"Authorization": f"Bearer {self._key}", **self._extra}
+        model = str((json_body or data or {}).get("model") or "")
+        left = self._blocked_until.get(model, 0.0) - self._clock()
+        if left > 0:
+            raise ProviderUnavailable(f"{self.name}: {model} is cooling down after HTTP 429 ({int(left) + 1} s left)", status_code=429)
         last: Exception | None = None
+        retry_after_seen = 0.0
         t0 = time.monotonic()
         for attempt in range(self._max_retries + 1):
             self._throttle()
@@ -80,20 +90,35 @@ class ChatCompletionsProvider:
                         return resp.json(), int((time.monotonic() - t0) * 1000)
                     except ValueError as e:
                         raise ProviderResponseInvalid(f"{self.name}: non-JSON body") from e
-                last = ProviderUnavailable(f"{self.name}: HTTP {resp.status_code}", status_code=resp.status_code)
+                last = ProviderUnavailable(f"{self.name}: HTTP {resp.status_code}{self._error_detail(resp)}", status_code=resp.status_code)
                 if resp.status_code not in _RETRYABLE:
                     break
                 try:
                     retry_after = min(8.0, float(resp.headers.get("retry-after", "0")))
                 except ValueError:
                     retry_after = 0.0
+                retry_after_seen = max(retry_after_seen, retry_after)
                 if attempt < self._max_retries:
                     self._sleep(max(retry_after, 0.5 * (2 ** attempt)))
                 continue
             if attempt < self._max_retries:
                 self._sleep(0.5 * (2 ** attempt))
+        if getattr(last, "status_code", None) == 429:
+            self._blocked_until[model] = self._clock() + max(QUOTA_COOLDOWN_S, retry_after_seen)
         log.warning("provider call failed: %s", last)
         raise last  # type: ignore[misc]
+
+    def _error_detail(self, resp: httpx.Response) -> str:
+        """`` (provider message)`` from an error body, at most 200 characters, with the API key scrubbed: tells a per-minute from a per-day quota 429 or a rejected model id."""
+        try:
+            body = resp.json()
+            body = body[0] if isinstance(body, list) and body else body
+            err = body.get("error") if isinstance(body, dict) else None
+            msg = (err.get("message") if isinstance(err, dict) else err) or ""
+        except (ValueError, AttributeError):
+            msg = ""
+        msg = " ".join(str(msg).split()).replace(self._key, "***")
+        return f" ({msg[:200]})" if msg else ""
 
     def list_models(self) -> list[str]:
         """Model ids this key can use (GET /models). Used by the live-check CLI so you can copy valid ids from your own account."""
@@ -193,14 +218,26 @@ class ChatCompletionsProvider:
         total, used = 0, model
         for i in range(0, len(texts), _EMBED_BATCH):
             batch = list(texts[i:i + _EMBED_BATCH])
-            resp, ms = self._post("/embeddings", json_body={"model": model, "input": batch})
+            body = {"model": model, "input": batch, **({"dimensions": self._embedding_dim} if self._embedding_dim else {})}
+            resp, ms = self._post("/embeddings", json_body=body)
             total += ms
             used = resp.get("model", model)
             rows = sorted(resp.get("data", []), key=lambda r: r.get("index", 0))
             if len(rows) != len(batch):
                 raise ProviderResponseInvalid("embedding count mismatch")
-            vectors.extend([list(map(float, r["embedding"])) for r in rows])
+            vectors.extend([self._checked_vector(r["embedding"]) for r in rows])
         return EmbeddingResult(vectors=vectors, model=used, latency_ms=total)
+
+    def _checked_vector(self, raw: Sequence[float]) -> list[float]:
+        """Length must equal AI_EMBEDDING_DIM when set (a truncated or longer vector is a provider/config error, never silently stored); the result is L2-normalised
+        because reduced-dimension embeddings of a Matryoshka model are not unit length, and the duplicate search compares by cosine."""
+        v = list(map(float, raw))
+        if self._embedding_dim and len(v) != self._embedding_dim:
+            raise ProviderResponseInvalid(f"{self.name}: embedding has {len(v)} dimensions, AI_EMBEDDING_DIM is {self._embedding_dim}")
+        norm = math.sqrt(sum(x * x for x in v))
+        if not norm or not math.isfinite(norm):
+            raise ProviderResponseInvalid(f"{self.name}: embedding is all zeros or not finite")
+        return [x / norm for x in v]
 
     def transcribe(self, audio: EvidenceInput, language_hint: str | None = None) -> TranscriptResult:
         model = self._require("transcription")
