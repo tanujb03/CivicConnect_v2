@@ -153,14 +153,14 @@ def _revoke_sessions(db: Session, user_id: str) -> None:
 
 def reset_password(db: Session, actor: User, user_id: str) -> tuple[User, str]:
     """Replaces the user's password with a generated one-time password (returned, never stored in clear), forces a change at the next sign-in and revokes
-    their refresh tokens. Same elevated-role rule as ``update_user``; nobody resets their own password here (use ``/auth/change-password``). The caller commits."""
+    their refresh tokens and (``password_changed_at`` = now) every access token issued before. Same elevated-role rule as ``update_user``; nobody resets their own password here (use ``/auth/change-password``). The caller commits."""
     target = get_or_404(db, user_id)
     if target.role in ELEVATED_ROLES and actor.role != "system_admin":
         raise forbidden("Only a SYSTEM_ADMIN may reset the password of a user with an elevated role.", capability="grant_elevated_role")
     if target.id == actor.id:
         raise CivicConnectException("CANNOT_MODIFY_SELF", "You cannot reset your own password here; use POST /auth/change-password.", 409)
     password, was_forced = secrets.token_urlsafe(12), target.must_change_password
-    target.hashed_password, target.must_change_password = get_password_hash(password), True
+    target.hashed_password, target.must_change_password, target.password_changed_at = get_password_hash(password), True, datetime.now(timezone.utc)     # old access tokens die now
     revoked = revoke_all_refresh(db, target.id)
     db.flush()
     record_audit(db, actor_id=actor.id, action="user.password_reset", entity_type="user", entity_id=target.id,

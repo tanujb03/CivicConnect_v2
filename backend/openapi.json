@@ -238,12 +238,13 @@
           "auth"
         ],
         "summary": "Logout",
+        "description": "Revokes the refresh token; with ``expo_push_token`` also that device, if it is the token owner's (otherwise silently nothing). Always ``{\"status\": \"ok\"}``.",
         "operationId": "logout_api_v1_auth_logout_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefreshIn"
+                "$ref": "#/components/schemas/LogoutIn"
               }
             }
           },
@@ -7392,6 +7393,36 @@
           "password"
         ],
         "title": "LoginIn"
+      },
+      "LogoutIn": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Refresh Token"
+          },
+          "expo_push_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 10,
+                "pattern": "^(Exponent|Expo)PushToken\\[.+\\]$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expo Push Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "LogoutIn",
+        "description": "Additive: ``expo_push_token`` (same format as ``DeviceTokenIn``) also revokes that device of the refresh token's owner, so a shared phone stops getting their pushes."
       },
       "NotificationItem": {
         "properties": {

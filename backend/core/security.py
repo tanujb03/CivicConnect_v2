@@ -46,8 +46,9 @@ def verify_password(plain_password: str, hashed_password: str | None) -> bool:
 
 # ------------------------------------------------------------------------------------------------ tokens
 def create_access_token(subject: Union[str, Any], role: str, expires_delta: Optional[timedelta] = None) -> str:
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-    return jwt.encode({"exp": expire, "sub": str(subject), "role": role, "typ": "access"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    now = datetime.now(timezone.utc)
+    expire = now + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    return jwt.encode({"exp": expire, "iat": int(now.timestamp()), "sub": str(subject), "role": role, "typ": "access"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def new_refresh_token() -> tuple[str, str]:
@@ -71,7 +72,8 @@ def decode_token(token: str) -> dict:
         raise _unauthorized("AUTH_INVALID_TOKEN", "Could not validate credentials.")
     if payload.get("sub") is None or payload.get("typ", "access") != "access":
         raise _unauthorized("AUTH_INVALID_TOKEN", "Could not validate credentials.")
-    return {"sub": payload["sub"], "role": payload.get("role")}
+    iat = payload.get("iat")
+    return {"sub": payload["sub"], "role": payload.get("role"), "iat": iat if isinstance(iat, int) and not isinstance(iat, bool) else None}
 
 
 def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> dict:
@@ -93,8 +95,23 @@ def require_roles(*roles: str):
 PASSWORD_CHANGE_EXEMPT = frozenset({"/auth/change-password", "/auth/logout", "/auth/refresh", "/auth/me"})     # paths (below the API prefix) open while a change is forced
 
 
+def ensure_session_current(user, claims: dict) -> None:
+    """Refuses (401 ``AUTH_INVALID_TOKEN``) an access token issued before the user's last password change or admin reset: no ``iat`` (issued before this check existed)
+    or ``iat`` earlier than ``password_changed_at`` (whole seconds, UTC; a naive value from SQLite is UTC). Never-changed accounts (``password_changed_at`` None) are not affected.
+    A token issued in the same second as the change passes, which keeps the pair returned by change-password valid."""
+    changed = user.password_changed_at
+    if changed is None:
+        return
+    if changed.tzinfo is None:
+        changed = changed.replace(tzinfo=timezone.utc)
+    iat = claims.get("iat")
+    if iat is None or iat < int(changed.timestamp()):
+        raise _unauthorized("AUTH_INVALID_TOKEN", "The session predates a password change; sign in again.")
+
+
 def current_user(request: Request, claims: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """The authenticated User row. The role comes from the database, so a demoted or deactivated account loses access immediately.
+    A token issued before the last password change is refused (``ensure_session_current``).
 
     While ``must_change_password`` is set (new staff account, admin reset) every endpoint except ``PASSWORD_CHANGE_EXEMPT`` answers 403 ``PASSWORD_CHANGE_REQUIRED``.
     """
@@ -102,6 +119,7 @@ def current_user(request: Request, claims: dict = Depends(get_current_user), db:
     user = db.get(User, claims["sub"])
     if user is None or not user.is_active:
         raise _unauthorized("AUTH_INVALID_TOKEN", "The account no longer exists or is inactive.")
+    ensure_session_current(user, claims)
     if user.must_change_password:
         path = request.url.path.rstrip("/")
         if path.startswith(settings.API_V1_STR):

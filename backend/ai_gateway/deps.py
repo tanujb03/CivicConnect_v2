@@ -8,7 +8,7 @@ from fastapi import Depends
 from ai.inference.service import AIService
 from backend.core.config import settings
 from backend.core.exceptions import CivicConnectException
-from backend.core.security import get_current_user
+from backend.core.security import ensure_session_current, get_current_user
 from backend.db.session import get_db
 
 from .memory import DEMO_NOW, DemoCityFactSource, DemoCityRepository, DemoCityToolExecutor, EventStreamAuditSink, MemoryAnalysisStore, MemoryEvidenceResolver, normalize_role
@@ -68,6 +68,7 @@ def get_actor(claims: dict = Depends(get_current_user), db=Depends(get_db)) -> A
         user = db.get(User, str(claims["sub"]))
         if user is None or not user.is_active:
             raise CivicConnectException("AUTH_INVALID_TOKEN", "The account no longer exists or is inactive.", 401)
+        ensure_session_current(user, claims)                # same rule as current_user: a token from before a password change / reset is refused
         if user.must_change_password:                       # same gate as backend.core.security.current_user (WP2): no AI route while a password change is forced
             raise CivicConnectException("PASSWORD_CHANGE_REQUIRED", "You must change your password before using the API (POST /auth/change-password).", 403)
         return Actor(user_id=user.id, role=normalize_role(user.role))

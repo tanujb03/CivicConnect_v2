@@ -107,10 +107,13 @@ def rotate_refresh(db: Session, token: str) -> tuple[User, dict]:
     return user, session_for(db, user)
 
 
-def revoke_refresh(db: Session, token: str) -> None:
+def revoke_refresh(db: Session, token: str) -> str | None:
+    """Revokes the refresh token; returns the owner's id when the token was live (what logout may act on), else None."""
     row = db.execute(select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(token))).scalar_one_or_none()
     if row is not None and row.revoked_at is None:
         row.revoked_at = datetime.now(timezone.utc)
+        return row.user_id
+    return None
 
 
 def revoke_all_refresh(db: Session, user_id: str) -> int:

@@ -155,7 +155,6 @@ def test_change_password_works_while_forced_and_lifts_the_gate(staffed, password
     assert r.status_code == 200 and r.json()["user"]["must_change_password"] is False
     assert row(e, "roads_op")["forced"] is False
     assert e.client.get(f"{API}/analytics/overview", headers=bearer(r.json())).status_code == 200
-    assert e.client.get(f"{API}/analytics/overview", headers=bearer(s)).status_code == 200                    # the old access token is not gated any more either (flag cleared)
     ((_, _, before, after),) = audits(e, "user.password_changed")
     assert before == {"must_change_password": True} and after["must_change_password"] is False
 

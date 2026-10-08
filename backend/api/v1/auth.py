@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from backend.core.security import current_user
 from backend.db.session import get_db
 from backend.models import User
-from backend.schemas.auth import ChangePasswordIn, LoginIn, ProfileOut, RefreshIn, RegisterIn, SessionOut, TokenPair
+from backend.schemas.auth import ChangePasswordIn, LoginIn, LogoutIn, ProfileOut, RefreshIn, RegisterIn, SessionOut, TokenPair
 from backend.services import auth as auth_service
+from backend.services import push as push_service
 
 router = APIRouter()
 
@@ -50,8 +51,11 @@ def refresh(body: RefreshIn, db: Session = Depends(get_db)):
 
 
 @router.post("/logout", response_model=StatusOut)
-def logout(body: RefreshIn, db: Session = Depends(get_db)):
-    auth_service.revoke_refresh(db, body.refresh_token)
+def logout(body: LogoutIn, db: Session = Depends(get_db)):
+    """Revokes the refresh token; with ``expo_push_token`` also that device, if it is the token owner's (otherwise silently nothing). Always ``{"status": "ok"}``."""
+    owner = auth_service.revoke_refresh(db, body.refresh_token)
+    if owner and body.expo_push_token:
+        push_service.revoke_device_by_token(db, owner, body.expo_push_token)
     db.commit()
     return {"status": "ok"}
 

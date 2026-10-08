@@ -40,6 +40,12 @@ class RefreshIn(BaseModel):
     refresh_token: str = Field(min_length=10, max_length=300)
 
 
+class LogoutIn(RefreshIn):
+    """Additive: ``expo_push_token`` (same format as ``DeviceTokenIn``) also revokes that device of the refresh token's owner, so a shared phone stops getting their pushes."""
+
+    expo_push_token: Optional[str] = Field(default=None, min_length=10, max_length=255, pattern=r"^(Exponent|Expo)PushToken\[.+\]$")
+
+
 class ChangePasswordIn(BaseModel):
     """The password policy (length, deny-list, not the current one) is enforced by the service so every refusal has the same envelope (``WEAK_PASSWORD``)."""
 

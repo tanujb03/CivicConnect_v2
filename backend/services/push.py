@@ -127,6 +127,18 @@ def revoke_device(db: Session, user: User, device_id: str) -> DeviceToken:
     return row
 
 
+def revoke_device_by_token(db: Session, user_id: str, expo_push_token: str, reason: str = "logout") -> bool:
+    """Revokes the live device row with this token IF it belongs to ``user_id`` (logout: the refresh token's owner). Unknown, other users' and already revoked tokens change
+    nothing and say nothing (returns False). The audit row never holds the token. Caller commits."""
+    row = db.execute(select(DeviceToken).where(DeviceToken.expo_push_token == expo_push_token, DeviceToken.user_id == user_id, DeviceToken.revoked_at.is_(None))).scalar_one_or_none()
+    if row is None:
+        return False
+    row.revoked_at = _now()
+    db.flush()
+    record_audit(db, actor_id=user_id, action="device.revoked", entity_type="device_token", entity_id=row.id, before={"revoked": False}, after={"revoked": True, "reason": reason})
+    return True
+
+
 # ------------------------------------------------------------------------------------------------ marking (called by notify)
 def push_enabled(db: Session) -> bool:
     """The effective ``notification_policy.push`` (the stored value, else the registry default)."""
