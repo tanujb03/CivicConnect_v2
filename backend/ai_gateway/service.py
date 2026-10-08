@@ -8,14 +8,18 @@ from __future__ import annotations
 
 import copy
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from ai.inference.common import provider_ready
-from ai.inference.errors import InputLimitExceeded, ToolPermissionDenied, ToolValidationError
+from ai.inference.errors import (
+    InputLimitExceeded, ProviderNotConfigured, ProviderResponseInvalid, ToolPermissionDenied, ToolValidationError,
+)
 from ai.inference.schemas import (
     ActorContext, CopilotQuery, CopilotScope, FusionCase, FusionRequest, IntakeRequest, Location, ResolutionReviewRequest, TriageRequest, W,
 )
@@ -318,6 +322,106 @@ class AIGateway:
         analysis_id = self.analyses.save({"task_type": "embedding", "case_id": case.id, "actor_id": actor.user_id, "confidence": None, "model": model, "source": source,
                                           "degraded": bool(warnings), "created_at": self.clock().isoformat(), "result_json": info, "warnings": warnings})
         return {**info, "source": source, "analysis_id": analysis_id}
+
+    # ------------------------------------------------------------------------------------------ batch embeddings (backfill script)
+    def _embedded_ids(self, case_ids: Sequence[str]) -> set[str]:
+        """Which of ``case_ids`` already have a stored vector (one query on the SQL store; the generic fallback reads the snapshots)."""
+        fn = getattr(self.repo, "embedded_ids", None)
+        if fn is not None:
+            return set(fn(list(case_ids)))
+        return {i for i in case_ids if (c := self.repo.get_case(i)) is not None and c.embedding is not None}
+
+    def _embed_many(self, texts: list[str], warnings: list[str], out: dict[str, Any]) -> tuple[list[list[float]], str, str]:
+        """(vectors, model tag, source) for ``texts`` with ONE embedder call: the local M7 first (as ``_embed_text``), else ONE ``provider.embed`` call (the adapter itself splits
+        it at 64 inputs per HTTP request). Provider errors propagate; the vectors are validated before anything is stored."""
+        if self.embedder is not None:
+            try:
+                return [[float(x) for x in v] for v in self.embedder.embed(texts)], self.embedder.tag, "local_m7"
+            except Exception as e:                                      # noqa: BLE001
+                log.warning("local embedder failed: %s", type(e).__name__)
+                warnings.append(W.make("LOCAL_EMBEDDER_FAILED", f"the local embedder failed ({type(e).__name__}); trying the provider"))
+        provider = self.ai.provider
+        if not provider_ready(provider, "embedding"):
+            raise ProviderNotConfigured("no local embedder (AI_EMBED_ONNX_PATH) and no embedding provider configured")
+        out["provider_called"] = True
+        res = provider.embed(texts)
+        return [[float(x) for x in v] for v in res.vectors], f"provider:{res.model}", "provider"
+
+    @staticmethod
+    def _check_vectors(vectors: list[list[float]], n: int, expected_dim: int | None) -> int:
+        """The shared dimension of ``vectors``; ``ProviderResponseInvalid`` when the count, a length or a value is wrong (then nothing is stored)."""
+        if len(vectors) != n:
+            raise ProviderResponseInvalid(f"embedding count mismatch ({len(vectors)} vectors for {n} texts)")
+        dim = len(vectors[0]) if vectors else 0
+        if dim == 0 or any(len(v) != dim for v in vectors):
+            raise ProviderResponseInvalid("embeddings are empty or have different dimensions")
+        if expected_dim is not None and dim != expected_dim:
+            raise ProviderResponseInvalid(f"embedding dimension {dim} differs from the expected {expected_dim}")
+        if any(not math.isfinite(x) for v in vectors for x in v):
+            raise ProviderResponseInvalid("embedding contains a non-finite value")
+        return dim
+
+    def embed_cases(self, case_ids: Sequence[str], actor: Actor, *, only_missing: bool = False, expected_dim: int | None = None,
+                    max_chars: int | None = None) -> dict[str, Any]:
+        """Backfill entry: embed several cases with ONE embedder call and store each vector via ``repo.save_embedding``, with the same ``embedding`` AIAnalysis per stored case as
+        ``embed_case``. Unlike ``embed_case`` a provider failure PROPAGATES (the caller owns the stop / retry policy; nothing of this batch is stored then), and a batch whose
+        vectors are the wrong count, not finite or of another dimension raises ``ProviderResponseInvalid`` before any write: the dimension must equal ``expected_dim``, else the
+        dimension of the embeddings already stored (``repo.stored_embedding_dim``), else it only has to be uniform. ``only_missing`` never touches a case that already has a vector:
+        filtered before the call and checked again inside the saving transaction (a vector that appeared meanwhile, including a primary-key collision at commit, is kept).
+        ``max_chars`` cuts each text sent for embedding (the ids are returned in ``truncated``). Cases without text or unknown ids are reported, never sent."""
+        self._require(actor, "embed")
+        out: dict[str, Any] = {"requested": len(case_ids), "embedded": 0, "skipped_empty": [], "skipped_existing": [], "not_found": [], "failed": [], "truncated": [], "model": None,
+                               "source": "none", "dim": 0, "provider_called": False, "analysis_ids": [], "warnings": []}
+        ids = list(dict.fromkeys(case_ids))
+        existing = self._embedded_ids(ids) if only_missing else set()
+        todo: list[tuple[CaseSnapshot, str]] = []
+        for cid in ids:
+            if cid in existing:
+                out["skipped_existing"].append(cid)
+                continue
+            case = self.repo.get_case(cid)
+            if case is None:
+                out["not_found"].append(cid)
+            elif not (case.text or "").strip():
+                out["skipped_empty"].append(cid)
+            else:
+                text = case.text.strip()
+                if max_chars and len(text) > max_chars:
+                    text = text[:max_chars]
+                    out["truncated"].append(cid)
+                todo.append((case, text))
+        if not todo:
+            return out
+        save = getattr(self.repo, "save_embedding", None)
+        if save is None:
+            raise RuntimeError("this store cannot persist embeddings")
+        if expected_dim is None and (stored_dim := getattr(self.repo, "stored_embedding_dim", None)) is not None:
+            expected_dim = stored_dim()
+        warnings: list[str] = out["warnings"]
+        vectors, model, source = self._embed_many([t for _, t in todo], warnings, out)
+        out.update(model=model, source=source, dim=self._check_vectors(vectors, len(todo), expected_dim))
+        for (case, _), vec in zip(todo, vectors):
+            try:
+                stored = save(case.id, vec, model, if_missing=True) if only_missing else save(case.id, vec, model)
+            except IntegrityError:                                      # another process inserted this case's row between the pre-check and the commit: theirs stays
+                out["skipped_existing"].append(case.id)
+                continue
+            except Exception as e:                                      # noqa: BLE001
+                log.warning("storing the embedding of %s failed: %s", case.id, type(e).__name__)
+                out["failed"].append(case.id)
+                continue
+            if stored is None:                                          # a vector appeared since the pre-check: kept, not replaced
+                out["skipped_existing"].append(case.id)
+                continue
+            out["embedded"] += 1
+            info = {"stored": True, "dim": out["dim"], "model": model, "pgvector": bool(stored.get("pgvector")), "warnings": warnings, "batch_size": len(todo)}
+            try:
+                out["analysis_ids"].append(self.analyses.save({"task_type": "embedding", "case_id": case.id, "actor_id": actor.user_id, "confidence": None, "model": model,
+                                                               "source": source, "degraded": bool(warnings), "created_at": self.clock().isoformat(), "result_json": info,
+                                                               "warnings": warnings}))
+            except Exception as e:                                      # noqa: BLE001  (the vector is stored; the audit record is secondary)
+                log.warning("saving the embedding analysis of %s failed: %s", case.id, type(e).__name__)
+        return out
 
     def fusion(self, case_id: str, actor: Actor) -> FusionAnalyzeResponse:
         self._require(actor, "fusion")

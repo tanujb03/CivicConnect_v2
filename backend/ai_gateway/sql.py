@@ -186,14 +186,32 @@ class SqlCaseRepository:
                         sn.embedding, sn.embedding_model = None, None
             return snaps
 
-    def save_embedding(self, case_id: str, vector: list[float], model: str) -> dict:
-        """The JSON vector everywhere (SQLite, no extension) AND, on PostgreSQL with pgvector, ``embedding_vec`` + ``embedding_dim`` + ``embedding_model``."""
+    @staticmethod
+    def embedded_ids(case_ids: list[str]) -> set[str]:
+        """The subset of ``case_ids`` that already has a ``case_embeddings`` row (the backfill's pre-check)."""
+        if not case_ids:
+            return set()
+        with session_scope() as db:
+            return set(db.execute(select(CaseEmbedding.case_id).where(CaseEmbedding.case_id.in_(case_ids))).scalars())
+
+    @staticmethod
+    def stored_embedding_dim() -> int | None:
+        """The dimension of the most recently stored embedding (the backfill refuses vectors of another dimension), or None when there is none."""
+        with session_scope() as db:
+            r = db.execute(select(CaseEmbedding).order_by(CaseEmbedding.created_at.desc()).limit(1)).scalars().first()
+            return (r.embedding_dim or len(r.vector)) if r is not None and r.vector else None
+
+    def save_embedding(self, case_id: str, vector: list[float], model: str, *, if_missing: bool = False) -> dict | None:
+        """The JSON vector everywhere (SQLite, no extension) AND, on PostgreSQL with pgvector, ``embedding_vec`` + ``embedding_dim`` + ``embedding_model``.
+        ``if_missing``: an existing row is left untouched and ``None`` is returned (checked in the same transaction as the insert; the backfill never re-embeds)."""
         vec = [float(x) for x in vector]
         dim = len(vec)
         if not 0 < dim <= vectors.MAX_VECTOR_DIM:
             raise ValueError(f"unsupported embedding dimension {dim}")
         with session_scope() as db:
             row = db.get(CaseEmbedding, case_id)
+            if row is not None and if_missing:
+                return None
             native = vectors.vector_search_available(db)
             if row is None:
                 row = CaseEmbedding(case_id=case_id, model=model, vector=vec)
