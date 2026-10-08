@@ -3,8 +3,9 @@ import ast
 import re
 from pathlib import Path
 
-import nbformat
 import pytest
+
+nbformat = pytest.importorskip("nbformat", reason="optional notebook tooling (nbformat) is not installed")
 
 NB_DIR = Path(__file__).resolve().parents[1] / "notebooks"
 NOTEBOOKS = sorted(NB_DIR.glob("*.ipynb"))

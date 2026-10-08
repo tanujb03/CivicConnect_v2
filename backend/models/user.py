@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db.session import Base
@@ -38,3 +38,6 @@ class User(Base):
     created_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, nullable=False)
     updated_at: Mapped[object] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow, nullable=False)
     last_login_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)
+    # migration 0004: staff accounts created or reset by an admin must set their own password before anything else (403 PASSWORD_CHANGE_REQUIRED)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
+    password_changed_at: Mapped[object | None] = mapped_column(UTCDateTime, nullable=True)

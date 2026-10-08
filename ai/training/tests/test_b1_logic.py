@@ -6,6 +6,7 @@ import pytest
 from ai.inference.providers.fake import FakeProvider
 from ai.training.src import train_encoder_head as B1
 from ai.training.src.io_utils import read_jsonl
+from ai.training.tests.optional_deps import requires_sklearn
 
 
 def fake_embed(texts):
@@ -14,6 +15,7 @@ def fake_embed(texts):
     return np.array([fp._vec(t) for t in texts], dtype=np.float32)
 
 
+@requires_sklearn
 def test_b1_pipeline_logic_with_an_injected_encoder(small_dataset):
     tr, va, te = (read_jsonl(small_dataset / f"{s}.jsonl") for s in ("train", "val", "test"))
     res = B1.evaluate_embedding_classifier(fake_embed, tr, va, te, c_grid=(1.0, 10.0))
@@ -22,6 +24,7 @@ def test_b1_pipeline_logic_with_an_injected_encoder(small_dataset):
     assert set(res["test_subcategory_accuracy_by_language"]) == {"en", "hi", "mr", "hi-Latn"}
 
 
+@requires_sklearn
 def test_b1_run_writes_a_report_that_states_it_is_synthetic(small_dataset, tmp_path):
     out = B1.run(small_dataset, tmp_path, "fake/encoder", embed_fn=fake_embed)
     rep = __import__("json").loads((out / "b1_report.json").read_text(encoding="utf-8"))

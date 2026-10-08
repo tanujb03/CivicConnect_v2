@@ -72,7 +72,7 @@ def test_upgrade_backfill_defaults_constraints_downgrade_and_upgrade_again(sqlit
     with pytest.raises(IntegrityError), engine.begin() as c:                                                                  # expo_push_token is unique
         c.execute(text(insert_token.format("d2")))
 
-    command.downgrade(cfg, "-1")
+    command.downgrade(cfg, "0002")                                    # 0003 and the later 0004 go; the data must survive
     assert not {"scan_status", "push_status", "embedding_dim", "embedding_model"} & (_cols(engine, "evidence_items") | _cols(engine, "notifications") | _cols(engine, "case_embeddings"))
     assert not {"system_settings", "device_tokens", "case_flags"} & set(inspect(engine).get_table_names())
     with engine.begin() as c:

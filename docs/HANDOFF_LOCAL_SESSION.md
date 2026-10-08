@@ -34,14 +34,14 @@ You are a Claude Code session running **on Tanuj's laptop**. Until now the AI/ML
 |---|---|---|---|
 | M1 | Gemini (cloud, free) | adapter + mock tests; **never called live** | `live_check` green |
 | M2 | Groq Whisper (cloud STT) | same | `live_check --audio` prints a transcript |
-| M3 | B0 char-n-gram LR classifier | trained on synthetic template data; ~0.62 category / 0.55 subcategory held-out; last fallback | nothing |
-| M4 | fusion calibrator | trained on synthetic pairs (lexical), distance dominates | recalibrate with M7 (`--semantic-mode local`) |
+| M3 | B0 char-n-gram LR classifier | a small baseline once fitted on synthetic template data (model card: ~0.62 category / 0.55 subcategory held-out, synthetic only); **its weights are not on disk and nothing loads it unless `AI_LOCAL_CLASSIFIER_PATH` is set** (census 2026-10-08) | nothing |
+| M4 | fusion calibrator | a tracked JSON of lexical weights fitted on synthetic pairs; used only if `AI_FUSION_WEIGHTS_PATH` is set (census 2026-10-08) | recalibrate with M7 (`--semantic-mode local`) |
 | M5 | YOLOv8 road-damage detector (D00/D10/D20/D40) | pipeline tested on invented data; **not trained** | notebook 06 on Kaggle (overnight) or local GPU |
 | M6 | fine-tuned multilingual-e5 27-label classifier | pipeline + export + backend runtime proven on a tiny random model; **not trained** | corpus → notebook 07 |
 | M7 | multilingual-e5 embedder (cross-language duplicates) | same as M6 | notebook 07, then recalibrate M4 |
 | M8 | browser Web Speech API | frontend job (snippet in `ai/INTEGRATION_HANDOFF.md` §16) | Krrish/Vedant |
 
-Honest limits to keep in every claim: only M3/M4 are truly trained and only on synthetic data; M1/M2/copilot unverified live; M6/M7 will learn from LLM-written synthetic text (the team-written **gold set** is the real yardstick); no free source of real Indian-language complaint narratives exists (the 311 datasets have category/descriptor only, no narrative text); AI-4's image part cannot be evaluated (no before/after images); real-image metrics do not exist until M5 is trained.
+Honest limits to keep in every claim: no model is trained in this project (M3/M4 are synthetic-data baselines whose weights are not on disk; nothing else exists) and the plan trains nothing: the AI layer uses pretrained hosted models through `AIProvider`; M1/M2/copilot unverified live; M6/M7 will learn from LLM-written synthetic text (the team-written **gold set** is the real yardstick); no free source of real Indian-language complaint narratives exists (the 311 datasets have category/descriptor only, no narrative text); AI-4's image part cannot be evaluated (no before/after images); real-image metrics do not exist until M5 is trained.
 
 ## 5 · Architecture you will touch
 - `backend/ai_gateway/`: `service.py` (`AIGateway`: intake incl. local-vision merge, fusion with `embedder`, triage, decision with override audit, copilot, `review_resolution`, `explain_analytics`), `deps.py` (`build_default_gateway`: loads `.env`, then text models, `build_ai_service(executor, classifier)`, vision, embedder), `vision.py` (ONNX YOLO), `text_model.py` (`OnnxTextClassifier`, `OnnxEmbedder`, schema `civic-onnx-text/1`, checksum-verified; int8 preferred unless `AI_TEXT_PREFER_INT8=0`), `envfile.py`, `providers/` (`openai_compat.py`, `composite.py` per-task routing, `factory.py`, `live_check.py`).

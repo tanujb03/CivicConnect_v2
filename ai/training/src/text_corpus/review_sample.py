@@ -15,6 +15,15 @@ from ai.training.src.text_corpus.build import load_gold
 
 SEEDS = {"hi": 7, "mr": 11}
 NAMES = {"hi": "Hindi (hi)", "mr": "Marathi (mr)"}
+REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+def display_path(p: Path) -> str:
+    """The path as written into the doc: relative to the repository root, so the committed text does not depend on where the repo (or a worktree) lives."""
+    try:
+        return p.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return p.name
 
 
 def stratified_sample(rows: list[tuple[int, dict]], k: int, seed: int, prefer: tuple[str, ...] = ()) -> tuple[list[tuple[int, dict]], list[str]]:
@@ -35,7 +44,7 @@ def build_doc(gold: Path, k: int = 20) -> str:
     rows, _ = load_gold(gold)
     numbered = list(enumerate(rows, 1))                              # row N = N-th accepted data row of the CSV
     out = ["# Native-speaker review of LLM-written Indic text", "",
-           f"**Why:** the gold set `{gold.as_posix()}` was written by an LLM (provenance `llm_authored_claude`, a different model family from the Gemini/Groq corpus generators).",
+           f"**Why:** the gold set `{display_path(gold)}` was written by an LLM (provenance `llm_authored_claude`, a different model family from the Gemini/Groq corpus generators).",
            "LLM-written Hindi and Marathi can sound translated, stiff or regionally off, and the same applies to the training corpus. Until a native speaker has signed off,",
            "no accuracy number computed on these rows may be called a real-world result, and the set is always reported as `gold[llm_authored_claude, n=...]`, never as human gold.", "",
            f"**Sample:** per language, {k} lines, one from each of {k} different labels (of 27), chosen with `random.Random(seed)` (seed {SEEDS['hi']} for Hindi, {SEEDS['mr']} for Marathi) from the 84 lines",

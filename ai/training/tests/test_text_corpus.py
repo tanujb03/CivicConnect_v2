@@ -222,3 +222,15 @@ def test_gold_csv_saved_by_excel_or_notepad_with_bom_and_crlf_is_read(tmp_path):
     p.write_bytes("﻿text,label_id,language,note\r\nरस्त्यावर खड्डा आहे,roads/pothole,mr,\r\n".encode("utf-8"))
     rows, bad = cb.load_gold(p)
     assert [r["label_id"] for r in rows] == ["roads/pothole"] and rows[0]["language"] == "mr" and not bad
+
+
+def test_the_review_doc_names_the_gold_set_relative_to_the_repository_not_by_absolute_path(tmp_path):
+    from pathlib import Path
+
+    from ai.training.src.text_corpus import review_sample as rs
+    root = Path(__file__).parents[3]
+    gold = root / "ai" / "training" / "gold" / "gold_llm_authored_claude_v1.csv"
+    assert rs.display_path(gold) == "ai/training/gold/gold_llm_authored_claude_v1.csv"
+    assert rs.display_path(tmp_path / "x.csv") == "x.csv"                    # outside the repository: the bare file name
+    committed = (root / "docs" / "I18N_REVIEW.md").read_text(encoding="utf-8")
+    assert "D:/" not in committed and "C:/" not in committed

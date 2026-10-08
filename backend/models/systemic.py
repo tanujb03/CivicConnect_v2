@@ -7,7 +7,7 @@ from backend.models.types import JSONType, UTCDateTime, new_id, utcnow
 
 class Notification(Base):
     __tablename__ = "notifications"
-    __table_args__ = (Index("ix_notif_user_created", "user_id", "created_at"),)
+    __table_args__ = (Index("ix_notif_user_created", "user_id", "created_at"), Index("ix_notif_push_status", "push_status", "created_at"))   # the push worker scans PENDING / FAILED rows
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)

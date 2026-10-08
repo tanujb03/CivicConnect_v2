@@ -5,6 +5,7 @@ import numpy as np
 from ai.inference.fusion.scoring import FusionWeights
 from ai.training.src import train_fusion_calibrator as C
 from ai.training.src.io_utils import read_jsonl
+from ai.training.tests.optional_deps import requires_scipy
 
 
 def test_auc_known_values():
@@ -18,6 +19,7 @@ def test_prf_known_values():
     assert (m["tp"], m["fp"], m["fn"]) == (1, 1, 1) and m["precision"] == 0.5 and m["recall"] == 0.5
 
 
+@requires_scipy
 def test_constrained_fit_never_produces_negative_weights():
     rng = np.random.default_rng(1)
     X = rng.random((500, 4))
@@ -34,6 +36,7 @@ def test_gating_drops_out_of_policy_pairs(small_dataset):
     assert X.shape == (len(kept), 4) and ((X >= 0) & (X <= 1)).all()
 
 
+@requires_scipy
 def test_calibration_writes_loadable_monotone_weights(small_dataset, tmp_path):
     out = C.run(small_dataset, tmp_path / "fw")
     w = FusionWeights.load(out)

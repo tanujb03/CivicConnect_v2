@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from ai.training.src import doctor
+from ai.training.tests.optional_deps import requires_scipy, requires_sklearn
 
 
 def test_doctor_reports_names_only_and_flags_what_is_missing(tmp_path, monkeypatch):
@@ -14,6 +15,8 @@ def test_doctor_reports_names_only_and_flags_what_is_missing(tmp_path, monkeypat
     assert by["AI_VISION_ONNX_PATH"] == "INFO" and by[".env"] == "MISSING"
 
 
+@requires_scipy
+@requires_sklearn
 def test_doctor_is_satisfied_by_a_complete_cloud_configuration(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text("X=1\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)

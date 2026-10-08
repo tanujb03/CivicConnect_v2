@@ -111,3 +111,27 @@ Still different from the design: Python 3.13.6 (design 3.14.x), SQLAlchemy 2.1.3
 **What:** `text_corpus.build` used to write every gold row as `label_origin=team_authored`, `synthetic=False`. Each row now carries a `provenance` (`human` only when explicitly marked, `llm_authored_<model>`, else `unspecified`), read from a new `provenance` CSV column or an `llm_authored_*` marker in `notes` (`ai/evaluation/gold.py`). `label_origin` / `synthetic` follow it (`team_authored` / False only for `human`; everything else True). The corpus manifest gains `gold.by_provenance`. The M6 evaluation (`text_model/train.py`) reports gold as one block per provenance, `gold[<provenance>, n=<rows>]`, never pooled, instead of one block named `gold`; notebook 07 checks for those blocks. The gold CSV template has a fifth `provenance` column.
 **Why:** The 336-line cross-family set `ai/training/gold/gold_llm_authored_claude_v1.csv` is LLM-written; the old defaults would have labelled it, and any report using it, as human gold. Unknown provenance must never read as human.
 **Affects:** Only `ai/training` and `ai/evaluation` (no `ai/inference` change, no API change). A `gold.jsonl` built before this change has no provenance and is reported as `unspecified`: rebuild the corpus. The team's own gold CSV must put `human` in the `provenance` column to count as human gold. `info["results"]["gold"]` no longer exists; use the `gold[...]` keys.
+
+## 2026-10-08 · Backend build plan: one session, no lanes; hooks and sub-agents
+
+**What:** `docs/BACKEND_BUILD_PLAN.md` orders the remaining backend work. For this work it replaces the lane structure of `CLAUDE.md` sections 4 and 6: one session in the main checkout on `tanuj`, sub-agents (`backend-implementer`, `backend-reviewer`) for work packages, no `new_worktree.ps1`. `CLAUDE.md` now says so at the top. Safety hooks (`.claude/hooks/guard.py`, wired in the gitignored `.claude/settings.local.json`) block force-push, push to `main`, `reset --hard`, `clean -f`, volume deletion, trailer text in commit messages, printing the env file, and cross-role edits (`CC_ROLE`).
+**Why:** The lanes were built for four parallel sessions; the build is now one backend session plus a frontend session, and the plan makes the shared-file and Alembic ownership rules explicit.
+**Affects:** Process only. The old lanes under `D:\cc` still exist and hold no unpushed work (census 2026-10-08).
+
+## 2026-10-08 · Honesty sweep: no model is trained; `packages/api-client` does not exist yet; the containers are not always running
+
+**What:** `CLAUDE.md`, `docs/HANDOFF_LOCAL_SESSION.md` (section 4) and `docs/RUNBOOK_ML.md` no longer say M3/M4 "are trained". Truth: the AI layer uses pretrained hosted models through `AIProvider`; the B0 classifier and the fusion calibrator are small baselines once fitted on synthetic data, their weights are not on the laptop, and nothing loads them unless `AI_LOCAL_CLASSIFIER_PATH` / `AI_FUSION_WEIGHTS_PATH` is set. The plan trains nothing. `CLAUDE.md` also records that `packages/api-client` is created in WP9 (it was listed as existing) and that the Docker containers must be started (they had been stopped for days).
+**Why:** The 2026-10-08 census found no trained weights on disk and no `packages/api-client`; repeating the old statements would mislead the team and any report built from them.
+**Affects:** Documentation only. No code or API change.
+
+## 2026-10-08 · Migration 0004: forced password change columns and worker indexes
+
+**What:** Revision `0004` (the only new revision of the build plan): `users.must_change_password BOOLEAN NOT NULL DEFAULT false`, `users.password_changed_at TIMESTAMPTZ NULL`; indexes `ix_device_tokens_user_active (user_id, revoked_at)`, `ix_notif_push_status (push_status, created_at)`, `ix_evidence_scan_status (scan_status)`, `ix_case_flags_case_status (case_id, status)`. The unique `(case_id, user_id, kind)` on `case_flags` already existed (`uq_case_flag`, 0003). Models updated to match; reversible; verified on SQLite and PostgreSQL (upgrade, `downgrade -1`, upgrade, `alembic check`).
+**Why:** WP2 (change/reset password with forced change), WP4 (open-flag counts), WP5 (push worker), WP6 (scan worker and quarantine gate) need these and no other schema change.
+**Affects:** Existing rows get `must_change_password = false`, so nobody is locked out by the upgrade. No API change yet (WP2 exposes the flag). `test_migration_0003.py` now downgrades to `0002` instead of `-1`, and `test_postgres_integration.py` expects head `0004`.
+
+## 2026-10-08 · Tests: optional packages skip instead of failing; the I18N review doc has repo-relative paths
+
+**What:** Test modules that need `nbformat`, `scikit-learn` or `scipy` skip with a reason when the package is missing or unusable (an OS Application Control policy can block scikit-learn's compiled `_libsvm`); helper `ai/training/tests/optional_deps.py`. `ai.training.src.text_corpus.review_sample` writes the gold-set path relative to the repository root, and `docs/I18N_REVIEW.md` was regenerated (it contained `D:/cc/b/...`). No test assertion was changed; one regression test was added.
+**Why:** In a clean venv with only `backend/requirements.txt` plus pytest, `pytest ai backend -q` must give 0 failures (it had collection errors and 10 failures from missing optional packages); the review doc test failed on every checkout except one old lane.
+**Affects:** Test code and the doc generator only.

@@ -8,6 +8,7 @@ from ai.inference.config import load_taxonomy
 from ai.inference.local.text_classifier import LocalTextClassifier
 from ai.training.src import train_text_classifier as T
 from ai.training.src.io_utils import read_jsonl
+from ai.training.tests.optional_deps import requires_scipy, requires_sklearn
 
 
 def test_vectoriser_fit_is_deterministic_and_sane():
@@ -26,6 +27,7 @@ def test_idf_matches_the_documented_formula():
     assert v.idf[v.vocab[" b"]] == pytest.approx(math.log(4 / 2) + 1)
 
 
+@requires_scipy
 def test_csr_matches_transform_one():
     v = T.fit_vectorizer(["pothole road", "garbage bin"] * 2, min_df=1)
     X = T.to_csr(v, ["pothole", "garbage bin", "zzz"])
@@ -50,6 +52,8 @@ def test_macro_f1_known_values():
     assert T.macro_f1(np.array([0, 0, 1, 1]), np.array([0, 1, 1, 1]), 2) == pytest.approx((2 / 3 + 0.8) / 2)
 
 
+@requires_scipy
+@requires_sklearn
 def test_end_to_end_training_exports_a_loadable_numpy_equivalent_artifact(small_dataset, tmp_path):
     out = T.run(small_dataset, tmp_path / "b0", seed=5, c_grid=(3.0,), min_df=2, max_features=4000)
     clf = LocalTextClassifier.load(out)                      # loader validates schema, checksums, taxonomy
@@ -65,6 +69,8 @@ def test_end_to_end_training_exports_a_loadable_numpy_equivalent_artifact(small_
     assert abs(p.sum() - 1) < 1e-6
 
 
+@requires_scipy
+@requires_sklearn
 def test_training_refuses_data_missing_a_class(small_dataset):
     rows = read_jsonl(small_dataset / "train.jsonl")
     rows = [r for r in rows if r["subcategory"] != "pothole"]

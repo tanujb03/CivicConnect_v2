@@ -2,8 +2,11 @@ import json
 
 from ai.inference.local.text_classifier import LocalTextClassifier
 from ai.training.src.make_fixture_artifact import GOLDEN_TEXTS, build_fixture
+from ai.training.tests.optional_deps import requires_scipy, requires_sklearn
 
 
+@requires_scipy
+@requires_sklearn
 def test_fixture_build_is_reproducible_and_matches_the_committed_golden_file(tmp_path):
     out = build_fixture(tmp_path / "fx")
     from ai.inference.tests.conftest import FIXTURE_ARTIFACT

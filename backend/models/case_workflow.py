@@ -24,6 +24,7 @@ class EvidenceItem(Base):
     """Metadata only: media bytes live in object storage (design §31, §44), never in PostgreSQL."""
 
     __tablename__ = "evidence_items"
+    __table_args__ = (Index("ix_evidence_scan_status", "scan_status"),)                     # the scan worker and the quarantine gate filter on it
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     case_id: Mapped[str | None] = mapped_column(ForeignKey("civic_cases.id"), nullable=True, index=True)
@@ -108,6 +109,7 @@ class CaseFlag(Base):
         CheckConstraint("status IN ('OPEN', 'UPHELD', 'DISMISSED')", name="ck_case_flags_status"),
         Index("ix_case_flags_case_kind", "case_id", "kind"),
         Index("ix_case_flags_status", "status"),
+        Index("ix_case_flags_case_status", "case_id", "status"),                            # "open flags of a case" (review threshold)
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

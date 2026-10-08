@@ -5,8 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-import nbformat
 import pytest
+
+nbformat = pytest.importorskip("nbformat", reason="optional notebook tooling (nbformat) is not installed")
 
 NB = Path(__file__).resolve().parents[1] / "notebooks" / "05_kaggle_real_data_profile_evaluate.ipynb"
 REPO_ROOT = Path(__file__).resolve().parents[3]

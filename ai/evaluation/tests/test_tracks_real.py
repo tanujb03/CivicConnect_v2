@@ -9,6 +9,7 @@ from ai.inference.intake.service import IntakeService
 from ai.inference.providers.fake import FakeProvider
 from ai.training.src.data_sources import cli as ds_cli
 from ai.training.tests.conftest_real import NYC_CSV, make_chicago_rows, make_rdd_tree
+from ai.training.tests.optional_deps import requires_scipy, requires_sklearn
 
 DS = run_eval.HERE / "datasets"
 ACK = ["--acknowledge-unverified-license"]
@@ -211,6 +212,8 @@ def test_intake_real_guard():
         eval_real.evaluate_intake_real(IntakeService(None), [real_row()])
 
 
+@requires_scipy
+@requires_sklearn
 def test_real_fusion_calibration_labels_weights_as_real_with_provenance(chicago_prepared, tmp_path):
     from ai.inference.fusion.scoring import FusionWeights
     from ai.training.src import train_fusion_calibrator as C

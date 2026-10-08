@@ -1,6 +1,6 @@
 # CivicConnect v2: rules for every Claude Code session
 
-Read `docs/HANDOFF_LOCAL_SESSION.md` first (backend = section 10), then `docs/RUNBOOK_ML.md` for the ML steps. Backend details: `backend/README.md`, `docs/BACKEND_AUDIT.md`. Shell is Windows PowerShell. Use they/them for anyone whose pronouns are not stated.
+**Backend build:** `docs/BACKEND_BUILD_PLAN.md` orders the work and, for session structure (one session in the main checkout, no lanes), overrides sections 4 and 6 below. Read `docs/HANDOFF_LOCAL_SESSION.md` (backend = section 10), then `docs/RUNBOOK_ML.md` for the ML steps. Backend details: `backend/README.md`, `docs/BACKEND_AUDIT.md`. Shell is Windows PowerShell. Use they/them for anyone whose pronouns are not stated.
 
 ## 1. Identity and commits
 - Commit author is **Tanuj Vivek Bhide <bhidetanuj@gmail.com>** (repo-local git config, shared by all worktrees; check `git config user.name` / `user.email` if in doubt).
@@ -8,7 +8,7 @@ Read `docs/HANDOFF_LOCAL_SESSION.md` first (backend = section 10), then `docs/RU
 - After every commit verify: `git log -1 --format='%an <%ae>%n%B'` (author is Tanuj, no trailers).
 
 ## 2. Ownership
-- **Ours (Tanuj + Claude):** `backend/`, `ai/`, `alembic/`, `infra/`, `packages/api-client`. Any file in them may change, including the frozen docs below, when necessary.
+- **Ours (Tanuj + Claude):** `backend/`, `ai/`, `alembic/`, `infra/`, `packages/api-client` (not created yet: WP9 of the build plan creates it). Any file in them may change, including the frozen docs below, when necessary.
 - **Not ours:** `apps/` and every other `packages/*` belong to Krrish, Vedant and Parth (frontends). Do not edit them except tiny, agreed API-contract fixes (say so in the report).
 - Parth has no unpushed backend work and moved to frontend; no coordination is needed before editing `backend/`.
 
@@ -40,13 +40,13 @@ Frozen sources: `docs/CivicConnect_v2_V1_System_Design.md`, `docs/IMPLEMENTATION
 - Run Python as modules with `python -m ...` from the root **of your lane** (`python -m pytest`, `python -m alembic`, `python -m uvicorn`, `python -m ai...`, `python -m backend...`). The cwd then wins on `sys.path`, so a lane imports its own `ai/` and `backend/`, not the editable install (`pip install -e ai`), which points at the main checkout. `python -m backend.scripts.worktree_check` proves it; a test enforces it.
 - One shared venv for every lane: `D:\Projects\CivicConnect_V2\.venv` (activate with `& D:\Projects\CivicConnect_V2\.venv\Scripts\Activate.ps1`). **Python 3.13.6** (the project requires 3.11+). Torch is the CUDA **cu128** build (`2.11.0+cu128`; the `cu121` index has no Python 3.13 wheels), RTX 4050 6 GB.
 - The C drive is nearly full: **install, build and cache on D**. Caches live in `D:\ml-cache`: pip `D:\ml-cache\pip` (set in `.venv\pip.ini`), `TEMP`/`TMP` `D:\ml-cache\tmp`, `HF_HOME` `D:\ml-cache\hf`, `TORCH_HOME` `D:\ml-cache\torch`. Set `TEMP`/`TMP` in the shell before heavy work (Claude Code ignores them in project settings; lanes get `HF_HOME`/`TORCH_HOME` from their `env` block). Lanes live in `D:\cc`.
-- Services (Docker): `civic-db` (image `civicconnect-postgres:local` = PostgreSQL 18.6 + PostGIS 3.6 + pgvector 0.8.6, named volume `civic-pgdata`) on host port **5433** (a host PostgreSQL service owns 5432) and `civic-redis` (`redis:7`) on 6379. (Re)build and start both with `.\scripts\dev\db_up.ps1`. Health: `GET /api/v1/health/ready` (under the API prefix).
+- Services (Docker): `civic-db` (image `civicconnect-postgres:local` = PostgreSQL 18.6 + PostGIS 3.6 + pgvector 0.8.6, named volume `civic-pgdata`) on host port **5433** (a host PostgreSQL service owns 5432) and `civic-redis` (`redis:7`) on 6379. (Re)build and start both with `.\scripts\dev\db_up.ps1`. Health: `GET /api/v1/health/ready` (under the API prefix). The containers are not always running (Docker Desktop must be started first, then `db_up.ps1`); do not assume a running stack.
 - Tests never read `.env` or the lane's `DATABASE_URL`/`REDIS_URL` (root `conftest.py`, `CIVIC_IGNORE_ENV_FILE`); the tests that want a real server read `TEST_DATABASE_URL` / `TEST_REDIS_URL` and skip when they are not set or reachable.
 
 ## 7. Quality gates and honest reporting
 - Tests: `python -m pytest ai backend -q`. Lint touched files: `python -m ruff check <files>` (root `ruff.toml`: line length 130, py311; some older files already have findings, do not add new ones). Preflight: `python -m ai.training.src.doctor` (names only).
 - Add tests for behaviour you add. Match the surrounding code (dense, typed, short docstrings).
-- Report results as they are: failing tests, skipped steps and unverified claims are stated plainly. Synthetic data gives **no real-world accuracy claim**; only the team-written gold set is a yardstick, and only M3/M4 are trained so far (see handoff section 4).
+- Report results as they are: failing tests, skipped steps and unverified claims are stated plainly. Synthetic data gives **no real-world accuracy claim**; only the team-written gold set is a yardstick, and **no model is trained in this project**: the AI layer uses pretrained hosted models through `AIProvider`. The B0 and fusion artifacts are small synthetic-data baselines; no weights are on the laptop and nothing loads them unless `AI_LOCAL_CLASSIFIER_PATH` / `AI_FUSION_WEIGHTS_PATH` is set (see `docs/BACKEND_BUILD_PLAN.md` section 1A).
 
 ## 8. End every task with a report of at most 25 lines
 Include: files changed; commands run with results (exact pass/skip/fail counts); failures; what you did **not** verify.

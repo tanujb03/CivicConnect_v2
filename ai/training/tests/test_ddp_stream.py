@@ -2,11 +2,11 @@
 import subprocess
 import sys
 
-import nbformat
 import pytest
 
 from ai.training.src.vision import ddp
 
+nbformat = pytest.importorskip("nbformat", reason="optional notebook tooling (nbformat) is not installed")
 pytest.importorskip("ultralytics")
 
 

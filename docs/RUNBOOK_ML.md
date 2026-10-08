@@ -116,8 +116,8 @@ uvicorn backend.main:app --reload
 |---|---|---|---|
 | M1 | Gemini (intake / triage prose / copilot planner) | adapter + mock tests; **not live-checked** | step 1 output is green |
 | M2 | Groq Whisper | same | `--audio` check prints a transcript |
-| M3 | B0 char-n-gram fallback | trained (synthetic), weak (~0.62 category) | kept only as last fallback |
-| M4 | fusion calibrator | trained on synthetic, lexical | recalibrated in step 6 |
+| M3 | B0 char-n-gram fallback | once fitted on synthetic data (weak, ~0.62 category); weights not on disk, not loaded by default | kept only as an optional last fallback |
+| M4 | fusion calibrator | tracked JSON fitted on synthetic data; loaded only if `AI_FUSION_WEIGHTS_PATH` is set | recalibrated in step 6 |
 | M5 | YOLOv8 road damage | pipeline proven on invented data; **not trained** | step 5 |
 | M6 | fine-tuned e5 classifier | pipeline + export + backend runtime proven on a tiny model; **not trained** | steps 3–4 |
 | M7 | e5 embedder | same | steps 3–4, 6 |

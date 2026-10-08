@@ -3,9 +3,9 @@ import json
 import zipfile
 from pathlib import Path
 
-import nbformat
 import pytest
 
+nbformat = pytest.importorskip("nbformat", reason="optional notebook tooling (nbformat) is not installed")
 pytest.importorskip("torch")
 pytest.importorskip("transformers")
 pytest.importorskip("onnxruntime")

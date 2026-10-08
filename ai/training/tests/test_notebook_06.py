@@ -5,9 +5,9 @@ import random
 import zipfile
 from pathlib import Path
 
-import nbformat
 import pytest
 
+nbformat = pytest.importorskip("nbformat", reason="optional notebook tooling (nbformat) is not installed")
 pytest.importorskip("ultralytics")
 pytest.importorskip("onnxruntime")
 PIL = pytest.importorskip("PIL.Image")

@@ -46,7 +46,7 @@ def test_pgvector_untyped_column_partial_hnsw_indexes_and_the_documented_query(p
     """Migration 0003: ``embedding_vec`` has NO fixed dimension, 384 and 768 dim vectors coexist, and each dimension has a partial HNSW cosine expression index
     (pgvector README, "Can I store vectors with different dimensions in the same column?") that the documented query form really uses."""
     from sqlalchemy import text
-    assert _alembic("current")[1].count("0003") >= 1
+    assert _alembic("current")[1].count("0004") >= 1                  # head; 0003 added the vector column
     conn = pg.connect()
     trans = conn.begin()
     try:

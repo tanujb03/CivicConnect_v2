@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db.session import Base
@@ -51,6 +51,7 @@ class DeviceToken(Base):
     """An Expo push token of one installed app instance of a user (citizen and field-worker apps are Expo). Revoked tokens are kept, never reused."""
 
     __tablename__ = "device_tokens"
+    __table_args__ = (Index("ix_device_tokens_user_active", "user_id", "revoked_at"),)      # "the active tokens of a user" (push sender, device list)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
