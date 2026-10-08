@@ -2,7 +2,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -13,6 +13,7 @@ from backend.core.exceptions import (
     CivicConnectException, civicconnect_exception_handler, http_exception_handler, unhandled_exception_handler, validation_exception_handler,
 )
 from backend.core.logging import setup_logging
+from backend.core.rate_limit import rate_limit_dependency
 
 log = logging.getLogger("civicconnect.main")
 
@@ -47,6 +48,7 @@ app = FastAPI(
     description="Backend API for CivicConnect v2 (design section 51A contract)",
     version="1.0.0",
     lifespan=lifespan,
+    dependencies=[Depends(rate_limit_dependency)],          # WP3: counts every request against its rule (off when RATE_LIMIT_ENABLED=false)
 )
 
 app.add_middleware(
@@ -55,7 +57,7 @@ app.add_middleware(
     allow_credentials=settings.cors_origins != ["*"],       # credentials are never combined with a wildcard origin
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Request-ID", "Idempotent-Replayed"],
+    expose_headers=["X-Request-ID", "Idempotent-Replayed", "Retry-After", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 

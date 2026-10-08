@@ -9,11 +9,12 @@ _STATUS_CODES = {400: "BAD_REQUEST", 401: "AUTH_REQUIRED", 403: "AUTH_FORBIDDEN"
 
 
 class CivicConnectException(Exception):
-    def __init__(self, code: str, message: str, status_code: int = 400, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, code: str, message: str, status_code: int = 400, details: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None):
         self.code = code
         self.message = message
         self.status_code = status_code
         self.details = details or {}
+        self.headers = headers or {}       # extra response headers (Retry-After and X-RateLimit-* on 429)
 
 
 def _envelope(request: Request, code: str, message: str, details: Any = None) -> Dict[str, Any]:
@@ -23,8 +24,9 @@ def _envelope(request: Request, code: str, message: str, details: Any = None) ->
 
 
 async def civicconnect_exception_handler(request: Request, exc: CivicConnectException):
-    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
-    return JSONResponse(status_code=exc.status_code, content=_envelope(request, exc.code, exc.message, exc.details), headers=headers)
+    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else {}
+    headers.update(exc.headers)
+    return JSONResponse(status_code=exc.status_code, content=_envelope(request, exc.code, exc.message, exc.details), headers=headers or None)
 
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):

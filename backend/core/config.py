@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     # Redis (events / jobs). The API works without it: events are skipped and logged.
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Rate limiting (WP3): Redis counters with an in-process fallback. Off when RATE_LIMIT_ENABLED=false (the unit tests) or ENVIRONMENT=test.
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_LOGIN_IP_PER_MIN: int = 10
+    RATE_LIMIT_LOGIN_IDENTIFIER_PER_MIN: int = 5
+    RATE_LIMIT_REGISTER_IP_PER_MIN: int = 5
+    RATE_LIMIT_CASE_CREATE_PER_HOUR: int = 20
+    RATE_LIMIT_UPLOAD_INIT_PER_HOUR: int = 60
+    RATE_LIMIT_AI_PER_HOUR: int = 30                 # intake/fusion/triage analyze and copilot: protects the free-tier provider quotas
+    RATE_LIMIT_DEFAULT_PER_MIN: int = 600            # every other route, per user (per IP when anonymous)
+    RATE_LIMIT_TRUST_FORWARDED_FOR: bool = False     # true only behind a proxy or tunnel you control: the client IP is then the RIGHTMOST X-Forwarded-For entry. Left false behind a
+                                                     # tunnel, every phone shares the tunnel's address and so the per-IP login (10/min) and register (5/min) limits
+
     # Browser origins allowed to call the API (comma separated); "*" only for local experiments
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://localhost:4173"
 

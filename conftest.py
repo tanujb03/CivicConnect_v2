@@ -10,6 +10,7 @@ TEST_REDIS_URL explicitly.
 import os
 
 os.environ["CIVIC_IGNORE_ENV_FILE"] = "1"
+os.environ["RATE_LIMIT_ENABLED"] = "false"   # WP3: the limiter is off for the unit tests (tests/test_rate_limit.py switches it on for itself)
 os.environ["AI_GATEWAY_STORE"] = "demo"    # the default is "sql"; the gateway / demo-city tests use the token-role demo store, the DB-backed ``env`` fixture switches to "sql"
 for _name in ("DATABASE_URL", "REDIS_URL"):
     os.environ.pop(_name, None)
