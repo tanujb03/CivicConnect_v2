@@ -152,4 +152,8 @@ def start_background_workers() -> None:
     _launch(STREAM_AI_JOBS,       GROUP_AI_WORKERS,    "ai-1",     _handle_ai_job)
     _launch(STREAM_AUDIT,         GROUP_AUDIT_WRITERS, "audit-1",  _handle_audit)
     _launch(STREAM_SYNC,          GROUP_SYNC_WORKERS,  "sync-1",   _handle_sync)
+    from backend.events.push_worker import start_push_worker
+    from backend.events.scan_worker import start_scan_worker
+    start_push_worker()       # WP5: Expo push delivery of PENDING notifications and their receipts
+    start_scan_worker()       # WP6: malware scan of PENDING evidence (does nothing unless SCAN_ENABLED)
     log.info("All background event workers started (%d threads).", len(_threads))

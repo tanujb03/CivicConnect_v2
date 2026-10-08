@@ -544,12 +544,159 @@
         }
       }
     },
+    "/api/v1/me/devices": {
+      "post": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Register Device",
+        "description": "Registers (or refreshes) the Expo push token of this installed app for the caller. Any signed-in role (citizen and field-worker apps).\n\nUpsert by token, so it is idempotent by nature and needs no Idempotency-Key: the same token is the same device row, bound to the caller (a token that belonged to another\naccount is moved to the caller: the phone changed hands), ``revoked_at`` cleared, ``last_seen_at`` refreshed. 201 for a new device, 200 for an existing one. The token is never\nreturned. At most PUSH_MAX_DEVICES_PER_USER (10) active devices per user: registering one more revokes the least recently seen one. Call it after every sign-in and whenever Expo hands out a new token.\n\nRemote push does not work in Expo Go (SDK 53 and later); it needs a development build or a store build.",
+        "operationId": "register_device_api_v1_me_devices_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "me"
+        ],
+        "summary": "My Devices",
+        "description": "The caller's own devices, newest first (active ones; ``include_revoked=true`` adds revoked ones). At most the 50 newest are returned, so it is not paged.",
+        "operationId": "my_devices_api_v1_me_devices_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_revoked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Revoked"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceTokenOut"
+                  },
+                  "title": "Response My Devices Api V1 Me Devices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/devices/{device_id}": {
+      "delete": {
+        "tags": [
+          "me"
+        ],
+        "summary": "Revoke Device",
+        "description": "Revokes one of the caller's devices (no more push to it; call it on sign-out). 200 with the device; idempotent by nature: repeating it keeps the first ``revoked_at``.\nA device id that is not the caller's answers 404 ``DEVICE_NOT_FOUND``.",
+        "operationId": "revoke_device_api_v1_me_devices__device_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cases/intake/analyze": {
       "post": {
         "tags": [
           "cases"
         ],
         "summary": "Analyze Intake",
+        "description": "``language_hint`` (the language the citizen chose for this report) goes to speech-to-text; without it the profile's ``preferred_language`` is used when it is Hindi or\nMarathi. English is never taken from the profile: it is the default value, and Whisper obeys the hint (a Hindi clip hinted ``en`` comes back transliterated into Latin script).",
         "operationId": "analyze_intake_api_v1_cases_intake_analyze_post",
         "requestBody": {
           "content": {
@@ -1807,6 +1954,204 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cases/{case_id}/flags": {
+      "post": {
+        "tags": [
+          "flags"
+        ],
+        "summary": "Create Flag",
+        "description": "Flag a case you may see. One flag per user, kind and case (409 FLAG_ALREADY_EXISTS); a reporter cannot flag their own case INAPPROPRIATE (403 FLAG_NOT_ALLOWED).",
+        "operationId": "create_flag_api_v1_cases__case_id__flags_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1).",
+              "title": "Idempotency-Key"
+            },
+            "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseFlagIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseFlagOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "flags"
+        ],
+        "summary": "List Flags",
+        "description": "Staff with access to the case: every flag plus the counts by kind and by status (zeros included). Flaggers are never identified.",
+        "operationId": "list_flags_api_v1_cases__case_id__flags_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseFlagList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/flags/{flag_id}/resolve": {
+      "post": {
+        "tags": [
+          "flags"
+        ],
+        "summary": "Resolve Flag",
+        "description": "Staff mark an open flag UPHELD or DISMISSED (409 FLAG_ALREADY_RESOLVED when it is no longer open). Audited, with a timeline event.",
+        "operationId": "resolve_flag_api_v1_flags__flag_id__resolve_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flag_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Flag Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1).",
+              "title": "Idempotency-Key"
+            },
+            "description": "Client generated UUID; a retry with the same key replays the first response (§51A.1)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseFlagResolveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseFlagOut"
                 }
               }
             }
@@ -4878,6 +5223,21 @@
             ],
             "title": "Closed At"
           },
+          "open_flag_count": {
+            "type": "integer",
+            "title": "Open Flag Count",
+            "default": 0
+          },
+          "needs_flag_review": {
+            "type": "boolean",
+            "title": "Needs Flag Review",
+            "default": false
+          },
+          "map_hidden": {
+            "type": "boolean",
+            "title": "Map Hidden",
+            "default": false
+          },
           "is_reporter": {
             "type": "boolean",
             "title": "Is Reporter",
@@ -4938,6 +5298,142 @@
           "updated_at"
         ],
         "title": "CaseDetail"
+      },
+      "CaseFlagIn": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "STILL_EXISTS",
+              "OUTDATED",
+              "INCORRECT",
+              "INAPPROPRIATE"
+            ],
+            "title": "Kind"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "CaseFlagIn"
+      },
+      "CaseFlagList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseFlagOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FlagCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "counts"
+        ],
+        "title": "CaseFlagList"
+      },
+      "CaseFlagOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "STILL_EXISTS",
+              "OUTDATED",
+              "INCORRECT",
+              "INAPPROPRIATE"
+            ],
+            "title": "Kind"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "UPHELD",
+              "DISMISSED"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "title": "CaseFlagOut"
+      },
+      "CaseFlagResolveIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPHELD",
+              "DISMISSED"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "CaseFlagResolveIn"
       },
       "CaseOut": {
         "properties": {
@@ -5091,6 +5587,21 @@
               }
             ],
             "title": "Closed At"
+          },
+          "open_flag_count": {
+            "type": "integer",
+            "title": "Open Flag Count",
+            "default": 0
+          },
+          "needs_flag_review": {
+            "type": "boolean",
+            "title": "Needs Flag Review",
+            "default": false
+          },
+          "map_hidden": {
+            "type": "boolean",
+            "title": "Map Hidden",
+            "default": false
           }
         },
         "type": "object",
@@ -5788,6 +6299,125 @@
         ],
         "title": "DepartmentStatsOut"
       },
+      "DeviceTokenIn": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android",
+              "web"
+            ],
+            "title": "Platform"
+          },
+          "expo_push_token": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 10,
+            "pattern": "^(Exponent|Expo)PushToken\\[.+\\]$",
+            "title": "Expo Push Token"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform",
+          "expo_push_token"
+        ],
+        "title": "DeviceTokenIn"
+      },
+      "DeviceTokenOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android",
+              "web"
+            ],
+            "title": "Platform"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "platform",
+          "created_at",
+          "last_seen_at"
+        ],
+        "title": "DeviceTokenOut"
+      },
       "EvidenceOut": {
         "properties": {
           "id": {
@@ -5892,6 +6522,11 @@
               }
             ],
             "title": "Expires At"
+          },
+          "scan_status": {
+            "type": "string",
+            "title": "Scan Status",
+            "default": "UNSCANNED"
           }
         },
         "type": "object",
@@ -5904,6 +6539,30 @@
           "purpose"
         ],
         "title": "EvidenceOut"
+      },
+      "FlagCounts": {
+        "properties": {
+          "by_kind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Kind"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "by_kind",
+          "by_status"
+        ],
+        "title": "FlagCounts"
       },
       "FusionAnalyzeResponse": {
         "properties": {

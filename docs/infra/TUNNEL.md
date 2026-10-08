@@ -39,3 +39,15 @@ Things to know:
 * With `STORAGE_BACKEND=s3` the signed links point at `S3_ENDPOINT_URL`, not at `PUBLIC_BASE_URL`; that address must be reachable from the phone as well.
 
 Not verified: everything in this section B. `winget` was not available in the session that wrote this and `cloudflared` is not installed on the laptop, so the install command, the printed URL format and the phone round trip are written from Cloudflare's documented behaviour and have not been run here.
+
+## C. Rate limits behind a tunnel or proxy (`RATE_LIMIT_TRUST_FORWARDED_FOR`)
+
+The API counts requests per user and, for anonymous routes (sign-in 10/min, register 5/min), per client IP. Behind `cloudflared` or any proxy the socket peer is the tunnel process, so **every phone looks like one IP** and shares one sign-in bucket (10 per minute for everybody). Setting `RATE_LIMIT_TRUST_FORWARDED_FOR=true` makes the API use the **rightmost** `X-Forwarded-For` entry (the one the proxy appended) as the client address.
+
+**Set it to `true` ONLY when the tunnel or proxy is the sole way into the backend.** If the API is also reachable directly (LAN address, port forward, a second tunnel), a client can send its own `X-Forwarded-For` and pick any bucket, which defeats the per-IP limits (and lets one person burn another address's budget). When in doubt leave it `false`: the limits then protect the API but are shared by all clients behind the tunnel.
+
+Checklist when the tunnel is up (also part of the WP11 smoke test in `docs/BACKEND_BUILD_PLAN.md`):
+1. `RATE_LIMIT_TRUST_FORWARDED_FOR=true` in the repo's environment file, the API restarted and reachable ONLY through the tunnel (bind it to `127.0.0.1`: `python -m uvicorn backend.main:app --host 127.0.0.1`; do not also open the LAN address).
+2. From phone A, sign in 11 times with a wrong password inside a minute: the 11th answer is `429 RATE_LIMITED` with `Retry-After`.
+3. From phone B (a different network, for example mobile data), sign in at the same moment: it must NOT be limited. If it is, the API still sees one shared address (the setting is not applied, or the proxy does not append `X-Forwarded-For`).
+4. Send a request with a forged `X-Forwarded-For: 1.2.3.4` header from phone A: it must still count against phone A's bucket (only the rightmost entry, appended by the tunnel, is trusted).
