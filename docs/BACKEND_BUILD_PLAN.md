@@ -280,12 +280,12 @@ At the start of every wave and after every work package: read `docs/FRONTEND_REQ
 | WP | Title | State | Commit | Notes |
 |---|---|---|---|---|
 | 0 | Baseline, migration 0004, hygiene | DONE (tests green) | 93311d4 | clean venv 968 passed / 39 skipped / 0 failed; PostgreSQL+Redis run green; `civic-db` recreated on the current image (PostgreSQL 18.6, PostGIS 3.6.4, pgvector 0.8.6, data intact); dev DB at 0004 |
-| 1 | Live AI proof | IN PROGRESS | 7f2b264 | ids set (Gemini 3.5 flash / flash-lite, gemini-embedding-001 at 768, Groq whisper-large-v3); live_check passed incl. embeddings and transcription; no id rejected; `gemini-3.5-flash` free quota exhausted (HTTP 429) so real photo + flash endpoint answers are still open; degraded paths recorded in `docs/AI_LIVE_CHECK.md`. Open for Tanuj: audio-only intake without a provider returns 422 |
+| 1 | Live AI proof | IN PROGRESS | 7f2b264, b913472 | live_check passed (structured, tools, embeddings 768, Groq transcription); per-model budgets, 429-aware cooldown, Groq fallback, cache, language hint, voice-note degrade done. OPEN: `AI_INTAKE_MODEL` in the local environment is `gemini-3.5-lite`, which is not in Gemini's model list (Tanuj to fix; ids are not changed by Claude), so the flash-lite photo/audio pass is not run; no flash call has been made |
 | 2 | Auth hardening | DONE (tests green) | 6e6c2f1 | backend-reviewer: no blocker, minor items fixed (own pwchange counter, Retry-After, no-store, gate also on AI gateway routes); /security-review pass: nothing reportable; known limit: old access tokens live up to 30 min after a change |
 | 3 | Rate limiting | DONE (tests green) | 033d8ef | backend-reviewer: no blocker; majors fixed (rightmost X-Forwarded-For, media routes counted, test against the real app); not run against a real Redis in the unit tests (fake); full suite with Redis green |
-| 4 | Community flags | TODO | | |
-| 5 | Expo push | TODO | | |
-| 6 | Upload malware scan | TODO | | |
+| 4 | Community flags | DONE (tests green) | de33b0f | backend-reviewer: no blocker, 3 majors fixed (UPHELD keeps the case hidden, `map_hidden` for staff, flag fields on every staff view) + minors; PostgreSQL-specific SQL (grouped counts) ran in the full PG suite |
+| 5 | Expo push | DONE (tests green) | f3bfa52 | backend-reviewer: no blocker, 4 majors fixed (no attempts burned on outages/config errors, 400 bisect, per-batch commit + SKIP LOCKED, device cap); never run against real Expo; at-least-once delivery; logout `device_id` not built (apps revoke the device first) |
+| 6 | Upload malware scan | DONE (tests green) | 6f83237 | backend-reviewer: 1 blocker (signed PUT could swap a CLEAN file) + 6 majors fixed; my own read of the gate code found nothing more; clamd never run for real (EICAR test skipped), S3 presigned windows documented |
 | 7 | Embeddings and duplicate search | TODO | | dev DB has 560 cases, 0 embeddings |
 | 8 | OpenTelemetry | TODO | | |
 | 9 | Generated API client | TODO | | |
