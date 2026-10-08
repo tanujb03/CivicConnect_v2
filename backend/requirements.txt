@@ -15,6 +15,18 @@ redis==8.1.0
 httpx==0.28.1
 numpy==2.5.3
 
+# OpenTelemetry (WP8; only imported when OTEL_ENABLED=true). Two version lines that move together: the API/SDK/exporter 1.x line and the contrib 0.xxbN line
+# (sdk 1.45.1 needs api and semantic-conventions 0.66b1 exactly; each contrib 0.66b1 package needs opentelemetry-instrumentation 0.66b1 exactly). Bump all at once.
+# FastAPI traces natively (no opentelemetry-instrumentation-fastapi: it would add a second server span). SQLAlchemy 2.1 is outside the instrumentation's declared range,
+# see backend/core/telemetry.py (skip_dep_check).
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+opentelemetry-instrumentation-sqlalchemy==0.66b1
+opentelemetry-instrumentation-redis==0.66b1
+opentelemetry-instrumentation-httpx==0.66b1
+greenlet==3.5.6                                                 # SQLAlchemy 2.1 no longer installs it; the SQLAlchemy instrumentation imports sqlalchemy.ext.asyncio, which needs it
+
 # optional: local models (set AI_VISION_ONNX_PATH / AI_TEXT_ONNX_PATH / AI_EMBED_ONNX_PATH); without them the gateway runs without them
 onnxruntime==1.30.0
 Pillow==12.3.0

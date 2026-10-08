@@ -18,6 +18,7 @@ from typing import Callable
 
 import redis as redis_lib
 
+from backend.core.telemetry import consumer_span
 from backend.events.publisher import (
     GROUP_AI_WORKERS,
     GROUP_AUDIT_WRITERS,
@@ -94,7 +95,8 @@ def _stream_worker(
                             k: (json.loads(v) if v.startswith("{") or v.startswith("[") else v)
                             for k, v in fields.items()
                         }
-                        handler(decoded)
+                        with consumer_span(stream, entry_id, fields):      # WP8: continues the producer's trace (no-op while OTEL_ENABLED is false)
+                            handler(decoded)
                         r.xack(stream, group, entry_id)
                     except Exception as exc:
                         log.error("Handler error entry=%s: %s", entry_id, exc)

@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     SCAN_MAX_ATTEMPTS: int = 3
     SCAN_WORKER_INTERVAL_S: float = 5.0
 
+    # OpenTelemetry (WP8): tracing is off by default; with OTEL_ENABLED=true spans go to an OTLP/HTTP collector (Jaeger: http://localhost:4318, in compose http://jaeger:4318)
+    OTEL_ENABLED: bool = False
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
+
     # Browser origins allowed to call the API (comma separated); "*" only for local experiments
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://localhost:4173"
 

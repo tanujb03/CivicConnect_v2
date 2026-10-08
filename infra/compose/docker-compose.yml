@@ -55,6 +55,8 @@ services:
       DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-civic_dev_pwd}@db:5432/civicconnect
       REDIS_URL: redis://redis:6379/0
       AI_GATEWAY_STORE: sql
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}                     # WP8: true with the obs profile (Jaeger UI http://localhost:16686)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4318}
       MEDIA_DIR: /data/media
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${API_PORT:-8000}}   # what a phone can reach: LAN address or the tunnel URL (docs/infra/TUNNEL.md)
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}

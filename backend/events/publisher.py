@@ -20,6 +20,7 @@ from typing import Any
 import redis as redis_lib
 
 from backend.core.config import settings
+from backend.core.telemetry import inject_trace_context, producer_span
 
 log = logging.getLogger("civicconnect.events")
 
@@ -94,7 +95,9 @@ def publish(stream: str, payload: dict[str, Any]) -> str | None:
         flat = {k: json.dumps(v) if not isinstance(v, str) else v
                 for k, v in payload.items()}
         flat["_ts"] = str(int(time.time() * 1000))
-        entry_id = r.xadd(stream, flat)
+        with producer_span(stream):                     # WP8: no-ops while OTEL_ENABLED is false
+            inject_trace_context(flat)                  # traceparent / tracestate fields: the worker continues this trace
+            entry_id = r.xadd(stream, flat)
         log.debug("Event published stream=%s id=%s", stream, entry_id)
         return entry_id
     except Exception as exc:
