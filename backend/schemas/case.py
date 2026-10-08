@@ -57,6 +57,9 @@ class CaseOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     closed_at: Optional[datetime] = None
+    open_flag_count: int = 0                         # open citizen flags (WP4); staff views only, 0 for everyone else
+    needs_flag_review: bool = False                  # open_flag_count >= the flag_review_threshold setting; staff views only
+    map_hidden: bool = False                         # hidden from the public map (open INAPPROPRIATE flags at the threshold, or one UPHELD); staff views only
 
 
 class CaseCreated(BaseModel):

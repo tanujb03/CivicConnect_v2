@@ -45,7 +45,13 @@ def _authorize_ai_case(db: Session, actor: Actor, case_id: str) -> None:
 # ---------------------------------------------------------------------------------------------------------------- AI (§51A.5 / 51A.7 / 51A.8)
 # Plain ``def`` handlers on purpose: the adapter is synchronous (HTTP + numpy) and FastAPI runs these in its thread pool.
 @router.post("/intake/analyze", response_model=IntakeAnalyzeResponse)
-def analyze_intake(request: IntakeAnalyzeRequest, actor: Actor = Depends(get_actor), gateway: AIGateway = Depends(get_gateway)):
+def analyze_intake(request: IntakeAnalyzeRequest, actor: Actor = Depends(get_actor), gateway: AIGateway = Depends(get_gateway), db: Session = Depends(get_db)):
+    """``language_hint`` (the language the citizen chose for this report) goes to speech-to-text; without it the profile's ``preferred_language`` is used when it is Hindi or
+    Marathi. English is never taken from the profile: it is the default value, and Whisper obeys the hint (a Hindi clip hinted ``en`` comes back transliterated into Latin script)."""
+    if not request.language_hint and settings.AI_GATEWAY_STORE == "sql":                  # the demo store has no user table
+        user = db.get(User, actor.user_id)
+        if user is not None and user.preferred_language in ("hi", "mr"):
+            request = request.model_copy(update={"language_hint": user.preferred_language})
     return gateway.intake(request, actor)
 
 
@@ -82,7 +88,7 @@ def create_case(body: CaseCreate, response: Response, idempotency_key: Optional[
     """The server owns status, priority, assignment and timestamps. A repeated ``client_case_id`` returns the existing case."""
     def handler():
         case, created = case_service.create_case(db, user, body)
-        return (201 if created else 200), {"case": case_service.serialize_case(case)}, case.id
+        return (201 if created else 200), {"case": case_service.view_case(db, user, case)}, case.id
     return idempotent(db, response, user_id=user.id, key=idempotency_key, method="POST", path="/cases", payload=body.model_dump(mode="json"), handler=handler)
 
 
@@ -205,7 +211,7 @@ def reject_case(case_id: str, body: RejectIn, response: Response, idempotency_ke
     def handler():
         case = case_service.get_visible_case(db, user, case_id)
         verification_service.reject(db, user, case, body.reason)
-        return 200, case_service.serialize_case(case), case.id
+        return 200, case_service.view_case(db, user, case), case.id
     return idempotent(db, response, user_id=user.id, key=idempotency_key, method="POST", path=f"/cases/{case_id}/reject", payload=body.model_dump(), handler=handler)
 
 
@@ -215,5 +221,5 @@ def reopen_case(case_id: str, body: ReopenIn, response: Response, idempotency_ke
     def handler():
         case = case_service.get_visible_case(db, user, case_id)
         verification_service.reopen(db, user, case, body.reason)
-        return 200, case_service.serialize_case(case), case.id
+        return 200, case_service.view_case(db, user, case), case.id
     return idempotent(db, response, user_id=user.id, key=idempotency_key, method="POST", path=f"/cases/{case_id}/reopen", payload=body.model_dump(), handler=handler)

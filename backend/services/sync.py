@@ -128,7 +128,9 @@ def changes_since(db: Session, user: User, cursor: str | None, limit: int = 100)
     more = len(rows) > limit
     rows = rows[:limit]
     ids = list(dict.fromkeys(e.case_id for e in rows))
-    cases = {c.id: case_service.serialize_case(c) for c in db.execute(select(CivicCase).where(CivicCase.id.in_(ids))).scalars()} if ids else {}
+    found = list(db.execute(select(CivicCase).where(CivicCase.id.in_(ids))).scalars()) if ids else []
+    case_service.annotate_flags(db, user, found)                       # staff snapshots carry the flag fields (one grouped count)
+    cases = {c.id: case_service.serialize_case(c) for c in found}
     last = rows[-1].seq if rows else after
     return {"changes": [{"cursor": encode_cursor(e.seq), "case_id": e.case_id, "event_type": e.event_type, "timestamp": e.created_at} for e in rows], "cases": cases,
             "server_cursor": encode_cursor(last), "has_more": more}

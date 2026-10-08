@@ -223,7 +223,9 @@ def list_cases(db: Session, user: User, *, status: str | None = None, category: 
         raise CivicConnectException("VALIDATION_ERROR", "Unknown sort.", 422, {"field": "sort", "allowed": sorted(SORTS)})
     order = SORTS[key]
     fields = [c.key for c, _ in order]
-    return paginate(query, order, cursor, clamp_limit(limit), lambda c: [getattr(c, f) for f in fields])
+    rows, nxt = paginate(query, order, cursor, clamp_limit(limit), lambda c: [getattr(c, f) for f in fields])
+    annotate_flags(db, user, rows)
+    return rows, nxt
 
 
 # ------------------------------------------------------------------------------------------------ edits
@@ -255,6 +257,7 @@ def patch_case(db: Session, user: User, case: CivicCase, body: CasePatch) -> Civ
             continue
         changes[k] = (getattr(case, k), v)
     if not changes:
+        annotate_flags(db, user, [case])
         return case
     if ("category" in changes or "subcategory" in changes):
         cat, sub = tx.resolve_category(changes.get("category", (None, case.category))[1], changes.get("subcategory", (None, case.subcategory))[1])
@@ -278,6 +281,7 @@ def patch_case(db: Session, user: User, case: CivicCase, body: CasePatch) -> Civ
         record_audit(db, actor_id=user.id, action=action, entity_type="CIVIC_CASE", entity_id=case.id, before=before, after={**after, "reason": reason})
     add_event(db, case.id, "CASE_UPDATED", actor_id=user.id, actor_role=user.role, metadata={"fields": sorted(after)}, visibility="PUBLIC" if not staff else "INTERNAL")
     db.flush()
+    annotate_flags(db, user, [case])
     return case
 
 
@@ -339,8 +343,21 @@ def location_of(c: CivicCase) -> dict:
     return {"latitude": c.latitude, "longitude": c.longitude, "accuracy_m": c.accuracy_m}
 
 
+def annotate_flags(db: Session, user: User, cases: list[CivicCase]) -> None:
+    """Staff views carry ``open_flag_count`` / ``needs_flag_review`` / ``map_hidden`` (one grouped count for the whole page); everyone else gets the defaults."""
+    from backend.services import flags as flag_service
+    flag_service.annotate_cases(db, user, cases)
+
+
+def view_case(db: Session, user: User, c: CivicCase) -> dict:
+    """``serialize_case`` with the caller's flag fields (for single-case responses)."""
+    annotate_flags(db, user, [c])
+    return serialize_case(c)
+
+
 def serialize_case(c: CivicCase) -> dict:
-    return {"id": c.id, "case_number": c.case_number, "title": c.title, "description": c.description, "status": c.status, "category": c.category,
+    n, review, hidden = getattr(c, "_flag_view", (0, False, False))
+    return {"open_flag_count": n, "needs_flag_review": review, "map_hidden": hidden, "id": c.id, "case_number": c.case_number, "title": c.title, "description": c.description, "status": c.status, "category": c.category,
             "subcategory": c.subcategory, "severity": c.severity, "priority": c.priority, "location": location_of(c), "ward_id": c.ward_id, "department_id": c.department_id,
             "support_count": c.support_count, "reopen_count": c.reopen_count, "sla_hours": c.sla_hours, "sla_deadline": c.sla_deadline, "created_at": c.created_at,
             "updated_at": c.updated_at, "closed_at": c.closed_at}
@@ -349,6 +366,7 @@ def serialize_case(c: CivicCase) -> dict:
 def serialize_detail(db: Session, user: User, c: CivicCase) -> dict:
     from backend.services import timeline as timeline_service
     staff = user.role in STAFF_ROLES
+    annotate_flags(db, user, [c])
     out = serialize_case(c)
     out["is_reporter"] = c.reporter_id == user.id
     out["contributors"] = db.execute(select(func.count()).select_from(Support).where(Support.case_id == c.id, Support.role == "CONTRIBUTOR")).scalar_one()

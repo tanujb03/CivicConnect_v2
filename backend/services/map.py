@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.core.exceptions import CivicConnectException
 from backend.core.permissions import STAFF_ROLES
 from backend.models import CivicCase, User
+from backend.services import flags as flag_service
 from backend.services.cases import visibility_clause
 
 
@@ -32,7 +33,7 @@ def markers(db: Session, user: User, *, bbox: str | None, category: str | None, 
         if clause is not True:
             q = q.filter(clause)
     else:
-        q = q.filter(CivicCase.status != "REJECTED")
+        q = q.filter(CivicCase.status != "REJECTED", CivicCase.id.not_in(flag_service.hidden_from_public_map(db)))      # reported as inappropriate until staff resolve the flags
     box = parse_bbox(bbox)
     if box:
         q = q.filter(CivicCase.latitude.between(box[0], box[2]), CivicCase.longitude.between(box[1], box[3]))
