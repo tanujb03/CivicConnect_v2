@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 
 import bcrypt
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -90,10 +90,22 @@ def require_roles(*roles: str):
     return _check
 
 
-def current_user(claims: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    """The authenticated User row. The role comes from the database, so a demoted or deactivated account loses access immediately."""
+PASSWORD_CHANGE_EXEMPT = frozenset({"/auth/change-password", "/auth/logout", "/auth/refresh", "/auth/me"})     # paths (below the API prefix) open while a change is forced
+
+
+def current_user(request: Request, claims: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The authenticated User row. The role comes from the database, so a demoted or deactivated account loses access immediately.
+
+    While ``must_change_password`` is set (new staff account, admin reset) every endpoint except ``PASSWORD_CHANGE_EXEMPT`` answers 403 ``PASSWORD_CHANGE_REQUIRED``.
+    """
     from backend.models import User
     user = db.get(User, claims["sub"])
     if user is None or not user.is_active:
         raise _unauthorized("AUTH_INVALID_TOKEN", "The account no longer exists or is inactive.")
+    if user.must_change_password:
+        path = request.url.path.rstrip("/")
+        if path.startswith(settings.API_V1_STR):
+            path = path[len(settings.API_V1_STR):]
+        if path not in PASSWORD_CHANGE_EXEMPT:
+            raise CivicConnectException("PASSWORD_CHANGE_REQUIRED", "You must change your password before using the API (POST /auth/change-password).", 403)
     return user

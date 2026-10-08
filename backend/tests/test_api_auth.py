@@ -15,6 +15,7 @@ def test_register_returns_a_session_and_the_citizen_role(env):
     me = env.client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {b['access_token']}"}).json()
     assert me["email"] == "asha@example.test" and me["preferred_language"] == "mr" and me["access_scope"]["capabilities"] and me["role"] == "CITIZEN"
     assert "hashed_password" not in me
+    assert b["user"]["must_change_password"] is False and me["must_change_password"] is False          # additive fields: citizens are never forced
 
 
 def test_register_validation_and_duplicates(env):

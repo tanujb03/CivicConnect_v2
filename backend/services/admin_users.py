@@ -24,6 +24,7 @@ from backend.core.security import get_password_hash
 from backend.models import CivicCase, Department, DeviceToken, RefreshToken, User, Ward
 from backend.schemas.admin import UserCreateIn
 from backend.services.audit import record_audit
+from backend.services.auth import revoke_all_refresh
 
 ELEVATED_ROLES = frozenset({"city_admin", "system_admin"})
 ASSIGNABLE_ON_CREATE = ALL_ROLES - {"citizen"}                      # citizens register themselves
@@ -81,7 +82,8 @@ def snapshot(user: User) -> dict[str, Any]:
 def to_out(user: User, cases_reported: int = 0) -> dict[str, Any]:
     return {"id": user.id, "name": user.name, "email": user.email, "phone": user.phone, "role": user.role.upper(), "department_id": user.department_id, "ward_id": user.ward_id,
             "preferred_language": user.preferred_language, "is_active": user.is_active, "status": "active" if user.is_active else "inactive", "synthetic": user.synthetic,
-            "created_at": user.created_at, "updated_at": user.updated_at, "last_login_at": user.last_login_at, "cases_reported": cases_reported}
+            "created_at": user.created_at, "updated_at": user.updated_at, "last_login_at": user.last_login_at, "cases_reported": cases_reported,
+            "must_change_password": bool(user.must_change_password)}
 
 
 def _reported_counts(db: Session, ids: list[str]) -> dict[str, int]:
@@ -132,7 +134,7 @@ def create_user(db: Session, actor: User, body: UserCreateIn) -> tuple[User, str
         raise CivicConnectException("USER_ALREADY_EXISTS", "An account with that email or phone already exists.", 409)
     password = secrets.token_urlsafe(12)
     user = User(name=body.name.strip(), email=body.email, phone=body.phone, hashed_password=get_password_hash(password), role=role, department_id=dept, ward_id=ward,
-                preferred_language=body.preferred_language, is_active=True)
+                preferred_language=body.preferred_language, is_active=True, must_change_password=True)
     db.add(user)
     try:
         db.flush()
@@ -147,6 +149,23 @@ def _revoke_sessions(db: Session, user_id: str) -> None:
     now = datetime.now(timezone.utc)
     db.execute(update(RefreshToken).where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)).values(revoked_at=now))
     db.execute(update(DeviceToken).where(DeviceToken.user_id == user_id, DeviceToken.revoked_at.is_(None)).values(revoked_at=now))
+
+
+def reset_password(db: Session, actor: User, user_id: str) -> tuple[User, str]:
+    """Replaces the user's password with a generated one-time password (returned, never stored in clear), forces a change at the next sign-in and revokes
+    their refresh tokens. Same elevated-role rule as ``update_user``; nobody resets their own password here (use ``/auth/change-password``). The caller commits."""
+    target = get_or_404(db, user_id)
+    if target.role in ELEVATED_ROLES and actor.role != "system_admin":
+        raise forbidden("Only a SYSTEM_ADMIN may reset the password of a user with an elevated role.", capability="grant_elevated_role")
+    if target.id == actor.id:
+        raise CivicConnectException("CANNOT_MODIFY_SELF", "You cannot reset your own password here; use POST /auth/change-password.", 409)
+    password, was_forced = secrets.token_urlsafe(12), target.must_change_password
+    target.hashed_password, target.must_change_password = get_password_hash(password), True
+    revoked = revoke_all_refresh(db, target.id)
+    db.flush()
+    record_audit(db, actor_id=actor.id, action="user.password_reset", entity_type="user", entity_id=target.id,
+                 before={"must_change_password": was_forced}, after={"must_change_password": True, "sessions_revoked": revoked})
+    return target, password
 
 
 def update_user(db: Session, actor: User, user_id: str, patch: dict[str, Any]) -> User:

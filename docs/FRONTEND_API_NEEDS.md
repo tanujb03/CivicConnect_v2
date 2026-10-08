@@ -103,3 +103,25 @@ Changes reach the AI services within 5 seconds in every process (immediately in 
 (`critical` = open cases with priority URGENT/CRITICAL, `backlog` = open cases, `recurrence` = recurring problem sites in the ward).
 
 `GET /analytics/overview` (extended) adds `"priority_distribution": [{"priority": "URGENT", "count": 3}]` (priorities in the order CRITICAL, URGENT, HIGH, NORMAL, LOW) and `"severity_distribution": [{"severity": "HIGH", "count": 5}]` (CRITICAL, HIGH, MEDIUM, LOW): both count the open cases and always list every value, zeros included.
+
+## 6. Passwords and the forced change (WP2, additive)
+
+`POST /auth/change-password` (any signed-in user; open even while a change is forced). Body `{"current_password": "...", "new_password": "..."}`. Not idempotency-keyed (a replay would have to store the new tokens). Response `200`, the same shape as login:
+```json
+{"user": {"id": "...", "name": "...", "role": "FIELD_WORKER", "must_change_password": false}, "access_token": "...", "refresh_token": "...", "token_type": "bearer"}
+```
+Every earlier refresh token of the user is revoked; **store the new pair**. Old access tokens stay valid until they expire (30 min). Errors: `400 CURRENT_PASSWORD_INCORRECT`; `422 WEAK_PASSWORD` with `details {"field": "new_password", "reasons": ["at least 10 characters", "different from the current password", "not a commonly used password"]}`; `429 RATE_LIMITED` after 5 wrong current passwords in a minute.
+
+`POST /admin/users/{user_id}/reset-password` (CITY_ADMIN, SYSTEM_ADMIN; same elevated-role rule as `PATCH /admin/users/{id}`; no body, no idempotency key on purpose). Response `200`: `{"user": <UserAdminOut>, "temporary_password": "..."}`. **Shown once; show it to the admin and never store it.** The account must change it at its next sign-in. Errors: `403 AUTH_FORBIDDEN`, `404 USER_NOT_FOUND`, `409 CANNOT_MODIFY_SELF` (a system admin resetting their own account).
+
+`POST /admin/users` now creates the account with `must_change_password = true` (the temporary password is still returned once). Registered citizens and the seeded demo accounts have it `false`.
+
+New field `must_change_password: bool` (always present, default `false`) on: `user` in every login, register, token and change-password response, `ProfileOut` (`GET /auth/me`, `GET /me`) and the admin user objects. While it is `true`, **every endpoint except** `POST /auth/change-password`, `POST /auth/logout`, `POST /auth/refresh` and `GET /auth/me` answers `403 PASSWORD_CHANGE_REQUIRED`. The app should route to a "set a new password" screen when the login response says `true`.
+
+## 7. Rate limits (WP3, additive)
+
+Every request under `/api/v1` is counted (health probes excepted). Defaults: sign-in 10/min per IP (and 5 failed attempts per identifier per minute), register 5/min per IP, `POST /cases` 20/hour per user, `POST /evidence/upload-init` 60/hour per user, the AI routes (`intake/analyze`, `fusion/analyze`, `triage/analyze`, `copilot/query`, `analytics/explain`) 30/hour per user, everything else 600/min per user (per IP when not signed in). Responses on counted routes carry `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (epoch seconds when the window ends); some responses that bypass FastAPI's normal response handling (for example the signed media download) may not. When the limit is used up the answer is `429` with the usual envelope and a `Retry-After` header:
+```json
+{"error": {"code": "RATE_LIMITED", "message": "Too many requests. Please slow down and try again later.", "details": {"retry_after_seconds": 42, "limit": 30, "window_seconds": 3600, "rule": "ai"}, "request_id": "..."}}
+```
+Apps should wait `Retry-After` seconds before retrying and must not retry a 429 in a tight loop. The AI routes depend on free-tier provider quotas: when the provider itself is rate limited the answer degrades to the rules-based proposal with a warning (it is not a 429).

@@ -68,5 +68,7 @@ def get_actor(claims: dict = Depends(get_current_user), db=Depends(get_db)) -> A
         user = db.get(User, str(claims["sub"]))
         if user is None or not user.is_active:
             raise CivicConnectException("AUTH_INVALID_TOKEN", "The account no longer exists or is inactive.", 401)
+        if user.must_change_password:                       # same gate as backend.core.security.current_user (WP2): no AI route while a password change is forced
+            raise CivicConnectException("PASSWORD_CHANGE_REQUIRED", "You must change your password before using the API (POST /auth/change-password).", 403)
         return Actor(user_id=user.id, role=normalize_role(user.role))
     return Actor(user_id=str(claims["sub"]), role=normalize_role(claims.get("role")))

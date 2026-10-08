@@ -8,7 +8,16 @@ from backend.api.deps import IdempotencyHeader, idempotent
 from backend.core.permissions import require_capability
 from backend.db.session import get_db
 from backend.models import User
-from backend.schemas.admin import SettingList, SettingsUpdateIn, UserAdminOut, UserCreateIn, UserCreateOut, UserPage, UserPatchIn
+from backend.schemas.admin import (
+    PasswordResetOut,
+    SettingList,
+    SettingsUpdateIn,
+    UserAdminOut,
+    UserCreateIn,
+    UserCreateOut,
+    UserPage,
+    UserPatchIn,
+)
 from backend.services import admin_users
 from backend.services import settings as settings_service
 
@@ -27,7 +36,7 @@ def list_users(role: Optional[str] = None, department_id: Optional[str] = None, 
 
 
 @router.post("/users", response_model=UserCreateOut, status_code=201)
-def create_user(body: UserCreateIn, user: User = Depends(manage_users), db: Session = Depends(get_db)):
+def create_user(body: UserCreateIn, response: Response, user: User = Depends(manage_users), db: Session = Depends(get_db)):
     """Creates a staff account and returns its generated one-time password ONCE. Deliberately not idempotency-keyed: a replay would have to store the password."""
     try:
         created, password = admin_users.create_user(db, user, body)
@@ -35,7 +44,22 @@ def create_user(body: UserCreateIn, user: User = Depends(manage_users), db: Sess
     except Exception:
         db.rollback()
         raise
+    response.headers["Cache-Control"] = "no-store"                  # a one-time password must not sit in any cache
     return {"user": admin_users.to_out(created), "temporary_password": password}
+
+
+@router.post("/users/{user_id}/reset-password", response_model=PasswordResetOut)
+def reset_password(user_id: str, response: Response, user: User = Depends(manage_users), db: Session = Depends(get_db)):
+    """Sets a new one-time password (returned ONCE), forces a change at the next sign-in and ends the user's sessions. Deliberately not idempotency-keyed
+    (like ``POST /admin/users``): a replay would have to store the password."""
+    try:
+        target, password = admin_users.reset_password(db, user, user_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    response.headers["Cache-Control"] = "no-store"
+    return {"user": admin_users.to_out(target, admin_users.cases_reported(db, target.id)), "temporary_password": password}
 
 
 @router.patch("/users/{user_id}", response_model=UserAdminOut)

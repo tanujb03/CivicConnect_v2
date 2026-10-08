@@ -3,10 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.db.session import get_db
 from backend.core.security import current_user
+from backend.db.session import get_db
 from backend.models import User
-from backend.schemas.auth import LoginIn, ProfileOut, RefreshIn, RegisterIn, SessionOut, TokenPair
+from backend.schemas.auth import ChangePasswordIn, LoginIn, ProfileOut, RefreshIn, RegisterIn, SessionOut, TokenPair
 from backend.services import auth as auth_service
 
 router = APIRouter()
@@ -54,6 +54,19 @@ def logout(body: RefreshIn, db: Session = Depends(get_db)):
     auth_service.revoke_refresh(db, body.refresh_token)
     db.commit()
     return {"status": "ok"}
+
+
+@router.post("/change-password", response_model=SessionOut)
+def change_password(body: ChangePasswordIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Changes the caller's own password, revokes every refresh token and returns a fresh session (user + token pair). Open while ``must_change_password`` is set.
+    Deliberately not idempotency-keyed: a replay would have to store the new tokens."""
+    try:
+        out = auth_service.change_password(db, user, body.current_password, body.new_password)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return out
 
 
 @router.get("/me", response_model=ProfileOut)

@@ -61,8 +61,8 @@ def test_list_filters_search_pagination_and_report_counts(adm):
     assert r.status_code == 200 and {"items", "next_cursor"} == set(body) and len(body["items"]) >= 10
     first = body["items"][0]
     assert {"id", "name", "email", "phone", "role", "department_id", "ward_id", "preferred_language", "is_active", "status", "synthetic", "created_at", "updated_at",
-            "last_login_at", "cases_reported"} == set(first)
-    assert not any("password" in k or "hash" in k for k in first)
+            "last_login_at", "cases_reported", "must_change_password"} == set(first)
+    assert not any(("password" in k and k != "must_change_password") or "hash" in k for k in first)
     by_email = {u["email"]: u for u in body["items"]}
     assert by_email["alice@example.test"]["cases_reported"] == 1 and by_email["bob@example.test"]["cases_reported"] == 0
     assert by_email["alice@example.test"]["role"] == "CITIZEN" and by_email["alice@example.test"]["status"] == "active"
@@ -95,9 +95,10 @@ def test_create_staff_returns_a_one_time_password_that_works_and_is_audited(adm,
     out = r.json()
     user, pw = out["user"], out["temporary_password"]
     assert len(pw) >= 12 and user["role"] == "DEPARTMENT_MANAGER" and user["department_id"] == "water_supply" and user["ward_id"] is None
-    assert user["phone"] == "+919876543210" and user["preferred_language"] == "hi" and user["is_active"] is True and "password" not in str(user).lower()
+    assert user["phone"] == "+919876543210" and user["preferred_language"] == "hi" and user["is_active"] is True and pw not in str(user) and "hash" not in str(user).lower()
     login = e.client.post("/api/v1/auth/login", json={"identifier": body["email"], "password": pw})
     assert login.status_code == 200 and login.json()["user"]["role"] == "DEPARTMENT_MANAGER"
+    assert user["must_change_password"] is True and login.json()["user"]["must_change_password"] is True       # staff change the one-time password at first sign-in
     assert pw not in e.client.get(URL, headers=e.headers("admin")).text                                   # shown once, never again
     ((actor, entity, eid, before, after),) = audit(e, "user.created")
     assert (actor, entity, eid, before) == (e.users["admin"]["id"], "user", user["id"], None)

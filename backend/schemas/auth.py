@@ -40,10 +40,18 @@ class RefreshIn(BaseModel):
     refresh_token: str = Field(min_length=10, max_length=300)
 
 
+class ChangePasswordIn(BaseModel):
+    """The password policy (length, deny-list, not the current one) is enforced by the service so every refusal has the same envelope (``WEAK_PASSWORD``)."""
+
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
 class UserBrief(BaseModel):
     id: str
     name: str
     role: str
+    must_change_password: bool = False
 
 
 class SessionOut(BaseModel):
@@ -76,6 +84,7 @@ class ProfileOut(BaseModel):
     department_id: Optional[str] = None
     ward_id: Optional[str] = None
     access_scope: dict
+    must_change_password: bool = False
 
 
 class ProfilePatch(BaseModel):

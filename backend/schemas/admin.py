@@ -40,6 +40,7 @@ class UserAdminOut(BaseModel):
     updated_at: datetime
     last_login_at: Optional[datetime] = None
     cases_reported: int = 0
+    must_change_password: bool = False
 
 
 class UserPage(BaseModel):
@@ -70,6 +71,11 @@ class UserCreateIn(BaseModel):
 class UserCreateOut(BaseModel):
     user: UserAdminOut
     temporary_password: str = Field(description="Shown once; only its hash is stored.")
+
+
+class PasswordResetOut(BaseModel):
+    user: UserAdminOut
+    temporary_password: str = Field(description="Shown once; only its hash is stored. The user must change it at the next sign-in.")
 
 
 class UserPatchIn(BaseModel):
