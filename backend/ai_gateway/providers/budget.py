@@ -45,6 +45,7 @@ class Limits:
     rpm: int | None = None
     rpd: int | None = None
     tpm: int | None = None
+    per_input: bool = False        # the provider counts every INPUT of a batch call as one request (measured for the embedding model, 2026-10-08: a batch of 10 cost 10)
 
 
 def _num(value: object) -> int | None:
@@ -56,22 +57,23 @@ def _num(value: object) -> int | None:
 
 def load_default_limits(path: Path = LIMITS_FILE) -> dict[str, Limits]:
     rows = json.loads(path.read_text(encoding="utf-8")).get("models", {})
-    return {m: Limits(_num(v.get("rpm")), _num(v.get("rpd")), _num(v.get("tpm"))) for m, v in rows.items()}
+    return {m: Limits(_num(v.get("rpm")), _num(v.get("rpd")), _num(v.get("tpm")), v.get("count") == "per_input") for m, v in rows.items()}
 
 
 def parse_limits(spec: str | None, base: Mapping[str, Limits] | None = None) -> dict[str, Limits]:
-    """``base`` plus the ``AI_MODEL_LIMITS`` overrides. ``off`` returns an empty table (budgets disabled)."""
+    """``base`` plus the ``AI_MODEL_LIMITS`` overrides (``model=rpm/rpd/tpm[/input]``; a fourth field ``input`` = every input of a batch counts as one request). ``off`` returns an empty
+    table (budgets disabled)."""
     out = dict(load_default_limits() if base is None else base)
     spec = (spec or "").strip()
     if spec.lower() == "off":
         return {}
     for item in filter(None, (s.strip() for s in spec.split(","))):
         model, _, rest = item.partition("=")
-        parts = (rest.split("/") + ["", "", ""])[:3]
+        parts = (rest.split("/") + ["", "", "", ""])[:4]
         if not model.strip() or not rest:
             raise ValueError(f"AI_MODEL_LIMITS entry {item!r} must look like model=rpm/rpd/tpm")
         try:
-            out[model.strip()] = Limits(*(_num(p) for p in parts))
+            out[model.strip()] = Limits(_num(parts[0]), _num(parts[1]), _num(parts[2]), parts[3].strip().lower() in ("input", "per_input"))
         except ValueError as exc:
             raise ValueError(f"AI_MODEL_LIMITS entry {item!r}: rpm/rpd/tpm must be whole numbers or '-'") from exc
     return out
@@ -95,7 +97,7 @@ class ModelBudgets:
         self.max_wait_s, self.tz_name = max_wait_s, tz_name
         self._redis_getter = redis_getter
         self._lock = threading.RLock()
-        self._windows: dict[str, deque[tuple[float, int]]] = {}
+        self._windows: dict[str, deque[tuple[float, int, int]]] = {}    # model -> (time, tokens, requests)
         self._days: dict[str, int] = {}                          # in-process fallback: "model|day" -> count
         self._reported: set[str] = set()                         # "model|day" whose spent-budget log line was written
         self._b = _Backend()                                     # Redis-or-memory plumbing with back-off and a once-a-minute warning
@@ -127,20 +129,20 @@ class ModelBudgets:
         with self._lock:
             return self._days.get(key, 0)
 
-    def _count_today(self, model: str) -> int:
-        """Counts one request and returns the new total."""
+    def _count_today(self, model: str, units: int = 1) -> int:
+        """Counts ``units`` requests and returns the new total."""
         key = self._day_key(model)
         r = self._redis()
         if r is not None:
             try:
                 pipe = r.pipeline()
-                pipe.incr(key)
+                pipe.incrby(key, units)
                 pipe.expire(key, DAY_KEY_TTL_S)
                 return int(pipe.execute()[0])
             except Exception as exc:
                 self._b.failed(exc)
         with self._lock:
-            self._days[key] = self._days.get(key, 0) + 1
+            self._days[key] = self._days.get(key, 0) + units
             return self._days[key]
 
     def _spent(self, model: str, lim: Limits, used: int) -> BudgetSpent:
@@ -154,14 +156,19 @@ class ModelBudgets:
         return BudgetSpent(f"{self.provider}: daily budget of {model} is spent ({used}/{lim.rpd} requests today); request not sent", status_code=429)
 
     # ------------------------------------------------------------------------------------------ the gate
-    def acquire(self, model: str, tokens: int = 0) -> None:
+    def acquire(self, model: str, tokens: int = 0, units: int = 1) -> None:
+        """Wait for / refuse one provider call. ``units`` = the number of inputs of the call; it only matters for models whose limits say ``per_input`` (every input counts as one
+        request in the minute window and in the daily counter); for other models a call is one request whatever its size."""
         lim = self.limits.get(model)
         if lim is None or not (lim.rpm or lim.rpd or lim.tpm):
             return
-        if lim.rpd and (used := self.used_today(model)) >= lim.rpd:
+        n = max(1, int(units)) if lim.per_input else 1
+        if lim.rpd and (used := self.used_today(model)) + n > lim.rpd:
             raise self._spent(model, lim, used)
         if lim.tpm and tokens > lim.tpm:
             raise BudgetSpent(f"{self.provider}: one request of about {tokens} tokens exceeds the {lim.tpm} tokens-per-minute budget of {model}; request not sent", status_code=429)
+        if lim.rpm and n > lim.rpm:
+            raise BudgetSpent(f"{self.provider}: one call of {n} inputs exceeds the {lim.rpm} requests-per-minute budget of {model} (every input counts); request not sent", status_code=429)
         waited = 0.0
         while True:
             with self._lock:
@@ -170,24 +177,29 @@ class ModelBudgets:
                 while win and win[0][0] <= now - WINDOW_S:
                     win.popleft()
                 wait = 0.0
-                if lim.rpm and len(win) >= lim.rpm:
-                    wait = win[0][0] + WINDOW_S - now
-                if lim.tpm and sum(t for _, t in win) + tokens > lim.tpm:
-                    need, freed = sum(t for _, t in win) + tokens - lim.tpm, 0
-                    for ts, t in win:
+                if lim.rpm and sum(u for _, _, u in win) + n > lim.rpm:
+                    need, freed = sum(u for _, _, u in win) + n - lim.rpm, 0
+                    for ts, _, u in win:
+                        freed += u
+                        wait = max(wait, ts + WINDOW_S - now)
+                        if freed >= need:
+                            break
+                if lim.tpm and sum(t for _, t, _ in win) + tokens > lim.tpm:
+                    need, freed = sum(t for _, t, _ in win) + tokens - lim.tpm, 0
+                    for ts, t, _ in win:
                         freed += t
                         wait = max(wait, ts + WINDOW_S - now)
                         if freed >= need:
                             break
                 if wait <= 0:
-                    win.append((now, tokens))
+                    win.append((now, tokens, n))
                     break
             if waited + wait > self.max_wait_s:
                 raise BudgetSpent(f"{self.provider}: per-minute budget of {model} is full (would wait {wait:.0f} s, limit {self.max_wait_s:.0f} s); request not sent", status_code=429)
             self._sleep(wait + 0.05)
             waited += wait + 0.05
-        if lim.rpd and (used := self._count_today(model)) > lim.rpd:       # another process spent the last request meanwhile
-            raise self._spent(model, lim, used - 1)
+        if lim.rpd and (used := self._count_today(model, n)) > lim.rpd:       # another process spent the last requests meanwhile
+            raise self._spent(model, lim, used - n)
 
     def snapshot(self) -> dict[str, dict]:
         """For diagnostics: per limited model, the day's usage and the limits (no secrets)."""

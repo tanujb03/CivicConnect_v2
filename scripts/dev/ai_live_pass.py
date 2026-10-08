@@ -96,6 +96,9 @@ def main() -> int:
     ap.add_argument("--base-url", default="http://localhost:8000/api/v1")
     ap.add_argument("--photo", type=Path)
     ap.add_argument("--audio", action="append", default=[], help="LANG=path (repeatable)")
+    ap.add_argument("--scene", action="append", default=[], metavar="LABEL=PATH:EXPECTED",
+                    help="photo-only intake: the image is the ONLY input (no text, no language hint), so the answer cannot come from words; EXPECTED is the taxonomy category the scene "
+                         "should map to (roads, sanitation, street_lighting, ...). Repeatable. With --scene only the scenes are run (no other calls)")
     ap.add_argument("--json-out", type=Path)
     ap.add_argument("--pause", type=float, default=7.0, help="seconds between calls; at least 6 s for gemini-3.5-flash-lite (15 requests/min), see --flash")
     ap.add_argument("--flash", action="store_true", help="the scarce gemini-3.5-flash is configured (5 requests/min, 20/day): pause at least 13 s and send at most 5 AI calls in total. "
@@ -135,20 +138,28 @@ def main() -> int:
         time.sleep(a.pause)
 
     steps: list = []
-    for lang, text in TEXTS.items():
+    scenes: dict[str, str] = {}                                  # label -> expected category
+    for spec in a.scene:
+        label, _, rest = spec.partition("=")
+        path_, _, expected = rest.rpartition(":")
+        scenes[f"photo only: {label}"] = expected
+        steps.append((f"photo only: {label}", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse,
+                      lambda path_=path_: {"evidence_ids": [run.upload("citizen", Path(path_), "image/jpeg")]}))
+    for lang, text in ({} if scenes else TEXTS).items():
         steps.append((f"intake text {lang}", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse, lambda lang=lang, text=text: {"text": text, "language_hint": lang}))
-    if a.photo:
+    if a.photo and not scenes:
         steps.append(("intake photo + text en", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse,
                       lambda: {"text": "Road damage here", "evidence_ids": [run.upload("citizen", a.photo, "image/jpeg")]}))
-    for spec in a.audio:
+    for spec in ([] if scenes else a.audio):
         lang, _, ap_ = spec.partition("=")
         steps.append((f"intake audio {lang}", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse,
                       lambda lang=lang, ap_=ap_: {"evidence_ids": [run.upload("citizen", Path(ap_), "audio/mpeg")], "language_hint": lang}))
-    cases = run.http.get(f"{a.base_url.rstrip('/')}/cases", headers=run.tokens["operator"], params={"limit": 5}).json().get("items", [])
+    cases = [] if scenes else run.http.get(f"{a.base_url.rstrip('/')}/cases", headers=run.tokens["operator"], params={"limit": 5}).json().get("items", [])
     if cases:
         cid = cases[0]["id"]
         steps.append(("triage on a demo case", "operator", f"/cases/{cid}/triage/analyze", C.TriageAnalyzeResponse, lambda: {}))
-    steps.append(("copilot: open cases by category", "admin", "/copilot/query", C.CopilotQueryResponse, lambda: {"query": "How many open cases are there per category in the city?"}))
+    if not scenes:
+        steps.append(("copilot: open cases by category", "admin", "/copilot/query", C.CopilotQueryResponse, lambda: {"query": "How many open cases are there per category in the city?"}))
     for i, (name, who, path, model, body) in enumerate(steps):
         if not ai_call_allowed():
             break
@@ -164,6 +175,12 @@ def main() -> int:
     for r in run.rows:
         notes = r.get("error") or ("; ".join(r.get("warnings") or []) or "")
         print(f"{r['call']:36} {r['http']:>4} {r['latency_ms']:>6} {str(r.get('schema_valid', '-')):>5}  {r.get('provider')}/{r.get('model')}/{r.get('source')}  {r.get('confidence')}  {notes[:110]}")
+    if scenes:
+        print("\nphoto-only scenes (no text, no hint; 3 samples: no accuracy claim):")
+        for r in run.rows:
+            if r["call"] in scenes:
+                got = (r.get("proposal") or {}).get("category")
+                print(f"  {r['call']:28} expected {scenes[r['call']]:14} got {str(got):14} {'MATCH' if got == scenes[r['call']] else 'DIFFERENT'}  sub={(r.get('proposal') or {}).get('subcategory')}  conf={r.get('confidence')}")
     if a.json_out:
         a.json_out.write_text(json.dumps(run.rows, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0

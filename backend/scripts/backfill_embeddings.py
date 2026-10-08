@@ -14,6 +14,7 @@ Rules (there is deliberately NO --force):
 * each text is cut at 8000 characters (reported as truncated); empty or over-long texts never use up ``--limit``;
 * a batch the provider rejects for itself (HTTP 400, an invalid answer) is bisected, at most 20 extra requests per run, to isolate the bad rows: those are skipped for this run and
   their case ids printed; HTTP 429 / a spent budget stops at once (exit 2, no bisecting); any other failure (outage, 5xx) stops (exit 3);
+* ``--daily-ceiling N`` / ``--assume-used-today M``: a hard stop for the day's requests (M = what AI Studio shows before the run).
 * ``--counting``: the daily quota may count a batch call as 1 request (``per-batch``) or every input as 1 (``per-input``); this cannot be known offline. A run of more than
   100 inputs is refused (exit 64) until you state which one AI Studio's usage page showed for the probe. ``per-input`` keeps inputs per minute <= 80 and inputs per run <=
   (daily limit - used today), and ``--max-requests`` then counts inputs. A model without a daily limit in the table is refused for more than 100 inputs.
@@ -63,6 +64,8 @@ class Options:
     batch_size: int = DEFAULT_BATCH
     max_requests: int = DEFAULT_MAX_REQUESTS
     counting: str | None = None
+    daily_ceiling: int | None = None             # hard stop: never let the day's embedding requests pass this (the owner keeps a reserve for runtime and calibration)
+    assume_used_today: int = 0                   # what Google AI Studio showed before the run (requests from other processes or earlier runs the local counter never saw)
 
 
 @dataclass
@@ -273,6 +276,10 @@ def final_lines(r: dict[str, Any]) -> list[str]:
          f"requests used: {r['embed_calls']} provider.embed calls = {r['http_requests']} HTTP requests (counted per 64-input call; AI_MAX_RETRIES=0, nothing repeated)",
          f"daily counter delta (compare with Google AI Studio's usage page): {delta}",
          f"estimated tokens sent: {r['tokens']}; elapsed: {r['elapsed_s']:.1f} s"]
+    if r.get("daily_ceiling") is not None or r.get("assumed_used_today"):
+        sent = r["counter_delta"] if r["counter_delta"] is not None else r["embedded_provider"]
+        L.append(f"daily ceiling: {r.get('daily_ceiling')}; assumed used before this run (AI Studio): {r.get('assumed_used_today')}; EXPECT about {(r.get('assumed_used_today') or 0) + sent} "
+                 f"requests/day in AI Studio after this run (every input counts as one request)")
     if r["local_fallbacks"]:
         L.append(f"the local embedder failed in {r['local_fallbacks']} batch(es) and the provider embedded them (counted and paced)")
     if r["truncated"]:
@@ -377,7 +384,13 @@ def execute(opts: Options, *, gateway_factory: Callable[[], Any] | None = None, 
     dim_raw = (env.get("AI_EMBEDDING_DIM") or "").strip()
     expected_dim = int(dim_raw) if dim_raw.isdigit() else None
     per_input = opts.counting == "per-input" and use_provider
-    allowed_inputs = min(opts.max_requests, (rpd - (rep["counter_before"] or 0)) if rpd else opts.max_requests)
+    used_eff = max(rep["counter_before"] or 0, opts.assume_used_today)
+    rep["assumed_used_today"], rep["daily_ceiling"] = opts.assume_used_today, opts.daily_ceiling
+    allowed_inputs = min(opts.max_requests, (rpd - used_eff) if rpd else opts.max_requests)
+    if opts.daily_ceiling is not None:
+        allowed_inputs = min(allowed_inputs, opts.daily_ceiling - used_eff)
+    if opts.daily_ceiling is not None and allowed_inputs <= 0:
+        return done(EXIT_QUOTA, f"STOP: {used_eff} requests are already used today (counter or --assume-used-today) and the daily ceiling is {opts.daily_ceiling}; nothing was sent")
     pacer = InputPacer(lim.rpm if lim else PACE_RPM, clock, sleep) if per_input else None
     if counting is not None:
         gw.ai.provider = counting
@@ -466,13 +479,16 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--batch-size", type=bounded(1, MAX_BATCH), default=DEFAULT_BATCH, help=f"cases per provider.embed call (default {DEFAULT_BATCH}, max {MAX_BATCH})")
     ap.add_argument("--max-requests", type=bounded(1), default=DEFAULT_MAX_REQUESTS,
                     help=f"stop before exceeding this many HTTP requests (default {DEFAULT_MAX_REQUESTS}); with --counting per-input it counts inputs")
+    ap.add_argument("--daily-ceiling", type=bounded(1), default=None, help="HARD STOP: never let today's embedding requests pass this number (the owner keeps a reserve for runtime use and calibration)")
+    ap.add_argument("--assume-used-today", type=bounded(0), default=0, help="requests AI Studio already showed today, which the local counter never saw (the larger of this and the counter is used)")
     ap.add_argument("--counting", choices=COUNTING, default=None, help=f"required for a run of more than {PROBE_INPUTS} inputs: how AI Studio's usage page counted the probe (a batch call, or every input)")
     return ap
 
 
 def main(argv: list[str] | None = None) -> int:
     a = build_parser().parse_args(argv)
-    code, _ = execute(Options(dry_run=a.dry_run, limit=a.limit, batch_size=a.batch_size, max_requests=a.max_requests, counting=a.counting))
+    code, _ = execute(Options(dry_run=a.dry_run, limit=a.limit, batch_size=a.batch_size, max_requests=a.max_requests, counting=a.counting,
+                        daily_ceiling=a.daily_ceiling, assume_used_today=a.assume_used_today))
     return code
 
 

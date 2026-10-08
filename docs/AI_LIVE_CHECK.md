@@ -110,8 +110,28 @@ What this does and does not show:
 - All nine AI calls were answered by the provider (`source: provider`), schema-valid, with no warnings. This is the first real endpoint pass; it proves the plumbing, not quality. All seven intake answers say roads / pothole, which is the right shape for these sentences; **no accuracy claim** is made from nine synthetic calls, and the severity differs between text (HIGH) and audio/photo (MEDIUM) runs without our knowing which is better.
 - The photo call carried the words "Road damage here", so it **cannot show that the model used the image**. A photo-only call and a comparison against flash are still open.
 - **One latency outlier of 29 s** (the Hindi text call) with no warning in the API log; the cause is not known (provider latency is the likely one). Not reproduced.
+- **Timing is now logged so the next outlier can be diagnosed** (the cause of the 29 s is still not found). Every provider call writes one INFO line, `ai provider call: task= backend= model= attempts= provider_ms= waited_ms= total_ms= outcome=`: `provider_ms` is the time inside the HTTP calls, `waited_ms` is everything else (throttle, budget waits, retry sleeps), so a slow answer shows whether the provider was slow or we were waiting. Each intake / triage / copilot / analytics-explain response carries the sum in `ai_metadata.timing` (`provider_ms`, `waited_ms`, `total_ms`, `provider_calls`; the localisation call counts in it). One provider call now has an overall deadline of `AI_PROVIDER_TIMEOUT_S` (default 20 s, retries and waits included); on a timeout the Groq text fallback answers with its own fresh deadline, otherwise the rules-based answer is returned with the usual `PROVIDER_UNAVAILABLE` warning. `test_ai_timeouts.py`; not run against the live API.
 - **Quota cost:** the nine endpoint calls used **14** `gemini-3.5-flash-lite` requests (Redis day counter 14 of 500) and 3 Groq Whisper requests (3 of 2000). The difference is the extra localisation call that non-English answers make (title and summary in the citizen's language): a Hindi or Marathi intake costs two Gemini requests, an English one costs one. Budget about **2 requests per non-English intake** when planning a demo.
 - The speech-to-text language label was measured directly (not through this pass): an explicit `mr` hint labels the Marathi clip `Marathi`, no hint labels it `Hindi`. This pass always sent a hint, so it does not show what an app that sends none gets.
+
+## Groq fallback text model comparison (2026-10-08; the owner decides)
+
+`scripts/dev/compare_fallback_models.py`, one real run: the production intake pipeline (`AIService.analyze_intake`) over the production Groq provider, retries and per-model budgets off, no images, the same 6 rows for both models (2 Hindi, 2 Marathi, 2 Hinglish; fixed rule; ids are a content hash because the gold file has no id column). The gold file is **LLM-written (`llm_authored_claude`)**, not human gold, and its Hindi and Marathi rows still await native-speaker review. **6 rows per model say nothing about accuracy.** 12 calls, no 429, no retry, no rejected model id.
+
+| | `openai/gpt-oss-120b` | `qwen/qwen3.8-27b` |
+|---|---|---|
+| Schema-valid answers | 6 / 6 | 6 / 6 |
+| Category agrees with gold | 6 / 6 | 6 / 6 |
+| Subcategory agrees with gold | 5 / 6 | 6 / 6 |
+| Median provider time | 1485 ms | 552 ms |
+| Average tokens per call (prompt + completion) | 1379 (917 + 462) | 645 (459 + 186) |
+| Largest single call | 1482 tokens | 690 tokens |
+| Calls per minute under the 8K tokens/min limit (floor(8000 / average)) | **5** | **12** |
+| Structured mode | `json_schema`, never rejected | `json_schema`, never rejected |
+
+Notes: the one miss was a Hindi row labelled roads/pothole that `gpt-oss-120b` answered roads/road_cave_in (category right, subcategory wrong). The 7,000-token pacing window made the script wait 50.8 s once, on `gpt-oss-120b`; `qwen` needed none. The 8K tokens/min figure is the owner's reading of the Groq console on 2026-10-08, not verified here, and none of the 12 calls reached it. Calls per minute ignore the 20 requests/minute cap. `qwen` reports about half the prompt tokens for the same prompt: Groq's usage reporting, not investigated. One run on one machine, no repeats.
+
+What it suggests, without a claim: at the same 8K tokens/min a fallback on `qwen/qwen3.8-27b` could serve about twice as many calls per minute as `gpt-oss-120b` here, and was faster; the sample is far too small to say which is more accurate. A Hindi or Marathi intake makes two model calls (answer plus localization), which halves those figures.
 
 ## Still to do for WP1
 

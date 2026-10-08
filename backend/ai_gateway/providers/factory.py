@@ -10,6 +10,11 @@
     AI_MODEL_LIMITS                      per-model budgets rpm/rpd/tpm, e.g. "modelid=15/500/250000" (defaults: model_limits.json; AI_MODEL_LIMITS=off disables); AI_BUDGET_MAX_WAIT_S (8), AI_QUOTA_TZ
     AI_EMBEDDING_DIM                     optional: ask the embedding model for this many dimensions (e.g. 768 for gemini-embedding-001); the length is checked and the vector
                                          is L2-normalised
+    AI_REQUEST_TIMEOUT_S (45)            timeout of ONE HTTP attempt; AI_MAX_RETRIES (2)
+    AI_PROVIDER_TIMEOUT_S                overall deadline of ONE provider call incl. retries, throttle and budget waits (default 20; 0 or empty = 20); each HTTP attempt gets
+                                         min(AI_REQUEST_TIMEOUT_S, time left). A timeout goes to the fallback (own fresh deadline) or the rules-based answer; it starts no cooldown
+    AI_REQUEST_DEADLINE_S                total time ONE API request may spend in provider calls (primary + fallback + localisation, retries, waits; default 30; 0 or empty = 30); each
+                                         call's deadline becomes min(AI_PROVIDER_TIMEOUT_S, what is left); when it is spent further calls are skipped and the request degrades
     AI_<BACKEND>_RPM                     requests-per-minute throttle for that backend (free tiers are rate limited), e.g. AI_GEMINI_RPM=10
     AI_<BACKEND>_BASE_URL                override a preset's base URL
     AI_<BACKEND>_STRUCTURED=json_object  for backends/models that reject json_schema response formats
@@ -24,10 +29,11 @@ from typing import Mapping
 from ai.inference.config import _MODEL_ENV
 from ai.inference.provider import AIProvider
 
+from .. import timing
 from .budget import ModelBudgets
 from .cache import ResponseCache
 from .composite import TEXT_TASKS, CompositeProvider
-from .openai_compat import ChatCompletionsProvider
+from .openai_compat import DEFAULT_DEADLINE_S, ChatCompletionsProvider
 
 log = logging.getLogger("civicconnect.ai.factory")
 
@@ -61,6 +67,20 @@ def _embedding_dim(env: Mapping[str, str]) -> int | None:
     return int(raw)
 
 
+def provider_deadline_s(env: Mapping[str, str]) -> float:
+    """``AI_PROVIDER_TIMEOUT_S`` in seconds: unset, empty or 0 mean the default (20); anything that is not a positive number is a configuration error."""
+    raw = (env.get("AI_PROVIDER_TIMEOUT_S") or "").strip()
+    if not raw:
+        return DEFAULT_DEADLINE_S
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError("AI_PROVIDER_TIMEOUT_S must be a number of seconds (for example 20)") from None
+    if value != value or value in (float("inf"), float("-inf")) or value < 0:
+        raise ValueError("AI_PROVIDER_TIMEOUT_S must be a positive number of seconds (for example 20)")
+    return value or DEFAULT_DEADLINE_S
+
+
 def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatCompletionsProvider | None:
     p = PRESETS[name]
     key = env.get(p["key"])
@@ -72,10 +92,11 @@ def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatC
     if not base or (needs_account and not env.get("CLOUDFLARE_ACCOUNT_ID")):
         log.error("%s: base URL incomplete (set CLOUDFLARE_ACCOUNT_ID or AI_%s_BASE_URL)", name, name.upper())
         return None
+    timing.request_deadline_s(env)                           # validates AI_REQUEST_DEADLINE_S at start-up (the gateway reads it per request)
     rpm = env.get(f"AI_{name.upper()}_RPM")
     dim = _embedding_dim(env)
     return ChatCompletionsProvider(name, base, key, models, rpm=float(rpm) if rpm else p["rpm"], structured_mode=env.get(f"AI_{name.upper()}_STRUCTURED", "json_schema"),
-                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")), embedding_dim=dim,
+                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")), deadline_s=provider_deadline_s(env), embedding_dim=dim,
                                    budgets=ModelBudgets.from_env(env, provider=name))
 
 

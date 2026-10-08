@@ -8,6 +8,7 @@ from ai.inference.errors import ProviderNotConfigured, ProviderUnavailable
 from ai.inference.provider import AIProvider, EmbeddingResult, InputPart, StructuredResult, ToolPlan, ToolSpec, TranscriptResult
 from ai.inference.schemas import EvidenceInput
 
+from .. import timing
 from .cache import ResponseCache, input_hash
 
 log = logging.getLogger("civicconnect.ai.composite")
@@ -48,9 +49,15 @@ class CompositeProvider:
             result = call(primary)
         except ProviderUnavailable as exc:
             fb = self.fallbacks.get(task)
-            if fb is None or has_image:                  # the text fallback models cannot read images: an image request degrades instead
+            if fb is not None and timing.spent():            # the request's provider budget is used up: no fallback call, the request degrades
+                log.warning("task %s: %s unavailable (%s); the request deadline is reached, so the fallback %s is skipped", task, primary.name, str(exc)[:160], fb.name)
                 raise
-            log.warning("task %s: %s unavailable (%s); using the fallback %s model %s", task, primary.name, str(exc)[:160], fb.name, fb.model_for(task))
+            if fb is None or has_image:                  # the text fallback models cannot read images: an image request degrades instead
+                if getattr(exc, "timed_out", False):
+                    log.warning("task %s: %s timed out (%s); no usable fallback (%s): the request degrades", task, primary.name, str(exc)[:160], "image" if has_image else "none configured")
+                raise
+            log.warning("task %s: %s %s (%s); using the fallback %s model %s with its own fresh deadline", task, primary.name, "timed out" if getattr(exc, "timed_out", False) else "unavailable",
+                        str(exc)[:160], fb.name, fb.model_for(task))
             return call(fb)                              # a fallback answer is never cached under the primary model's key
         if self.cache is not None:
             self.cache.put(capability, model, digest, result)

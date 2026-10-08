@@ -9,6 +9,8 @@ from __future__ import annotations
 import copy
 import logging
 import math
+import os
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Sequence
@@ -31,7 +33,7 @@ from .contracts import (
     ResolutionReviewIn, ResolutionReviewOut, TriageAnalyzeResponse, TriageDecisionRequest, TriageDecisionResponse, TriageRecommendationOut,
 )
 from .ports import AIAnalysisStore, AnalyticsFactSource, AuditSink, CaseRepository, CaseSnapshot, EvidenceResolver, ImageAnalyzer
-from . import localization, transcription
+from . import localization, timing, transcription
 from .vision import summarize
 
 log = logging.getLogger("civicconnect.ai_gateway")
@@ -114,6 +116,23 @@ class AIGateway:
     def _meta(response: Any) -> dict[str, Any]:
         return response.ai_metadata.model_dump(mode="json")
 
+    @staticmethod
+    def _begin() -> float:
+        """Start the per-request provider-time accumulator (see ``timing``); the returned clock value goes to ``_timed``. Handlers are sync ``def``: one thread per request."""
+        try:
+            deadline = timing.request_deadline_s(os.environ)
+        except ValueError:                                       # validated at start-up by the provider factory; never fail a request over it
+            deadline = timing.DEFAULT_REQUEST_DEADLINE_S
+        timing.start(deadline)
+        return time.perf_counter()
+
+    @staticmethod
+    def _timed(meta: dict[str, Any] | None, t0: float) -> dict[str, Any]:
+        """``meta`` plus the additive ``timing``: provider_ms (inside the HTTP calls), waited_ms (throttle, budget, retry sleeps), total_ms (this gateway method), provider_calls."""
+        t = timing.snapshot()
+        return {**(meta or {}), "timing": {"provider_ms": t["provider_ms"], "waited_ms": t["waited_ms"], "total_ms": int((time.perf_counter() - t0) * 1000),
+                                           "provider_calls": t["provider_calls"], "request_deadline_s": timing.deadline_s()}}
+
     def _dept_out(self, dept_id: str | None) -> tuple[str | None, str | None]:
         """canonical id -> (code shown in the contract, canonical id)."""
         d = self.ai.taxonomy.departments.get(dept_id or "")
@@ -131,6 +150,7 @@ class AIGateway:
     # ------------------------------------------------------------------------------------------ 51A.5 intake
     def intake(self, req: IntakeAnalyzeRequest, actor: Actor) -> IntakeAnalyzeResponse:
         self._require(actor, "intake")
+        t0 = self._begin()
         self._apply_thresholds()
         evidence = []
         for eid in req.evidence_ids:
@@ -146,7 +166,7 @@ class AIGateway:
         except (ValidationError, InputLimitExceeded, ValueError) as e:
             degraded = self._voice_note_without_transcript(req, evidence, speech_warnings)
             if degraded is not None:
-                return degraded
+                return degraded.model_copy(update={"ai_metadata": self._timed(degraded.ai_metadata, t0)})
             raise self._input_error(e) from e
         proposal = res.proposal.model_dump(mode="json", exclude={"suggested_department", "location"})
         proposal["location"] = res.proposal.location.model_dump(mode="json") if res.proposal.location else None
@@ -185,7 +205,7 @@ class AIGateway:
             extra["localization"] = local
         analysis_id = self._persist("intake", None, actor, res, confidence, extra or None)
         return IntakeAnalyzeResponse(proposal=proposal, confidence=confidence, warnings=warnings, requires_confirmation=True,
-                                     alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=meta, analysis_id=analysis_id, image_analysis=images)
+                                     alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=self._timed(meta, t0), analysis_id=analysis_id, image_analysis=images)
 
     @staticmethod
     def _voice_note_without_transcript(req: IntakeAnalyzeRequest, evidence: list, speech_warnings: list[str]) -> IntakeAnalyzeResponse | None:
@@ -445,6 +465,7 @@ class AIGateway:
     # ------------------------------------------------------------------------------------------ 51A.8 triage
     def triage(self, case_id: str, actor: Actor) -> TriageAnalyzeResponse:
         self._require(actor, "triage_analyze")
+        t0 = self._begin()
         case = self._case(case_id)
         age_h = max(0.0, (self.clock() - case.created_at).total_seconds() / 3600.0)
         try:
@@ -460,7 +481,7 @@ class AIGateway:
             recommendation=TriageRecommendationOut(severity=r.severity, priority=r.priority, department=code, department_id=canon,
                                                    sla_hours=r.sla_hours, sla_class=r.sla_class),
             confidence=res.confidence, reasons=res.reasons, warnings=res.warnings, priority_score=res.priority_score,
-            score_breakdown=[s.model_dump(mode="json") for s in res.score_breakdown], ai_metadata=self._meta(res), analysis_id=analysis_id)
+            score_breakdown=[s.model_dump(mode="json") for s in res.score_breakdown], ai_metadata=self._timed(self._meta(res), t0), analysis_id=analysis_id)
 
     def triage_decision(self, case_id: str, req: TriageDecisionRequest, actor: Actor) -> TriageDecisionResponse:
         self._require(actor, "triage_decision")
@@ -494,6 +515,7 @@ class AIGateway:
     # ------------------------------------------------------------------------------------------ 51A.15 copilot
     def copilot(self, req: CopilotQueryRequest, actor: Actor) -> CopilotQueryResponse:
         self._require(actor, "copilot")
+        t0 = self._begin()
         s = req.scope
         try:
             res = self.ai.copilot_query(CopilotQuery(query=req.query, scope=CopilotScope(ward_id=s.ward_id, department_id=s.department_id, from_=s.from_, until=s.until)),
@@ -502,7 +524,7 @@ class AIGateway:
             raise self._input_error(e) from e
         self._persist("copilot", None, actor, res, None, {"query_chars": len(req.query)}, exclude={"data", "answer"})
         return CopilotQueryResponse(answer=res.answer, data=res.data, citations=[c.model_dump(mode="json") for c in res.citations],
-                                    warnings=res.warnings, tool_calls=[t.model_dump(mode="json") for t in res.tool_calls], ai_metadata=self._meta(res))
+                                    warnings=res.warnings, tool_calls=[t.model_dump(mode="json") for t in res.tool_calls], ai_metadata=self._timed(self._meta(res), t0))
 
     # ------------------------------------------------------------------------------------------ AI-4 resolution review (internal hook)
     def review_resolution(self, case_id: str, req: ResolutionReviewIn, actor: Actor) -> ResolutionReviewOut:
@@ -536,6 +558,7 @@ class AIGateway:
     def explain_analytics(self, req: AnalyticsExplainRequest, actor: Actor) -> AnalyticsExplainResponse:
         """Deterministic facts (role-scoped) -> ``ai.explain_analytics``, which accepts model prose only if every number and fact id is grounded."""
         self._require(actor, "analytics_explain")
+        t0 = self._begin()
         if self.facts is None:
             raise CivicConnectException("ANALYTICS_UNAVAILABLE", "No analytics fact source is configured.", 503)
         try:
@@ -549,4 +572,4 @@ class AIGateway:
         analysis_id = self._persist("analytics_explain", None, actor, res, None, {"fact_count": len(facts.facts)})
         return AnalyticsExplainResponse(
             summary=res.summary, highlights=[h.model_dump(mode="json") for h in res.highlights], citations=[c.model_dump(mode="json") for c in res.citations],
-            facts=[f.model_dump(mode="json") for f in facts.facts], grounded=res.grounded, warnings=res.warnings, ai_metadata=self._meta(res), analysis_id=analysis_id)
+            facts=[f.model_dump(mode="json") for f in facts.facts], grounded=res.grounded, warnings=res.warnings, ai_metadata=self._timed(self._meta(res), t0), analysis_id=analysis_id)

@@ -23,7 +23,8 @@ from ai.inference.errors import ProviderNotConfigured, ProviderResponseInvalid, 
 from ai.inference.provider import EmbeddingResult, InputPart, PlannedToolCall, StructuredResult, ToolPlan, ToolSpec, TranscriptResult
 from ai.inference.schemas import EvidenceInput
 
-from .budget import ModelBudgets
+from .. import timing
+from .budget import BudgetSpent, ModelBudgets
 
 log = logging.getLogger("civicconnect.ai.compat")
 
@@ -31,6 +32,12 @@ _RETRYABLE = {429, 500, 502, 503, 504}
 QUOTA_COOLDOWN_S = 60.0          # default cooldown after a call ends in HTTP 429 when the provider names no delay: requests degrade at once instead of queueing for 15 s
 UNKNOWN_RESET_COOLDOWN_S = 3600.0   # a per-day quota whose reset time cannot be computed (no tzdata): one hour
 MAX_COOLDOWN_S = 26 * 3600.0
+DEFAULT_DEADLINE_S = 20.0        # AI_PROVIDER_TIMEOUT_S: the overall deadline of ONE provider call (HTTP attempts + retries + throttle + budget waits)
+
+
+class ProviderTimeout(ProviderUnavailable):
+    """The overall deadline of one provider call passed (no more attempts were started). Not a quota error: it never starts the 429 cooldown."""
+    timed_out = True
 
 
 def _estimate_tokens(body: dict | None) -> int:
@@ -109,7 +116,7 @@ _EMBED_BATCH = 64
 
 class ChatCompletionsProvider:
     def __init__(self, name: str, base_url: str, api_key: str | None, models: dict[str, str], *, rpm: float | None = None, timeout_s: float = 45.0,
-                 max_retries: int = 2, structured_mode: str = "json_schema", extra_headers: dict[str, str] | None = None,
+                 max_retries: int = 2, deadline_s: float | None = DEFAULT_DEADLINE_S, structured_mode: str = "json_schema", extra_headers: dict[str, str] | None = None,
                  client: httpx.Client | None = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
                  embedding_dim: int | None = None, budgets: ModelBudgets | None = None):
         if not api_key:
@@ -120,6 +127,8 @@ class ChatCompletionsProvider:
         self._base, self._key, self._models = base_url.rstrip("/"), api_key, dict(models)
         self._max_retries, self._mode, self._extra = max_retries, structured_mode, dict(extra_headers or {})
         self._client = client or httpx.Client(timeout=timeout_s)
+        self._timeout_s = timeout_s                      # per HTTP attempt (AI_REQUEST_TIMEOUT_S); each attempt gets min(this, time left of the deadline)
+        self._deadline_s = deadline_s if deadline_s and deadline_s > 0 else None     # per provider call (AI_PROVIDER_TIMEOUT_S); None = no deadline
         self._sleep, self._clock = sleep, clock
         self._min_gap = 60.0 / rpm if rpm else 0.0
         self._last = -1e9
@@ -141,39 +150,105 @@ class ChatCompletionsProvider:
         return m
 
     # ------------------------------------------------------------------------------------------ transport
-    def _throttle(self) -> None:
+    def _throttle(self, remaining: float | None = None, limit: float | None = None) -> None:
         if self._min_gap:
             wait = self._last + self._min_gap - self._clock()
             if wait > 0:
+                if remaining is not None and wait >= remaining:
+                    raise self._deadline_error(f"the {wait:.0f} s rate-limit spacing does not fit in the remaining {max(remaining, 0):.0f} s", limit)
                 self._sleep(wait)
             self._last = self._clock()
 
-    def _post(self, path: str, *, json_body: dict | None = None, data: dict | None = None, files: dict | None = None) -> tuple[dict, int]:
-        url = self._base + path
-        headers = {"Authorization": f"Bearer {self._key}", **self._extra}
+    def _deadline_error(self, detail: str, limit: float | None = None) -> ProviderTimeout:
+        return ProviderTimeout(f"{self.name}: deadline of {limit or self._deadline_s:g} s exceeded ({detail})")
+
+    def _pause(self, seconds: float, deadline: float | None) -> bool:
+        """Sleep before a retry; False (no sleep) when the pause would not leave time for another attempt before the deadline."""
+        if deadline is not None and seconds >= deadline - self._clock():
+            return False
+        self._sleep(seconds)
+        return True
+
+    @staticmethod
+    def _outcome(exc: BaseException | None) -> str:
+        if exc is None:
+            return "ok"
+        if isinstance(exc, BudgetSpent):
+            return "budget"
+        if getattr(exc, "timed_out", False):
+            return "timeout"
+        if isinstance(exc, ProviderUnavailable):
+            return f"http_{exc.status_code}" if exc.status_code else "transport_error"
+        return "invalid" if isinstance(exc, ProviderResponseInvalid) else "error"
+
+    def _post(self, path: str, *, json_body: dict | None = None, data: dict | None = None, files: dict | None = None, task: str = "") -> tuple[dict, int]:
+        """One provider call: HTTP attempts with retries under the overall deadline. Logs ONE INFO line (task, backend, model, attempts, provider_ms = time inside the HTTP calls,
+        waited_ms = throttle + budget waits + retry sleeps, total_ms, outcome) and adds the same figures to the request's ``timing`` accumulator."""
         model = str((json_body or data or {}).get("model") or "")
+        task = task or path.strip("/").split("/")[-1]
+        if timing.spent():                                       # the request's total provider budget (AI_REQUEST_DEADLINE_S) is used up: no new call
+            log.info("ai provider call: task=%s backend=%s model=%s attempts=0 provider_ms=0 waited_ms=0 total_ms=0 outcome=request_deadline", task, self.name, model)
+            raise ProviderTimeout(f"{self.name}: request deadline of {timing.deadline_s():g} s reached; call not started")
         left = self._blocked_until.get(model, 0.0) - self._clock()
         if left > 0:
+            log.info("ai provider call: task=%s backend=%s model=%s attempts=0 provider_ms=0 waited_ms=0 total_ms=0 outcome=cooldown", task, self.name, model)
             raise ProviderUnavailable(f"{self.name}: {model} is cooling down after HTTP 429 ({int(left) + 1} s left)", status_code=429)
+        t0, stat = self._clock(), {"provider": 0.0, "attempts": 0}
+        error: BaseException | None = None
+        try:
+            return self._send(path, model, json_body, data, files, t0, stat)
+        except BaseException as exc:
+            error = exc
+            raise
+        finally:
+            total_ms = int((self._clock() - t0) * 1000)
+            provider_ms = int(stat["provider"] * 1000)
+            waited_ms = max(0, total_ms - provider_ms)
+            timing.add(provider_ms, waited_ms)
+            timing.spent()                                       # logs "ai request deadline reached" once when this call used up the request budget
+            log.info("ai provider call: task=%s backend=%s model=%s attempts=%d provider_ms=%d waited_ms=%d total_ms=%d outcome=%s", task, self.name, model, stat["attempts"],
+                     provider_ms, waited_ms, total_ms, self._outcome(error))
+
+    def _send(self, path: str, model: str, json_body: dict | None, data: dict | None, files: dict | None, t0: float, stat: dict) -> tuple[dict, int]:
+        url = self._base + path
+        headers = {"Authorization": f"Bearer {self._key}", **self._extra}
         if model in self._cooling:
             self._cooling.discard(model)
             log.info("provider cooldown ended: %s model=%s; calling it again", self.name, model)
+        limit, req_left = self._deadline_s, timing.remaining()   # this call's deadline: AI_PROVIDER_TIMEOUT_S, capped by what is left of the request budget
+        if req_left is not None:
+            limit = min(limit, req_left) if limit else req_left
+        deadline = t0 + limit if limit else None
         last: Exception | None = None
         quota: dict = {}
-        t0 = time.monotonic()
+        stopped = False                                          # True: a retry was dropped because the deadline would pass first
+        attempt = 0
         tokens = _estimate_tokens(json_body) if self._budgets else 0
+        units = len(json_body["input"]) if json_body and isinstance(json_body.get("input"), list) else 1       # inputs of an embeddings call: counted one by one for per_input models
         for attempt in range(self._max_retries + 1):
             if self._budgets:
-                self._budgets.acquire(model, tokens)             # may wait a few seconds; raises BudgetSpent (no request sent) when the budget is spent
-            self._throttle()
+                self._budgets.acquire(model, tokens, units)             # may wait a few seconds (its own limit, AI_BUDGET_MAX_WAIT_S); raises BudgetSpent (no request sent) when spent
+            self._throttle(None if deadline is None else deadline - self._clock(), limit)
+            remaining = None if deadline is None else deadline - self._clock()
+            if remaining is not None and remaining <= 0:
+                raise self._deadline_error(f"no time left for attempt {attempt + 1}" + (f"; last: {last}" if last else ""), limit)
+            stat["attempts"] += 1
+            p0 = self._clock()
             try:
-                resp = self._client.post(url, headers=headers, json=json_body, data=data, files=files)
+                resp = self._client.post(url, headers=headers, json=json_body, data=data, files=files,
+                                         timeout=self._timeout_s if remaining is None else min(self._timeout_s, remaining))
             except httpx.HTTPError as e:
+                stat["provider"] += self._clock() - p0
                 last = ProviderUnavailable(f"{self.name}: transport error {type(e).__name__}")
+                if isinstance(e, httpx.TimeoutException):
+                    last.timed_out = True                        # type: ignore[attr-defined]
+                if deadline is not None and self._clock() >= deadline:
+                    raise self._deadline_error(f"attempt {attempt + 1} timed out; last: {last}", limit) from e
             else:
+                stat["provider"] += self._clock() - p0
                 if resp.status_code < 400:
                     try:
-                        return resp.json(), int((time.monotonic() - t0) * 1000)
+                        return resp.json(), int((self._clock() - t0) * 1000)
                     except ValueError as e:
                         raise ProviderResponseInvalid(f"{self.name}: non-JSON body") from e
                 last = ProviderUnavailable(f"{self.name}: HTTP {resp.status_code}{self._error_detail(resp)}", status_code=resp.status_code)
@@ -186,11 +261,13 @@ class ChatCompletionsProvider:
                     retry_after = min(8.0, float(resp.headers.get("retry-after", "0")))
                 except ValueError:
                     retry_after = 0.0
-                if attempt < self._max_retries:
-                    self._sleep(max(retry_after, 0.5 * (2 ** attempt)))
+                if attempt < self._max_retries and not self._pause(max(retry_after, 0.5 * (2 ** attempt)), deadline):
+                    stopped = True
+                    break
                 continue
-            if attempt < self._max_retries:
-                self._sleep(0.5 * (2 ** attempt))
+            if attempt < self._max_retries and not self._pause(0.5 * (2 ** attempt), deadline):
+                stopped = True
+                break
         if getattr(last, "status_code", None) == 429:
             secs = cooldown_seconds(quota)
             self._blocked_until[model] = self._clock() + secs
@@ -199,6 +276,10 @@ class ChatCompletionsProvider:
                 until = (datetime.now(timezone.utc) + timedelta(seconds=secs)).isoformat(timespec="seconds")
                 log.warning("provider cooldown started: %s model=%s for %d s (until %s UTC) quota_id=%s metric=%s retry_delay_s=%s", self.name, model, int(secs), until,
                             quota.get("quota_id"), quota.get("quota_metric"), quota.get("retry_delay_s"))
+        elif stopped:                                            # a timeout is not a quota error: no cooldown, only the log line
+            err = self._deadline_error(f"no time left to retry after attempt {attempt + 1}; last: {last}", limit)
+            log.warning("provider call failed: %s", err)
+            raise err
         log.warning("provider call failed: %s", last)
         raise last  # type: ignore[misc]
 
@@ -314,10 +395,10 @@ class ChatCompletionsProvider:
                     "response_format": fmt, "temperature": 0}
 
         try:
-            resp, ms = self._post("/chat/completions", json_body=body(self._mode))
+            resp, ms = self._post("/chat/completions", json_body=body(self._mode), task=task)
         except ProviderUnavailable as e:
             if self._mode == "json_schema" and e.status_code == 400:   # this backend/model does not accept json_schema: retry once in JSON mode
-                resp, ms = self._post("/chat/completions", json_body=body("json_object"))
+                resp, ms = self._post("/chat/completions", json_body=body("json_object"), task=task)
             else:
                 raise
         return StructuredResult(data=self._json_from_text(self._message_text(resp)), model=resp.get("model", model), latency_ms=ms, usage=resp.get("usage"))
@@ -329,7 +410,7 @@ class ChatCompletionsProvider:
         for i in range(0, len(texts), _EMBED_BATCH):
             batch = list(texts[i:i + _EMBED_BATCH])
             body = {"model": model, "input": batch, **({"dimensions": self._embedding_dim} if self._embedding_dim else {})}
-            resp, ms = self._post("/embeddings", json_body=body)
+            resp, ms = self._post("/embeddings", json_body=body, task="embedding")
             total += ms
             used = resp.get("model", model)
             rows = sorted(resp.get("data", []), key=lambda r: r.get("index", 0))
@@ -357,7 +438,7 @@ class ChatCompletionsProvider:
         if language_hint and language_hint in {"en", "hi", "mr"}:
             form["language"] = language_hint
         files = {"file": (f"{audio.evidence_id}.webm", audio.data, audio.mime_type or "audio/webm")}
-        resp, ms = self._post("/audio/transcriptions", data=form, files=files)
+        resp, ms = self._post("/audio/transcriptions", data=form, files=files, task="transcription")
         text = (resp.get("text") or "").strip()
         if not text:
             raise ProviderResponseInvalid("empty transcript")
@@ -368,7 +449,7 @@ class ChatCompletionsProvider:
         body = {"model": model, "temperature": 0, "tool_choice": "auto",
                 "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": query}],
                 "tools": [{"type": "function", "function": {"name": t.name, "description": t.description, "parameters": t.parameters}} for t in tools]}
-        resp, ms = self._post("/chat/completions", json_body=body)
+        resp, ms = self._post("/chat/completions", json_body=body, task="copilot")
         try:
             msg = resp["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as e:

@@ -575,6 +575,21 @@ def test_per_input_counting_respects_the_daily_room_left(env):
     assert code == 2 and rep["embed_calls"] == 0 and rep["counter_before"] == 930 and "would exceed 70" in text and rows(env, CaseEmbedding) == []
 
 
+def test_the_daily_ceiling_is_a_hard_stop_that_counts_what_ai_studio_already_showed(env):
+    many(env, 200)
+    p = Scripted()
+    code, rep, text = run(install(p), env=dict(FAKE_LIMITS), counting="per-input", batch_size=50, daily_ceiling=130, assume_used_today=28, clock=Clock())
+    assert code == 2 and sum(len(s) for s in p.sent) == 100 and rep["embedded"] == 100          # 28 + 100 = 128 <= 130; the next 50 would pass the ceiling
+    assert "would exceed" in text and "EXPECT about 128 requests/day in AI Studio" in text and "daily ceiling: 130" in text
+
+
+def test_a_run_that_is_already_at_the_ceiling_sends_nothing(env):
+    many(env, 20)
+    p = Scripted()
+    code, rep, text = run(install(p), env=dict(FAKE_LIMITS), counting="per-input", batch_size=10, daily_ceiling=700, assume_used_today=700, clock=Clock())
+    assert code == 2 and p.sent == [] and rep["embedded"] == 0 and "nothing was sent" in text and rows(env, CaseEmbedding) == []
+
+
 # ---- dry run -------------------------------------------------------------------------------------------------------------------------------------------------------------
 def test_dry_run_sends_and_writes_nothing_and_prints_both_request_assumptions(env):
     ids = add_cases(env, [("pothole near the school", 9), (None, 8), ("garbage not collected", 7), ("broken streetlight", 6)])

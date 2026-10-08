@@ -38,7 +38,10 @@ class FakeRedis:
         self.data[k], self.ttl[k] = v, ex
 
     def incr(self, k):
-        self.data[k] = int(self.data.get(k, 0)) + 1
+        return self.incrby(k, 1)
+
+    def incrby(self, k, n):
+        self.data[k] = int(self.data.get(k, 0)) + n
         return self.data[k]
 
     def expire(self, k, s):
@@ -50,6 +53,9 @@ class FakeRedis:
         class Pipe:
             def incr(self, k):
                 ops.append(lambda: outer.incr(k))
+
+            def incrby(self, k, n):
+                ops.append(lambda: outer.incrby(k, n))
 
             def expire(self, k, s):
                 ops.append(lambda: outer.expire(k, s))
@@ -74,7 +80,7 @@ def budgets(clock, limits, redis=None, **kw):
 def test_default_table_has_the_quota_numbers_of_2026_10_08_and_env_overrides_them():
     d = load_default_limits()
     assert d["gemini-3.5-flash"] == Limits(5, 20, 250000) and d["gemini-3.5-flash-lite"] == Limits(15, 500, 250000)
-    assert d["gemini-embedding-001"] == Limits(100, 1000, 30000) and d["whisper-large-v3"] == Limits(20, 2000, None)
+    assert d["gemini-embedding-001"] == Limits(100, 1000, 30000, per_input=True) and d["whisper-large-v3"] == Limits(20, 2000, None)
     o = parse_limits("gemini-3.5-flash=10/40/-, new-model=1/-/5", d)
     assert o["gemini-3.5-flash"] == Limits(10, 40, None) and o["new-model"] == Limits(1, None, 5) and o["gemini-3.5-flash-lite"] == d["gemini-3.5-flash-lite"]
     assert parse_limits("off") == {} and parse_limits("", {}) == {}
@@ -275,3 +281,49 @@ def test_the_cache_is_off_by_default_and_without_redis_calls_pass_through():
     assert n["c"] == 2
     broken = CompositeProvider({"intake": provider(h, {"intake": "m"})}, None, ResponseCache(redis_getter=lambda: DownRedis()))
     assert call(broken).data == {"a": "x"}                                             # a broken cache never fails an AI call
+
+
+# ---------------------------------------------------------------- per-input counting (measured 2026-10-08: a batch of 10 inputs cost 10 requests)
+def test_per_input_models_count_every_input_in_the_minute_window_and_the_daily_counter():
+    c, r = Clock(), FakeRedis()
+    b = budgets(c, {"e": Limits(rpm=100, rpd=1000, per_input=True)}, r)
+    b.acquire("e", 0, 40); b.acquire("e", 0, 40)
+    assert b.used_today("e") == 80
+    with pytest.raises(BudgetSpent, match="per-minute budget"):
+        b.acquire("e", 0, 30)                                     # 80 + 30 > 100 inputs inside the minute and the first slot frees in 60 s
+    c.t += 61
+    b.acquire("e", 0, 30)
+    assert b.used_today("e") == 110
+    with pytest.raises(BudgetSpent, match="exceeds the 100 requests-per-minute"):
+        b.acquire("e", 0, 101)                                    # can never fit
+
+
+def test_per_input_daily_budget_refuses_a_batch_that_would_pass_the_limit_and_sends_nothing():
+    c, r = Clock(), FakeRedis()
+    b = budgets(c, {"e": Limits(rpm=1000, rpd=100, per_input=True)}, r)
+    b.acquire("e", 0, 90)
+    with pytest.raises(BudgetSpent, match="daily budget of e is spent"):
+        b.acquire("e", 0, 20)
+    assert b.used_today("e") == 90                                # the refused batch is not counted
+    b.acquire("e", 0, 10)
+    assert b.used_today("e") == 100
+
+
+def test_models_not_marked_per_input_still_count_one_request_per_call_and_the_env_override_can_set_it():
+    c = Clock()
+    b = budgets(c, {"m": Limits(rpm=3, rpd=10)}, FakeRedis())
+    b.acquire("m", 0, 50); b.acquire("m", 0, 50)
+    assert b.used_today("m") == 2
+    assert parse_limits("x=5/50/-/input", {})["x"].per_input is True and parse_limits("x=5/50/-", {})["x"].per_input is False
+
+
+def test_an_embeddings_call_counts_one_request_per_input_through_the_provider():
+    c, r = Clock(), FakeRedis()
+
+    def h(req):
+        n = len(json.loads(req.content)["input"])
+        return httpx.Response(200, json={"model": "emb", "data": [{"index": i, "embedding": [1.0, 0.0]} for i in range(n)]})
+
+    p = provider(h, {"embedding": "emb"}, budgets=budgets(c, {"emb": Limits(rpm=100, rpd=1000, per_input=True)}, r))
+    assert len(p.embed([f"text {i}" for i in range(10)]).vectors) == 10
+    assert next(iter(r.data.values())) == 10                                  # one batch of 10 inputs = 10 requests in the daily counter (AI Studio showed +10)
