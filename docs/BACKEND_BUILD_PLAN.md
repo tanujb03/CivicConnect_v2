@@ -279,10 +279,10 @@ At the start of every wave and after every work package: read `docs/FRONTEND_REQ
 
 | WP | Title | State | Commit | Notes |
 |---|---|---|---|---|
-| 0 | Baseline, migration 0004, hygiene | IN PROGRESS | WP0 commit (see `git log`) | done: tooling and hooks, suite green (clean venv 968 passed / 39 skipped / 0 failed; laptop with PostgreSQL+Redis 1066 passed / 4 skipped / 0 failed), 0004 verified on SQLite and PostgreSQL, dev DB at 0004, honesty sweep. Open: `civic-db` still runs the old image (recreate was denied by the permission classifier; needs Tanuj's OK) |
-| 1 | Live AI proof | TODO | | needs my `.env` keys and my choice of `AI_*_MODEL` ids (all empty today) |
-| 2 | Auth hardening | TODO | | |
-| 3 | Rate limiting | TODO | | |
+| 0 | Baseline, migration 0004, hygiene | DONE (tests green) | 93311d4 | clean venv 968 passed / 39 skipped / 0 failed; PostgreSQL+Redis run green; `civic-db` recreated on the current image (PostgreSQL 18.6, PostGIS 3.6.4, pgvector 0.8.6, data intact); dev DB at 0004 |
+| 1 | Live AI proof | IN PROGRESS | 7f2b264 | ids set (Gemini 3.5 flash / flash-lite, gemini-embedding-001 at 768, Groq whisper-large-v3); live_check passed incl. embeddings and transcription; no id rejected; `gemini-3.5-flash` free quota exhausted (HTTP 429) so real photo + flash endpoint answers are still open; degraded paths recorded in `docs/AI_LIVE_CHECK.md`. Open for Tanuj: audio-only intake without a provider returns 422 |
+| 2 | Auth hardening | DONE (tests green) | 6e6c2f1 | backend-reviewer: no blocker, minor items fixed (own pwchange counter, Retry-After, no-store, gate also on AI gateway routes); /security-review pass: nothing reportable; known limit: old access tokens live up to 30 min after a change |
+| 3 | Rate limiting | DONE (tests green) | 033d8ef | backend-reviewer: no blocker; majors fixed (rightmost X-Forwarded-For, media routes counted, test against the real app); not run against a real Redis in the unit tests (fake); full suite with Redis green |
 | 4 | Community flags | TODO | | |
 | 5 | Expo push | TODO | | |
 | 6 | Upload malware scan | TODO | | |
