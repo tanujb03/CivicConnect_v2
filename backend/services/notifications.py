@@ -14,7 +14,7 @@ from backend.services import i18n
 
 log = logging.getLogger("civicconnect.notifications")
 
-TYPES = {"CASE_ASSIGNED", "CASE_UPDATED", "VERIFICATION_REQUESTED", "CASE_RESOLVED", "INCIDENT_CREATED", "WORK_ORDER_ASSIGNED"}
+TYPES = {"CASE_ASSIGNED", "CASE_UPDATED", "VERIFICATION_REQUESTED", "CASE_RESOLVED", "INCIDENT_CREATED", "WORK_ORDER_ASSIGNED", "CASE_FLAG_REVIEW"}
 
 
 def notify(db: Session, user_ids: Iterable[str | None], type_: str, payload: dict[str, Any], *, template: str | None = None, params: dict[str, Any] | None = None) -> list[Notification]:
@@ -36,6 +36,11 @@ def notify(db: Session, user_ids: Iterable[str | None], type_: str, payload: dic
         out.append(n)
         texts.append(data)
     db.flush()
+    try:                                                # push: NONE -> PENDING for users with an active device token while the push policy is on (the worker sends)
+        from backend.services import push
+        push.mark_pending(db, out)
+    except Exception as e:
+        log.debug("push marking skipped: %s", type(e).__name__)
     for n, data in zip(out, texts):
         try:
             from backend.events import emit_notification

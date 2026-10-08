@@ -47,6 +47,24 @@ class Settings(BaseSettings):
     RATE_LIMIT_TRUST_FORWARDED_FOR: bool = False     # true only behind a proxy or tunnel you control: the client IP is then the RIGHTMOST X-Forwarded-For entry. Left false behind a
                                                      # tunnel, every phone shares the tunnel's address and so the per-IP login (10/min) and register (5/min) limits
 
+    # Expo push (WP5): notifications of users with a registered device are sent through Expo's push service (free). The access token is optional (enhanced security mode).
+    EXPO_PUSH_URL: str = "https://exp.host/--/api/v2/push/send"
+    EXPO_RECEIPTS_URL: str = "https://exp.host/--/api/v2/push/getReceipts"
+    EXPO_ACCESS_TOKEN: Optional[str] = None          # secret: never logged
+    PUSH_BATCH_SIZE: int = 100                        # Expo accepts at most 100 messages per request
+    PUSH_MAX_ATTEMPTS: int = 3
+    PUSH_WORKER_INTERVAL_S: float = 5.0
+    PUSH_MAX_DEVICES_PER_USER: int = 10               # registering an 11th active token revokes the user's least recently seen one
+
+    # Upload malware scan (WP6): ClamAV's clamd over TCP (INSTREAM). Off by default; then new evidence is marked UNSCANNED.
+    SCAN_ENABLED: bool = False
+    CLAMD_HOST: str = "localhost"
+    CLAMD_PORT: int = 3310
+    SCAN_MAX_BYTES: int = 25 * 1024 * 1024            # larger files are not sent to clamd (status ERROR)
+    SCAN_TIMEOUT_S: float = 30.0
+    SCAN_MAX_ATTEMPTS: int = 3
+    SCAN_WORKER_INTERVAL_S: float = 5.0
+
     # Browser origins allowed to call the API (comma separated); "*" only for local experiments
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://localhost:4173"
 
