@@ -1,6 +1,7 @@
 ---
 name: wp-report
 description: Template for the end-of-work-package report (max 25 lines, plan rule 13) and the instruction to update the section 9 status table of docs/BACKEND_BUILD_PLAN.md. Use at the end of every work package.
+effort: medium
 ---
 
 # Work-package report

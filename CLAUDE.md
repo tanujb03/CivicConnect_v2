@@ -50,3 +50,24 @@ Frozen sources: `docs/CivicConnect_v2_V1_System_Design.md`, `docs/IMPLEMENTATION
 
 ## 8. End every task with a report of at most 25 lines
 Include: files changed; commands run with results (exact pass/skip/fail counts); failures; what you did **not** verify.
+
+## 9. Token budget and decisions (backend, 8 Oct)
+
+Token budget
+- Sub-agents only for large, truly independent work (over about 300 changed lines or 4+ files). Small work packages (WP9, WP11 and WP12 pieces) are done directly by the main session. Parallelism buys speed, and we are short on quota.
+- When launching a sub-agent, pass model: sonnet. Prompts contain only the work package text, its file set, acceptance checks and rule numbers; no "read the whole plan". Keep Explore questions narrow.
+- Reviewer only for security- or permission-sensitive work (auth, uploads, access control, WP11 tunnel/CORS). Skip it for non-security diffs under about 150 lines and say so in the report. Give it the diff and the acceptance text only.
+- Tests: while iterating run only touched files with -q --tb=short and show only the summary line and failing names. Full suite once per wave. ruff --output-format=concise.
+- Never read whole big files (backend/openapi.json, docs/I18N_REVIEW.md, the design doc, lockfiles): grep, jq/python or offset+limit.
+- Version lookups: pip index versions / npm view, not WebFetch of whole pages.
+- Reports follow the 25-line format; do not re-summarise earlier work.
+- End of each wave: commit, push, update plan section 9, say "safe to /clear".
+- Effort: the session runs at high. Routine mechanical steps (quality gates, work-package reports, status table updates, commit and push, version lookups) run through the skills quality-gates and wp-report, which are set to medium. Well-specified implementer work passes effort: medium on the launch; design, security fixes, unexplained failures and every review stay at session effort.
+
+Decisions so far
+- Gemini: flash is demo-only (20 RPD); runtime default is gemini-3.5-flash-lite; per-model budgets are config. No flash run until the owner says "flash rested".
+- Groq fallback text model: openai/gpt-oss-120b unless the comparison with qwen/qwen3.8-27b says otherwise; the owner decides after the report.
+- No local e5-small embedder. Embedding backfill only after the probe result and the owner's "go". Demo reset must keep stored embeddings.
+- iat check on access tokens (if no extra query). Logout accepts an optional expo_push_token and revokes it.
+- WP12 touches only the numeric facts in README.md (operations, tests, migrations).
+- No history rewrite of old commits. Never rely on chat memory: this section and plan section 9 are the handoff.

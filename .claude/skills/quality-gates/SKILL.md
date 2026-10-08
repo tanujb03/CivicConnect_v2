@@ -1,6 +1,7 @@
 ---
 name: quality-gates
 description: The exact commands that must pass before every commit in the CivicConnect backend (pytest, ruff, alembic heads and check, Postgres/Redis tests) and how to report their counts. Use before each work-package commit and at the end of each wave.
+effort: medium
 ---
 
 # Quality gates (plan rule 9)
