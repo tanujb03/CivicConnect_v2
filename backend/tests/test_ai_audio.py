@@ -192,3 +192,62 @@ def test_the_audio_endpoint_requests_verbose_json_so_the_language_comes_back():
     p = ChatCompletionsProvider("groq", "https://api.example.test/v1", "SECRET-KEY-123", {"transcription": "whisper-x"}, client=httpx.Client(transport=httpx.MockTransport(handler)))
     t = p.transcribe(EvidenceInput(evidence_id="a", media_type="AUDIO", mime_type="audio/wav", data=b"RIFF"), None)
     assert b"verbose_json" in seen["body"] and t.language == "hindi" and t.text == "paani nahi aa raha"
+
+
+# ---------------------------------------------------------------- voice note only, no transcript possible: 200 + TRANSCRIPTION_UNAVAILABLE (2026-10-08)
+def test_a_voice_note_alone_without_any_transcription_provider_degrades_to_an_empty_draft_not_a_422(staffed):
+    e = staffed
+    install(None)                                                                         # no provider at all
+    ev = audio(e)
+    r = e.client.post("/api/v1/cases/intake/analyze", headers=e.headers("alice"), json={"evidence_ids": [ev], "language_hint": "mr"})
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["requires_confirmation"] is True and b["confidence"] == 0.0 and b["ai_metadata"]["source"] == "none" and b["ai_metadata"]["degraded"] is True
+    assert b["proposal"]["title"] == "" and b["proposal"]["description"] == "" and b["proposal"]["language"] == "mr" and b["proposal"]["evidence_refs"] == [ev]
+    assert any(w.startswith("TRANSCRIPTION_UNAVAILABLE:") and "type" in w for w in b["warnings"])
+    assert any(w.startswith("AUDIO_NOT_TRANSCRIBED") for w in b["warnings"])              # the per-clip reason is still there
+
+
+def test_a_failing_transcription_provider_gives_the_same_degraded_answer(staffed):
+    e = staffed
+    install(SpeechProvider(error=down(), structured={"intake": INTAKE_OK}))
+    r = e.client.post("/api/v1/cases/intake/analyze", headers=e.headers("alice"), json={"evidence_ids": [audio(e)]})
+    assert r.status_code == 200 and any(w.startswith("TRANSCRIPTION_UNAVAILABLE:") for w in r.json()["warnings"])
+
+
+def test_other_invalid_requests_stay_422_and_text_with_a_voice_note_is_analysed(staffed):
+    e = staffed
+    install(None)
+    assert e.client.post("/api/v1/cases/intake/analyze", headers=e.headers("alice"), json={}).status_code == 422              # nothing at all
+    ev = audio(e)
+    r = e.client.post("/api/v1/cases/intake/analyze", headers=e.headers("alice"), json={"text": "no water since morning", "evidence_ids": [ev]})
+    assert r.status_code == 200 and not any(w.startswith("TRANSCRIPTION_UNAVAILABLE") for w in r.json()["warnings"])
+
+
+# ---------------------------------------------------------------- the language hint for speech-to-text
+def _hint_seen(e, who, body):
+    p = SpeechProvider(structured={"intake": INTAKE_OK})
+    seen = []
+    orig = p.transcribe
+    p.transcribe = lambda audio, language_hint=None: (seen.append(language_hint), orig(audio, language_hint))[1]
+    install(p)
+    r = e.client.post("/api/v1/cases/intake/analyze", headers=e.headers(who), json={"evidence_ids": [audio(e, who)], **body})
+    assert r.status_code == 200, r.text
+    return seen
+
+
+def _set_language(e, who, lang):
+    from backend.models import User
+    with e.session_factory() as db:
+        db.get(User, e.users[who]["id"]).preferred_language = lang
+        db.commit()
+
+
+def test_the_citizens_chosen_language_goes_to_whisper_and_the_profile_only_for_hindi_or_marathi(staffed):
+    e = staffed
+    assert _hint_seen(e, "alice", {"language_hint": "mr"}) == ["mr"]                      # the language chosen for this report wins
+    _set_language(e, "alice", "mr")
+    assert _hint_seen(e, "alice", {}) == ["mr"]                                          # no hint sent: the profile language (Marathi)
+    assert _hint_seen(e, "alice", {"language_hint": "hi"}) == ["hi"]                      # an explicit hint still beats the profile
+    _set_language(e, "alice", "en")
+    assert _hint_seen(e, "alice", {}) == [None]                                          # English is the default value, so it is never forced on speech-to-text

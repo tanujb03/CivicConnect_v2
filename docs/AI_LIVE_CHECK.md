@@ -66,6 +66,32 @@ So the degraded modes work and are visible in the response. Two real weaknesses 
 - Groq reported `Hindi` for a Marathi clip. If the language label matters downstream, derive it from the script or ask the citizen, not from this field.
 - `gemini-3.5-flash` free-tier quota is small enough that a few live-check runs in a row exhausted it. The rate limiter (`RATE_LIMIT_AI_PER_HOUR=30` per user) protects against one user; it does not protect the shared quota. Consider `gemini-3.5-flash-lite` for `AI_INTAKE_MODEL` if quota is the constraint (not changed: the ids are Tanuj's choice).
 
+## Quota notes
+
+**Limits as shown by Google AI Studio's rate-limit page and the Groq console, read by Tanuj on 2026-10-08** (these change; they are data in `backend/ai_gateway/providers/model_limits.json`, overridable with `AI_MODEL_LIMITS`, not code):
+
+| Model | Requests/min | Tokens/min | Requests/day |
+|---|---|---|---|
+| `gemini-3.5-flash` | 5 | 250K | **20** |
+| `gemini-3.5-flash-lite` | 15 | 250K | 500 |
+| `gemini-embedding-001` | 100 | 30K | 1000 |
+| Groq `whisper-large-v3` | 20 | not stated (2K requests/day) | 2000 |
+
+What we learned:
+- **The earlier `gemini-3.5-flash` HTTP 429 ("You exceeded your current quota") was the DAILY cap**: the account had made 21 requests against a limit of 20. It was not a per-minute limit and it was not a rejected model id. My own repeated live-check runs spent most of the 20. Whether the retried and rejected attempts also counted against Google's counter is not known; the adapter now avoids sending them at all while a model is cooling down or its budget is spent.
+- The embedding model has its own quota: it kept answering while the flash model was exhausted.
+- `gemini-3.5-flash` has 5 requests/min and 20/day: that is about one rehearsal of the whole endpoint set, so it is **not** a development model.
+- Where the reset happens: Gemini API daily quotas reset at midnight **Pacific time**, which is 07:00 UTC (12:30 IST) while daylight saving time is in effect (until 1 November 2026). **The actual reset has not been observed yet**; when a 429 for the day limit ends, record the time here. The provider adapter now computes the next reset for its cooldown.
+- The Gemini 429 body can name the limit (`QuotaFailure.quotaId`, `quotaMetric`, `RetryInfo.retryDelay`). The adapter now surfaces those fields in the error and in the log, with the model and the time, and applies a long cooldown when the quota id says "per day"; no real 429 body with those fields has been recorded yet (only the plain message above), so the parsing is tested against recorded **fake** bodies in the shape Google documents.
+
+What the gateway now does about it (all configurable, see `.env.example`):
+- **Per-model budgets** (requests/min, requests/day, tokens/min for embeddings): a full minute budget waits at most `AI_BUDGET_MAX_WAIT_S` (8 s); a spent daily budget sends nothing and the call degrades; the daily counter is kept in Redis (shared by every process), with an in-process fallback; "budget spent" is logged once per model per day.
+- **Routes:** no default selects any model; the text tasks use whatever `AI_INTAKE_MODEL`, `AI_ANALYTICS_MODEL` and `AI_COPILOT_MODEL` name (dev default: `gemini-3.5-flash-lite`). `gemini-3.5-flash` is reachable only by putting its id in those variables yourself. Optional `AI_FALLBACK_TEXT_MODEL` names a Groq text model used once when the Gemini call cannot be served (never for images).
+- **Optional response cache** (`AI_CACHE_ENABLED`, off by default, 24 h): repeated identical calls cost no quota. **It stores the model's answers to citizen text, images and audio in Redis for the TTL: keep it off for real data.**
+
+**Demo-day note:** rehearse on `gemini-3.5-flash-lite` (500 requests/day, 15/min). Spend `gemini-3.5-flash` calls only on the final photo run and the final Marathi run (at most 5 requests per minute, 20 per day, and wait at least 13 s between calls). Turn the response cache on for rehearsals on the synthetic demo city so reruns are free.
+
 ## Still to do for WP1
 
-Run the flash model on the real photo and the six text and audio cases once the quota is available again (`python scripts/dev/ai_live_pass.py --photo ... --audio ...`), and append the results here.
+- Run the photo and audio live pass on `gemini-3.5-flash-lite` (at least 6 s between Gemini calls, one run, no back-to-back reruns) and append the results here.
+- One comparison photo through `gemini-3.5-flash` (at most 5 flash calls in total, 13 s apart) only when Tanuj says the quota has rested; until then **no claim is made about any quality difference between flash and flash-lite**.

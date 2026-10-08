@@ -140,6 +140,9 @@ class AIGateway:
             loc = Location(**req.location.model_dump()) if req.location else None
             res = self.ai.analyze_intake(IntakeRequest(text=req.text, evidence=transcription.usable_for_adapter(evidence), language_hint=req.language_hint, location=loc))
         except (ValidationError, InputLimitExceeded, ValueError) as e:
+            degraded = self._voice_note_without_transcript(req, evidence, speech_warnings)
+            if degraded is not None:
+                return degraded
             raise self._input_error(e) from e
         proposal = res.proposal.model_dump(mode="json", exclude={"suggested_department", "location"})
         proposal["location"] = res.proposal.location.model_dump(mode="json") if res.proposal.location else None
@@ -179,6 +182,18 @@ class AIGateway:
         analysis_id = self._persist("intake", None, actor, res, confidence, extra or None)
         return IntakeAnalyzeResponse(proposal=proposal, confidence=confidence, warnings=warnings, requires_confirmation=True,
                                      alternatives=[a.model_dump(mode="json") for a in res.alternatives], ai_metadata=meta, analysis_id=analysis_id, image_analysis=images)
+
+    @staticmethod
+    def _voice_note_without_transcript(req: IntakeAnalyzeRequest, evidence: list, speech_warnings: list[str]) -> IntakeAnalyzeResponse | None:
+        """A report that is ONLY voice notes, none of which could be transcribed (no speech-to-text provider, or it failed), is not an error: answer 200 with an empty draft and
+        ``TRANSCRIPTION_UNAVAILABLE`` so the app can ask the citizen to type. Anything else that fails validation stays a 422."""
+        if (req.text or "").strip() or not evidence or any(e.media_type != "AUDIO" for e in evidence) or transcription.usable_for_adapter(evidence):
+            return None
+        warnings = [*speech_warnings, W.make("TRANSCRIPTION_UNAVAILABLE", "the voice note could not be turned into text; please type a short description of the problem")]
+        proposal = {"title": "", "description": "", "category": "other", "subcategory": "unclassified", "severity": "LOW", "location": None, "language": req.language_hint or "en",
+                    "suggested_department": None, "suggested_department_id": None, "reasons": [], "evidence_refs": [e.evidence_id for e in evidence]}
+        meta = {"source": "none", "degraded": True, "provider": None, "model": None}
+        return IntakeAnalyzeResponse(proposal=proposal, confidence=0.0, warnings=warnings, requires_confirmation=True, ai_metadata=meta)
 
     def _save_transcript(self, evidence_id: str, text: str, language: str | None) -> None:
         save = getattr(self.evidence, "save_transcript", None)                 # optional port

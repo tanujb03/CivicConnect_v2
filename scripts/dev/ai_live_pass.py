@@ -97,39 +97,68 @@ def main() -> int:
     ap.add_argument("--photo", type=Path)
     ap.add_argument("--audio", action="append", default=[], help="LANG=path (repeatable)")
     ap.add_argument("--json-out", type=Path)
-    ap.add_argument("--pause", type=float, default=8.0, help="seconds between AI calls (free-tier requests-per-minute limits)")
+    ap.add_argument("--pause", type=float, default=7.0, help="seconds between calls; at least 6 s for gemini-3.5-flash-lite (15 requests/min), see --flash")
+    ap.add_argument("--flash", action="store_true", help="the scarce gemini-3.5-flash is configured (5 requests/min, 20/day): pause at least 13 s and send at most 5 AI calls in total. "
+                                                         "Only when Tanuj says the quota has rested (docs/AI_LIVE_CHECK.md)")
+    ap.add_argument("--keep-going", action="store_true", help="do not stop at the first call that degraded because the provider failed (default: stop, so a 429 is not hammered)")
     a = ap.parse_args()
     password = os.environ.get("DEMO_PASSWORD")
     if not password:
         from backend.core.config import settings
         password = settings.DEMO_PASSWORD
+    a.pause = max(a.pause, 13.0 if a.flash else 6.0)
     run = Runner(a.base_url, password)
     for who in ACCOUNTS:
         run.login(who)
 
+    budget = {"ai": 5 if a.flash else None}             # Gemini-backed calls still allowed (flash: 5 in total)
+
+    def ai_call_allowed() -> bool:
+        if budget["ai"] is None:
+            return True
+        if budget["ai"] <= 0:
+            print("flash call budget (5) used up: stopping")
+            return False
+        budget["ai"] -= 1
+        return True
+
+    def failed() -> bool:
+        """True when the last call degraded because the PROVIDER failed (quota 429, outage): do not keep sending (the exact message is in the API log line 'provider call failed')."""
+        row = run.rows[-1] if run.rows else {}
+        bad = any(str(w).startswith("PROVIDER_UNAVAILABLE") for w in row.get("warnings") or []) or "PROVIDER_UNAVAILABLE" in str(row.get("error", ""))
+        if bad and not a.keep_going:
+            print(f"STOP: '{row.get('call')}' degraded because the provider failed. Not sending more calls. Read the API log line 'provider call failed' for the provider's exact message "
+                  f"and quota id; do not rerun until the limit has reset.")
+        return bad and not a.keep_going
+
     def pause():
         time.sleep(a.pause)
 
+    steps: list = []
     for lang, text in TEXTS.items():
-        run.call(f"intake text {lang}", "citizen", "POST", "/cases/intake/analyze", C.IntakeAnalyzeResponse, json={"text": text, "language_hint": lang})
-        pause()
+        steps.append((f"intake text {lang}", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse, lambda lang=lang, text=text: {"text": text, "language_hint": lang}))
     if a.photo:
-        ev = run.upload("citizen", a.photo, "image/jpeg")
-        run.call("intake photo + text en", "citizen", "POST", "/cases/intake/analyze", C.IntakeAnalyzeResponse, json={"text": "Road damage here", "evidence_ids": [ev]})
-        pause()
+        steps.append(("intake photo + text en", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse,
+                      lambda: {"text": "Road damage here", "evidence_ids": [run.upload("citizen", a.photo, "image/jpeg")]}))
     for spec in a.audio:
-        lang, _, p = spec.partition("=")
-        ev = run.upload("citizen", Path(p), "audio/mpeg")
-        run.call(f"intake audio {lang}", "citizen", "POST", "/cases/intake/analyze", C.IntakeAnalyzeResponse, json={"evidence_ids": [ev], "language_hint": lang})
-        pause()
+        lang, _, ap_ = spec.partition("=")
+        steps.append((f"intake audio {lang}", "citizen", "/cases/intake/analyze", C.IntakeAnalyzeResponse,
+                      lambda lang=lang, ap_=ap_: {"evidence_ids": [run.upload("citizen", Path(ap_), "audio/mpeg")], "language_hint": lang}))
     cases = run.http.get(f"{a.base_url.rstrip('/')}/cases", headers=run.tokens["operator"], params={"limit": 5}).json().get("items", [])
     if cases:
         cid = cases[0]["id"]
-        run.call("fusion on a demo case", "operator", "POST", f"/cases/{cid}/fusion/analyze", C.FusionAnalyzeResponse, json={})
-        pause()
-        run.call("triage on a demo case", "operator", "POST", f"/cases/{cid}/triage/analyze", C.TriageAnalyzeResponse, json={})
-        pause()
-    run.call("copilot: open cases by category", "admin", "POST", "/copilot/query", C.CopilotQueryResponse, json={"query": "How many open cases are there per category in the city?"})
+        steps.append(("triage on a demo case", "operator", f"/cases/{cid}/triage/analyze", C.TriageAnalyzeResponse, lambda: {}))
+    steps.append(("copilot: open cases by category", "admin", "/copilot/query", C.CopilotQueryResponse, lambda: {"query": "How many open cases are there per category in the city?"}))
+    for i, (name, who, path, model, body) in enumerate(steps):
+        if not ai_call_allowed():
+            break
+        if i:
+            pause()
+        run.call(name, who, "POST", path, model, json=body())
+        if failed():
+            break
+    if cases and not any(r["call"].startswith("fusion") for r in run.rows):            # fusion is rules + embeddings, not a text-model call: always cheap
+        run.call("fusion on a demo case", "operator", "POST", f"/cases/{cases[0]['id']}/fusion/analyze", C.FusionAnalyzeResponse, json={})
 
     print(f"{'call':36} {'http':>4} {'ms':>6} {'valid':>5}  provider / model / source  confidence  notes")
     for r in run.rows:

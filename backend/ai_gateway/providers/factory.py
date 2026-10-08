@@ -5,6 +5,9 @@
                                          AI_COPILOT_MODEL, AI_EMBEDDING_MODEL, AI_TRANSCRIPTION_MODEL; fallbacks as in ai.inference.config)
     AI_ROUTES="intake=gemini,transcription=groq"   optional task -> backend overrides; default: transcription -> groq if keyed, everything else -> the first keyed backend
                                          in the order gemini, groq, openrouter, cloudflare, openai
+    AI_FALLBACK_TEXT_MODEL               optional: a Groq text model used once when the primary (Gemini) cannot serve a text call (budget spent, 429, outage); never for images
+    AI_CACHE_ENABLED / AI_CACHE_TTL_S    optional Redis cache of successful answers (default off, 24 h): it STORES citizen text, keep it off for real data
+    AI_MODEL_LIMITS                      per-model budgets rpm/rpd/tpm, e.g. "modelid=15/500/250000" (defaults: model_limits.json; AI_MODEL_LIMITS=off disables); AI_BUDGET_MAX_WAIT_S (8), AI_QUOTA_TZ
     AI_EMBEDDING_DIM                     optional: ask the embedding model for this many dimensions (e.g. 768 for gemini-embedding-001); the length is checked and the vector
                                          is L2-normalised
     AI_<BACKEND>_RPM                     requests-per-minute throttle for that backend (free tiers are rate limited), e.g. AI_GEMINI_RPM=10
@@ -21,13 +24,15 @@ from typing import Mapping
 from ai.inference.config import _MODEL_ENV
 from ai.inference.provider import AIProvider
 
-from .composite import CompositeProvider
+from .budget import ModelBudgets
+from .cache import ResponseCache
+from .composite import TEXT_TASKS, CompositeProvider
 from .openai_compat import ChatCompletionsProvider
 
 log = logging.getLogger("civicconnect.ai.factory")
 
 PRESETS = {
-    "gemini": {"key": "GEMINI_API_KEY", "base": "https://generativelanguage.googleapis.com/v1beta/openai", "rpm": 10},
+    "gemini": {"key": "GEMINI_API_KEY", "base": "https://generativelanguage.googleapis.com/v1beta/openai", "rpm": None},     # budgets are per MODEL (budget.py), not per provider
     "groq": {"key": "GROQ_API_KEY", "base": "https://api.groq.com/openai/v1", "rpm": 20},
     "openrouter": {"key": "OPENROUTER_API_KEY", "base": "https://openrouter.ai/api/v1", "rpm": 15},
     "cloudflare": {"key": "CLOUDFLARE_API_TOKEN", "base": "https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/ai/v1", "rpm": 30},
@@ -70,7 +75,8 @@ def _backend(name: str, env: Mapping[str, str], models: dict[str, str]) -> ChatC
     rpm = env.get(f"AI_{name.upper()}_RPM")
     dim = _embedding_dim(env)
     return ChatCompletionsProvider(name, base, key, models, rpm=float(rpm) if rpm else p["rpm"], structured_mode=env.get(f"AI_{name.upper()}_STRUCTURED", "json_schema"),
-                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")), embedding_dim=dim)
+                                   timeout_s=float(env.get("AI_REQUEST_TIMEOUT_S", "45")), max_retries=int(env.get("AI_MAX_RETRIES", "2")), embedding_dim=dim,
+                                   budgets=ModelBudgets.from_env(env, provider=name))
 
 
 def build_backends_from_env(env: Mapping[str, str] | None = None) -> dict[str, ChatCompletionsProvider]:
@@ -99,4 +105,14 @@ def build_provider_from_env(env: Mapping[str, str] | None = None) -> AIProvider 
         else:
             log.error("AI_ROUTES entry %r ignored (unknown task or backend without a key)", pair)
     chosen = {t: backends[b] for t, b in routes.items() if models.get(t)}      # only tasks that have a model id configured are served
-    return CompositeProvider(chosen) if chosen else None
+    return CompositeProvider(chosen, _text_fallbacks(env, backends, routes, chosen), ResponseCache.from_env(env)) if chosen else None
+
+
+def _text_fallbacks(env: Mapping[str, str], backends: dict, routes: dict[str, str], chosen: dict) -> dict:
+    """Groq as the text fallback: needs a Groq key and ``AI_FALLBACK_TEXT_MODEL`` (an id from the Groq model list; never defaulted here). Used only for tasks whose primary
+    backend is another one, and never for requests with images."""
+    model = (env.get("AI_FALLBACK_TEXT_MODEL") or "").strip()
+    if not model or "groq" not in backends:
+        return {}
+    fb = _backend("groq", env, {t: model for t in TEXT_TASKS})
+    return {t: fb for t in TEXT_TASKS if fb is not None and t in chosen and routes.get(t) != "groq"}

@@ -14,6 +14,7 @@ import json
 import logging
 import math
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Sequence
 
 import httpx
@@ -22,10 +23,87 @@ from ai.inference.errors import ProviderNotConfigured, ProviderResponseInvalid, 
 from ai.inference.provider import EmbeddingResult, InputPart, PlannedToolCall, StructuredResult, ToolPlan, ToolSpec, TranscriptResult
 from ai.inference.schemas import EvidenceInput
 
+from .budget import ModelBudgets
+
 log = logging.getLogger("civicconnect.ai.compat")
 
 _RETRYABLE = {429, 500, 502, 503, 504}
-QUOTA_COOLDOWN_S = 60.0          # after a call ends in HTTP 429 the model is not called again for this long (or its Retry-After): requests degrade at once instead of queueing for 15 s
+QUOTA_COOLDOWN_S = 60.0          # default cooldown after a call ends in HTTP 429 when the provider names no delay: requests degrade at once instead of queueing for 15 s
+UNKNOWN_RESET_COOLDOWN_S = 3600.0   # a per-day quota whose reset time cannot be computed (no tzdata): one hour
+MAX_COOLDOWN_S = 26 * 3600.0
+
+
+def _estimate_tokens(body: dict | None) -> int:
+    """A cheap upper-ish estimate of the input tokens of a request body (text only; an image counts as 300): 4 characters per token for ASCII, 2 for other scripts."""
+    def text_tokens(s: str) -> int:
+        return -(-len(s) // (4 if s.isascii() else 2))
+
+    total = 0
+    for item in (body or {}).get("input", []) if isinstance((body or {}).get("input"), list) else []:
+        total += text_tokens(str(item)) + 1
+    for msg in (body or {}).get("messages", []) or []:
+        content = msg.get("content") if isinstance(msg, dict) else None
+        if isinstance(content, str):
+            total += text_tokens(content)
+        elif isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict):
+                    total += 300 if part.get("type") == "image_url" else text_tokens(str(part.get("text") or ""))
+    return total
+
+
+def _seconds(value: object) -> float | None:
+    """Google duration strings (``"23s"``, ``"0.5s"``) and plain numbers -> seconds."""
+    try:
+        return float(str(value).rstrip("s"))
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_quota_error(body: object, retry_after_header: str | None = None) -> dict:
+    """What a provider 429 says about WHICH limit was hit: ``message``, ``status``, ``quota_id``, ``quota_metric``, ``quota_model``, ``quota_value``, ``retry_delay_s``.
+    Reads Google's ``QuotaFailure`` / ``RetryInfo`` error details (Gemini) and falls back to the ``Retry-After`` header; every field is optional."""
+    body = body[0] if isinstance(body, list) and body else body
+    err = body.get("error") if isinstance(body, dict) else None
+    out: dict = {}
+    if isinstance(err, dict):
+        out["message"] = " ".join(str(err.get("message") or "").split())
+        out["status"] = err.get("status")
+        for d in err.get("details") or []:
+            if not isinstance(d, dict):
+                continue
+            kind = str(d.get("@type", ""))
+            if kind.endswith("QuotaFailure"):
+                v = next((x for x in d.get("violations") or [] if isinstance(x, dict)), {})
+                out.update(quota_id=v.get("quotaId"), quota_metric=v.get("quotaMetric"), quota_value=v.get("quotaValue"), quota_model=(v.get("quotaDimensions") or {}).get("model"))
+            elif kind.endswith("RetryInfo"):
+                out["retry_delay_s"] = _seconds(d.get("retryDelay"))
+    if out.get("retry_delay_s") is None and retry_after_header:
+        out["retry_delay_s"] = _seconds(retry_after_header)
+    return {k: v for k, v in out.items() if v not in (None, "")}
+
+
+def next_daily_reset_seconds(now: datetime | None = None) -> float:
+    """Seconds until the next midnight in America/Los_Angeles (Gemini API daily quotas reset then); 1 hour when the time zone database is not installed."""
+    try:
+        from zoneinfo import ZoneInfo
+        pt = ZoneInfo("America/Los_Angeles")
+    except Exception:
+        return UNKNOWN_RESET_COOLDOWN_S
+    here = (now or datetime.now(timezone.utc)).astimezone(pt)
+    midnight = (here + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(60.0, (midnight - here).total_seconds())
+
+
+def cooldown_seconds(quota: dict) -> float:
+    """How long to stop calling a model after a 429: a per-day quota until the daily reset, otherwise the provider's retry delay (+1 s), otherwise ``QUOTA_COOLDOWN_S``."""
+    quota_id = str(quota.get("quota_id") or "").lower()
+    delay = quota.get("retry_delay_s")
+    if "perday" in quota_id or "per_day" in quota_id or "daily" in quota_id:
+        return min(MAX_COOLDOWN_S, next_daily_reset_seconds())
+    if delay:
+        return min(MAX_COOLDOWN_S, max(float(delay) + 1.0, 5.0))
+    return QUOTA_COOLDOWN_S
 _EMBED_BATCH = 64
 
 
@@ -33,7 +111,7 @@ class ChatCompletionsProvider:
     def __init__(self, name: str, base_url: str, api_key: str | None, models: dict[str, str], *, rpm: float | None = None, timeout_s: float = 45.0,
                  max_retries: int = 2, structured_mode: str = "json_schema", extra_headers: dict[str, str] | None = None,
                  client: httpx.Client | None = None, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
-                 embedding_dim: int | None = None):
+                 embedding_dim: int | None = None, budgets: ModelBudgets | None = None):
         if not api_key:
             raise ProviderNotConfigured(f"{name}: API key is not set")
         if structured_mode not in ("json_schema", "json_object"):
@@ -46,6 +124,8 @@ class ChatCompletionsProvider:
         self._min_gap = 60.0 / rpm if rpm else 0.0
         self._last = -1e9
         self._blocked_until: dict[str, float] = {}       # model -> monotonic time until which calls fail fast (quota / rate limit cooldown)
+        self._cooling: set[str] = set()                  # models whose cooldown start has been logged (the end is logged once, lazily)
+        self._budgets = budgets                          # per-model rpm / rpd / tpm budgets (None = unlimited)
         self._embedding_dim = embedding_dim              # AI_EMBEDDING_DIM: asked from the provider (Matryoshka models), then checked and L2-normalised here
 
     def __repr__(self) -> str:      # never expose the key
@@ -75,10 +155,16 @@ class ChatCompletionsProvider:
         left = self._blocked_until.get(model, 0.0) - self._clock()
         if left > 0:
             raise ProviderUnavailable(f"{self.name}: {model} is cooling down after HTTP 429 ({int(left) + 1} s left)", status_code=429)
+        if model in self._cooling:
+            self._cooling.discard(model)
+            log.info("provider cooldown ended: %s model=%s; calling it again", self.name, model)
         last: Exception | None = None
-        retry_after_seen = 0.0
+        quota: dict = {}
         t0 = time.monotonic()
+        tokens = _estimate_tokens(json_body) if self._budgets else 0
         for attempt in range(self._max_retries + 1):
+            if self._budgets:
+                self._budgets.acquire(model, tokens)             # may wait a few seconds; raises BudgetSpent (no request sent) when the budget is spent
             self._throttle()
             try:
                 resp = self._client.post(url, headers=headers, json=json_body, data=data, files=files)
@@ -91,25 +177,41 @@ class ChatCompletionsProvider:
                     except ValueError as e:
                         raise ProviderResponseInvalid(f"{self.name}: non-JSON body") from e
                 last = ProviderUnavailable(f"{self.name}: HTTP {resp.status_code}{self._error_detail(resp)}", status_code=resp.status_code)
+                if resp.status_code == 429:
+                    quota = self._quota(resp)
+                    last.quota = quota                                  # type: ignore[attr-defined]
                 if resp.status_code not in _RETRYABLE:
                     break
                 try:
                     retry_after = min(8.0, float(resp.headers.get("retry-after", "0")))
                 except ValueError:
                     retry_after = 0.0
-                retry_after_seen = max(retry_after_seen, retry_after)
                 if attempt < self._max_retries:
                     self._sleep(max(retry_after, 0.5 * (2 ** attempt)))
                 continue
             if attempt < self._max_retries:
                 self._sleep(0.5 * (2 ** attempt))
         if getattr(last, "status_code", None) == 429:
-            self._blocked_until[model] = self._clock() + max(QUOTA_COOLDOWN_S, retry_after_seen)
+            secs = cooldown_seconds(quota)
+            self._blocked_until[model] = self._clock() + secs
+            if model not in self._cooling:
+                self._cooling.add(model)
+                until = (datetime.now(timezone.utc) + timedelta(seconds=secs)).isoformat(timespec="seconds")
+                log.warning("provider cooldown started: %s model=%s for %d s (until %s UTC) quota_id=%s metric=%s retry_delay_s=%s", self.name, model, int(secs), until,
+                            quota.get("quota_id"), quota.get("quota_metric"), quota.get("retry_delay_s"))
         log.warning("provider call failed: %s", last)
         raise last  # type: ignore[misc]
 
+    def _quota(self, resp: httpx.Response) -> dict:
+        try:
+            body = resp.json()
+        except ValueError:
+            body = None
+        return parse_quota_error(body, resp.headers.get("retry-after"))
+
     def _error_detail(self, resp: httpx.Response) -> str:
-        """`` (provider message)`` from an error body, at most 200 characters, with the API key scrubbed: tells a per-minute from a per-day quota 429 or a rejected model id."""
+        """`` (provider message) [quota_id=... quota_metric=... quota_model=... quota_value=... retry_in=...s]`` from an error body: the message at most 200 characters, the API key
+        scrubbed. Tells a per-minute from a per-day quota 429, or a rejected model id, from a bad request."""
         try:
             body = resp.json()
             body = body[0] if isinstance(body, list) and body else body
@@ -118,7 +220,15 @@ class ChatCompletionsProvider:
         except (ValueError, AttributeError):
             msg = ""
         msg = " ".join(str(msg).split()).replace(self._key, "***")
-        return f" ({msg[:200]})" if msg else ""
+        text = f" ({msg[:200]})" if msg else ""
+        if resp.status_code == 429:
+            q = self._quota(resp)
+            parts = [f"{k}={q[k]}" for k in ("quota_id", "quota_metric", "quota_model", "quota_value") if k in q]
+            if "retry_delay_s" in q:
+                parts.append(f"retry_in={q['retry_delay_s']:g}s")
+            if parts:
+                text += " [" + " ".join(parts).replace(self._key, "***") + "]"
+        return text
 
     def list_models(self) -> list[str]:
         """Model ids this key can use (GET /models). Used by the live-check CLI so you can copy valid ids from your own account."""

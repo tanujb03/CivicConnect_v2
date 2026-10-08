@@ -1,0 +1,10 @@
+{
+  "as_of": "2026-10-08",
+  "source": "Google AI Studio rate-limit page and Groq console, read by Tanuj on 2026-10-08. These are QUOTA numbers, not model choices: which model a task uses is decided only by the AI_*_MODEL variables. The numbers change; override them with AI_MODEL_LIMITS (see .env.example) instead of editing code.",
+  "models": {
+    "gemini-3.5-flash": {"rpm": 5, "rpd": 20, "tpm": 250000},
+    "gemini-3.5-flash-lite": {"rpm": 15, "rpd": 500, "tpm": 250000},
+    "gemini-embedding-001": {"rpm": 100, "rpd": 1000, "tpm": 30000},
+    "whisper-large-v3": {"rpm": 20, "rpd": 2000, "tpm": null}
+  }
+}
