@@ -91,7 +91,28 @@ What the gateway now does about it (all configurable, see `.env.example`):
 
 **Demo-day note:** rehearse on `gemini-3.5-flash-lite` (500 requests/day, 15/min). Spend `gemini-3.5-flash` calls only on the final photo run and the final Marathi run (at most 5 requests per minute, 20 per day, and wait at least 13 s between calls). Turn the response cache on for rehearsals on the synthetic demo city so reruns are free.
 
+## Endpoint pass on `gemini-3.5-flash-lite` (2026-10-08, after the intake model id was corrected)
+
+One run of `scripts/dev/ai_live_pass.py` against the real API (dev database, 560 demo cases, current code with per-model budgets), 7 s between calls, no reruns. Configured: intake, triage, analytics, copilot = `gemini-3.5-flash-lite`; embedding `gemini-embedding-001` (768); transcription `whisper-large-v3`. **No 429, no rejected id, no flash call.** Synthetic sentences, the public test photo `Pot_holes.jpg` and the synthetic voice clips only.
+
+| Call | HTTP | Latency | Schema valid | Confidence | Result |
+|---|---|---|---|---|---|
+| `intake/analyze` text en | 200 | 1.5 s | yes | 0.95 | roads / pothole / HIGH, language en, no warnings |
+| text hi | 200 | **29.3 s** | yes | 0.95 | roads / pothole / HIGH, language hi |
+| text mr | 200 | 5.4 s | yes | 0.95 | roads / pothole / HIGH, language mr |
+| photo + the text "Road damage here" | 200 | 3.2 s | yes | 0.95 | roads / pothole / MEDIUM |
+| audio hi / mr / en (language hint sent) | 200 | 2.9 / 3.0 / 1.8 s | yes | 0.95 / 0.95 / 0.99 | roads / pothole / MEDIUM, language hi / mr / en |
+| `triage/analyze` on a demo case | 200 | 3.3 s | yes | 0.85 | MEDIUM severity, HIGH priority, drainage_sewerage, source `provider+rules` |
+| `copilot/query` | 200 | 4.4 s | yes | none | 196-character answer, 1 tool call |
+| `fusion/analyze` | 200 | 52 ms | yes | none | NO_MATCH, rules only, `FUSION_UNCALIBRATED_PRIOR` |
+
+What this does and does not show:
+- All nine AI calls were answered by the provider (`source: provider`), schema-valid, with no warnings. This is the first real endpoint pass; it proves the plumbing, not quality. All seven intake answers say roads / pothole, which is the right shape for these sentences; **no accuracy claim** is made from nine synthetic calls, and the severity differs between text (HIGH) and audio/photo (MEDIUM) runs without our knowing which is better.
+- The photo call carried the words "Road damage here", so it **cannot show that the model used the image**. A photo-only call and a comparison against flash are still open.
+- **One latency outlier of 29 s** (the Hindi text call) with no warning in the API log; the cause is not known (provider latency is the likely one). Not reproduced.
+- **Quota cost:** the nine endpoint calls used **14** `gemini-3.5-flash-lite` requests (Redis day counter 14 of 500) and 3 Groq Whisper requests (3 of 2000). The difference is the extra localisation call that non-English answers make (title and summary in the citizen's language): a Hindi or Marathi intake costs two Gemini requests, an English one costs one. Budget about **2 requests per non-English intake** when planning a demo.
+- The speech-to-text language label was measured directly (not through this pass): an explicit `mr` hint labels the Marathi clip `Marathi`, no hint labels it `Hindi`. This pass always sent a hint, so it does not show what an app that sends none gets.
+
 ## Still to do for WP1
 
-- Run the photo and audio live pass on `gemini-3.5-flash-lite` (at least 6 s between Gemini calls, one run, no back-to-back reruns) and append the results here.
 - One comparison photo through `gemini-3.5-flash` (at most 5 flash calls in total, 13 s apart) only when Tanuj says the quota has rested; until then **no claim is made about any quality difference between flash and flash-lite**.
