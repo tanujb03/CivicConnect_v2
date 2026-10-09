@@ -70,7 +70,7 @@ India's civic systems collect complaints at scale but lose them to translation g
 | | |
 |---|---|
 | **4 apps** | Citizen and Field-Worker mobile apps (Expo), Admin and Overlooker web apps (React) |
-| **42-endpoint frozen contract, 69 REST operations** | One versioned `/api/v1` API with generated OpenAPI documentation |
+| **42-endpoint frozen contract, 78 REST operations** | One versioned `/api/v1` API with generated OpenAPI documentation |
 | **6 AI capabilities** | Intake, duplicate fusion, triage, resolution check, analytics explanation, grounded copilot |
 | **4 input languages** | English, Hindi, Marathi and Hinglish, by text or by voice |
 | **12-state case lifecycle** | Report, triage, work order, evidence, citizen verification, resolution |
@@ -164,9 +164,9 @@ Everything below was measured by code in this repository on a laptop-class machi
 
 | Check | Result |
 |---|---|
-| API surface | **42-endpoint frozen contract** plus extensions: 69 REST operations under `/api/v1`, OpenAPI committed and checked by a test |
-| Automated tests | **1,038 passed, 4 skipped, 0 failed** (backend and AI, last full lane run) |
-| Database | PostgreSQL 18.6, PostGIS 3.6, pgvector 0.8.6 from one image; 3 migrations, one head, no schema drift |
+| API surface | **42-endpoint frozen contract** plus extensions: 78 REST operations under `/api/v1`, OpenAPI committed and checked by a test |
+| Automated tests | **1,621 passed, 5 skipped, 0 failed** (backend and AI, full run with PostgreSQL and Redis, 2026-10-09) |
+| Database | PostgreSQL 18.6, PostGIS 3.6, pgvector 0.8.6 from one image; 4 migrations, one head, no schema drift |
 | Spatial and vector search | PostGIS radius queries; pgvector cosine search with HNSW indexes for 384- and 768-dimension embeddings |
 | Event pipeline | Redis Streams workers verified against a real Redis container: events consumed, nothing left pending |
 | Evidence flow | init, signed upload, complete with size, SHA-256 and magic-byte MIME checks, signed download: verified end to end |
