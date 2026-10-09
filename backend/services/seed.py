@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings
@@ -134,10 +134,26 @@ def seed_demo_city(db: Session, directory: Path = DEMO_DIR, password: str | None
     return {"skipped": False, "cases": len(cases), "accounts": accounts, "password": password or settings.DEMO_PASSWORD, "demo_numbering_max": year_max}
 
 
+LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "db", "host.docker.internal"})
+
+
+def assert_local_target(db: Session, allow_remote: bool = False) -> str:
+    """Refuse to wipe a database on another machine unless ``allow_remote``; returns "host/database" for the log (never the password). A SQLite file has no host and passes."""
+    url = db.get_bind().url
+    host, name = url.host or "", url.database or ""
+    if host and host.lower() not in LOCAL_HOSTS and not allow_remote:
+        raise RuntimeError(f"refusing to wipe {host}/{name}: not a local database (pass --allow-remote if you really mean it)")
+    return f"{host or 'file'}/{name}"
+
+
 def reset_all(db: Session) -> None:
     """Delete every row (development only)."""
     if settings.ENVIRONMENT.lower() == "prod":
         raise RuntimeError("refusing to wipe a production database")
-    for table in reversed(Base.metadata.sorted_tables):
-        db.execute(table.delete())
+    if db.get_bind().dialect.name == "postgresql":                    # work_orders <-> evidence_items reference each other: a table-by-table DELETE cannot order them
+        names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        db.execute(text(f"TRUNCATE TABLE {names} RESTART IDENTITY CASCADE"))
+    else:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
     db.commit()

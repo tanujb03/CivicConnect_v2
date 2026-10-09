@@ -70,7 +70,8 @@ class Settings(BaseSettings):
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
 
     # Browser origins allowed to call the API (comma separated); "*" only for local experiments
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://localhost:4173"
+    CORS_ORIGINS: str = ("http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000,http://localhost:4173,"
+                          "http://localhost:8080,http://localhost:8081,http://localhost:8082,http://localhost:19006")      # Vite apps, admin / overlooker (8080), Expo web (8081, 19006)
 
     # Evidence / media (design §44): private storage, generated object keys, short-lived signed URLs
     STORAGE_BACKEND: str = "local"               # "local" (files under MEDIA_DIR, signed URLs served by this API) or "s3" (MinIO / Supabase / any S3-compatible)

@@ -31,13 +31,15 @@ def embed_missing() -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--reference-only", action="store_true")
-    ap.add_argument("--reset", action="store_true", help="delete every row first (refused when ENVIRONMENT=prod)")
+    ap.add_argument("--reset", action="store_true", help="delete every row first (refused when ENVIRONMENT=prod or the database is not on this machine)")
+    ap.add_argument("--allow-remote", action="store_true", help="let --reset wipe a database whose host is not localhost")
     ap.add_argument("--with-embeddings", action="store_true", help="after seeding, print the embedding plan and the commands to run (default off; embeds nothing itself)")
     a = ap.parse_args(argv)
     if a.with_embeddings and a.reference_only:
         ap.error("--with-embeddings needs the demo cases (drop --reference-only)")
     with SessionLocal() as db:
         if a.reset:
+            print(f"wiping {seed.assert_local_target(db, a.allow_remote)}")
             seed.reset_all(db)
         added = seed.seed_reference(db)
         db.commit()

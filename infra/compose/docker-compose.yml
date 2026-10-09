@@ -60,6 +60,8 @@ services:
       MEDIA_DIR: /data/media
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${API_PORT:-8000}}   # what a phone can reach: LAN address or the tunnel URL (docs/infra/TUNNEL.md)
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      SCAN_ENABLED: ${SCAN_ENABLED:-false}                     # WP6: true with the scan profile (clamd must be up, else uploads stay PENDING and downloads are refused)
+      CLAMD_HOST: ${CLAMD_HOST:-clamav}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://s3:8333}
       S3_BUCKET: ${S3_BUCKET:-civicconnect-evidence}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-civicconnect}
