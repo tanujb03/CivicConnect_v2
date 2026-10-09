@@ -145,6 +145,18 @@ What it suggests, without a claim: at the same 8K tokens/min a fallback on `qwen
 
 **HNSW check (`EXPLAIN`, a stored vector as the query, so no provider call):** the partial index `ix_case_embeddings_vec_768` (`hnsw ((embedding_vec::vector(768)) vector_cosine_ops) WHERE embedding_dim = 768`) is chosen as an `Index Scan ... Order By embedding_vec::vector(768) <=> ...` once sequential scans are disabled; with only 560 rows the planner prefers a sequential scan on its own, which is correct at this size. The query must repeat the cast `::vector(768)` and the `embedding_dim = 768` predicate for the index to be eligible. Recall of the approximate index was not measured.
 
+## Photo-only scenes on `gemini-3.5-flash-lite` (2026-10-09, `ai_live_pass.py --scene`, no text, no language hint)
+
+Three public photos, one per scene, sent as the only evidence to `POST /cases/intake/analyze` (3 flash-lite requests, 7 s apart). The photos are not in git; the two that need attribution are recorded in `D:\civic-test-media\SOURCES.md`.
+
+| Scene | Photo and licence | Expected | Got (category / subcategory) | Confidence | Latency |
+|---|---|---|---|---|---|
+| road damage | `Potholes_in_Bengaluru_road.jpg`, CC0 | roads | roads / pothole | 0.95 | 13.4 s |
+| garbage | `garbage_street_temple_dump.jpg`, CC BY 2.0 (attribution in SOURCES.md) | sanitation | sanitation / garbage_overflow | 0.95 | 4.4 s |
+| streetlight | `streetlight_damaged_christiansfeld.jpg`, CC BY-SA 4.0 (attribution in SOURCES.md) | street_lighting | street_lighting / light_not_working | 0.95 | 8.4 s |
+
+3 of 3 categories match, all `source: provider`, all schema-valid. **Three photos prove nothing about accuracy**; this only shows the photo-only path works end to end. Every confidence is 0.95, so the number does not discriminate between easy and hard photos. `gemini-3.5-flash` was not used.
+
 ## Still to do for WP1
 
 - One comparison photo through `gemini-3.5-flash` (at most 5 flash calls in total, 13 s apart) only when Tanuj says the quota has rested; until then **no claim is made about any quality difference between flash and flash-lite**.
