@@ -148,14 +148,14 @@ def pace_limits(env: Mapping[str, str], model: str | None) -> Limits:
     """Our ceiling for ``model``: rpm and tpm capped at 80 / 25,000 (lower configured values are kept), the daily limit from the table or ``AI_MODEL_LIMITS``."""
     spec = (env.get("AI_MODEL_LIMITS") or "").strip()
     lim = parse_limits(None if spec.lower() == "off" else spec).get(model or "", Limits()) if model else Limits()
-    return Limits(min(lim.rpm or PACE_RPM, PACE_RPM), lim.rpd, min(lim.tpm or PACE_TPM, PACE_TPM))
+    return Limits(min(lim.rpm or PACE_RPM, PACE_RPM), lim.rpd, min(lim.tpm or PACE_TPM, PACE_TPM), lim.per_input)       # per_input kept: the provider counter must count inputs too
 
 
 def apply_pacing(env: MutableMapping[str, str], model: str) -> Limits:
     """Writes the override that the provider factory reads (so it must run BEFORE the provider is built); returns the effective limits."""
     lim = pace_limits(env, model)
     spec = (env.get("AI_MODEL_LIMITS") or "").strip()
-    env["AI_MODEL_LIMITS"] = ",".join(x for x in ("" if spec.lower() == "off" else spec, f"{model}={lim.rpm}/{lim.rpd or '-'}/{lim.tpm}") if x)
+    env["AI_MODEL_LIMITS"] = ",".join(x for x in ("" if spec.lower() == "off" else spec, f"{model}={lim.rpm}/{lim.rpd or '-'}/{lim.tpm}" + ("/input" if lim.per_input else "")) if x)
     env["AI_BUDGET_MAX_WAIT_S"] = MAX_WAIT_S
     return lim
 

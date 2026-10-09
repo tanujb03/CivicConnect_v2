@@ -95,13 +95,19 @@ def test_unknown_token_and_already_revoked_device_change_nothing(staffed, passwo
 
 
 @pytest.mark.parametrize("bad", ["not-a-token", "ExponentPushToken[]", "ExpoPushToken", "x" * 300, "", "ExponentPushToken[" + "a" * 260 + "]"])
-def test_invalid_token_format_is_a_422_and_revokes_nothing(staffed, password, bad):
+def test_a_malformed_token_never_blocks_logout_it_just_revokes_nothing(staffed, password, bad):
     e = staffed
     s = login(e, "alice", password)
     register_device(e, "alice", TOKEN)
     r = e.client.post(LOGOUT, json={"refresh_token": s["refresh_token"], "expo_push_token": bad})
-    assert r.status_code == 422 and r.json()["error"]["code"] == "VALIDATION_ERROR"
-    assert device(e, TOKEN)[1] is None and refresh_works(e, s)                           # nothing happened: the refresh token still works
+    assert r.status_code == 200 and r.json() == {"status": "ok"}
+    assert device(e, TOKEN)[1] is None and not refresh_works(e, s)                       # the session ended, the unrelated registered device is untouched
+
+
+def test_an_absurdly_long_token_value_is_still_refused(staffed, password):
+    s = login(staffed, "alice", password)
+    r = staffed.client.post(LOGOUT, json={"refresh_token": s["refresh_token"], "expo_push_token": "x" * 5000})
+    assert r.status_code == 422                                                            # a size cap only: nothing in the request is stored
 
 
 def test_without_a_token_logout_is_unchanged_and_both_token_formats_are_accepted(staffed, password):

@@ -43,7 +43,7 @@ class RefreshIn(BaseModel):
 class LogoutIn(RefreshIn):
     """Additive: ``expo_push_token`` (same format as ``DeviceTokenIn``) also revokes that device of the refresh token's owner, so a shared phone stops getting their pushes."""
 
-    expo_push_token: Optional[str] = Field(default=None, min_length=10, max_length=255, pattern=r"^(Exponent|Expo)PushToken\[.+\]$")
+    expo_push_token: Optional[str] = Field(default=None, max_length=2000)       # deliberately lenient: ending the session must never fail because of optional device cleanup; a value that is not a known device revokes nothing
 
 
 class ChangePasswordIn(BaseModel):

@@ -398,7 +398,7 @@ def test_pacing_and_a_single_attempt_are_in_place_before_the_gateway_is_built(en
 
     e = {"AI_EMBEDDING_MODEL": "gemini-embedding-001", "AI_MAX_RETRIES": "2"}
     code, _ = bf.execute(bf.Options(), gateway_factory=factory, environ=e, used_today=lambda *_: (0, "t", "gemini"), out=lambda s: None)
-    assert code == 0 and seen == {"limits": "gemini-embedding-001=80/1000/25000", "wait": "65", "retries": "0"}
+    assert code == 0 and seen == {"limits": "gemini-embedding-001=80/1000/25000/input", "wait": "65", "retries": "0"}
 
 
 def test_the_input_pacer_keeps_a_minute_window():
@@ -680,3 +680,10 @@ def test_seed_demo_with_embeddings_only_prints_the_plan_and_the_commands(env, mo
     assert rows(env, CaseEmbedding) == [] and rows(env, AIAnalysis) == []
     with pytest.raises(SystemExit):
         seed_demo.main(["--with-embeddings", "--reference-only"])
+
+
+def test_the_pacing_override_keeps_the_per_input_flag_so_the_provider_counter_counts_inputs():
+    env = {"AI_EMBEDDING_MODEL": "gemini-embedding-001"}
+    lim = bf.apply_pacing(env, "gemini-embedding-001")
+    assert lim.per_input is True and lim.rpm == 80 and lim.tpm == 25000
+    assert env["AI_MODEL_LIMITS"].endswith("gemini-embedding-001=80/1000/25000/input")
