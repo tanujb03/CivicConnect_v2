@@ -286,9 +286,9 @@ At the start of every wave and after every work package: read `docs/FRONTEND_REQ
 | 4 | Community flags | DONE (tests green) | de33b0f | backend-reviewer: no blocker, 3 majors fixed (UPHELD keeps the case hidden, `map_hidden` for staff, flag fields on every staff view) + minors; PostgreSQL-specific SQL (grouped counts) ran in the full PG suite |
 | 5 | Expo push | DONE (tests green) | f3bfa52 | backend-reviewer: no blocker, 4 majors fixed (no attempts burned on outages/config errors, 400 bisect, per-batch commit + SKIP LOCKED, device cap); never run against real Expo; at-least-once delivery; logout `device_id` not built (apps revoke the device first) |
 | 6 | Upload malware scan | DONE (tests green) | 6f83237 | backend-reviewer: 1 blocker (signed PUT could swap a CLEAN file) + 6 majors fixed; my own read of the gate code found nothing more; clamd never run for real (EICAR test skipped), S3 presigned windows documented |
-| 7 | Embeddings and duplicate search | TODO | | dev DB has 560 cases, 0 embeddings |
-| 8 | OpenTelemetry | TODO | | |
-| 9 | Generated API client | TODO | | |
+| 7 | Embeddings and duplicate search | DONE (tests green) | 447cbf5, c643f06, 50c1066 | full backfill run 2026-10-08: 560 of 560 cases embedded (768 dims, norm 1.0, pgvector filled; 550 via the provider in 11 calls, 612.8 s, 0 failures); AI Studio expected about 578 of 1000 (per-input counting; the script's own counter said 39 because of an override bug, fixed, Redis set to 578); calibration on 27 synthetic positives (no real-world claim, policy file unchanged: owner decides); HNSW partial index usable per EXPLAIN; details in docs/AI_LIVE_CHECK.md and docs/DUPLICATE_CALIBRATION.md |
+| 8 | OpenTelemetry | DONE except the real Jaeger run (tests green) | 6deef82 | native FastAPI spans + SQLAlchemy + Redis-envelope trace context, off by default; reviewed; the end-to-end trace in Jaeger (compose `obs` profile) is NOT yet verified |
+| 9 | Generated API client | DONE (tests green) | 426ca53 | packages/api-client (openapi-typescript 7.13.0 + openapi-fetch 0.17.0): typecheck, build, 10 node tests, 3 Python staleness tests; not tried inside a real Expo build or the Vite apps; not security-sensitive, no reviewer run. Full suite 1609 passed, 5 skipped, 0 failed (PostgreSQL + Redis) |
 | 10 | Frontend requests | ONGOING | | |
 | 11 | Deployment and smoke | TODO | | |
 | 12 | Documentation | TODO | | |
