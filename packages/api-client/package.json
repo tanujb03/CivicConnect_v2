@@ -1,0 +1,23 @@
+{
+  "name": "@civicconnect/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed client for the CivicConnect v2 API (generated types from backend/openapi.json + a thin fetch wrapper). Works in the browser and in React Native.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": ["src", "dist"],
+  "scripts": {
+    "gen": "node scripts/gen.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npm run build && node --test test/client.test.mjs"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

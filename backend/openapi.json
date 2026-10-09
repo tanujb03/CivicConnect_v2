@@ -7406,9 +7406,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 255,
-                "minLength": 10,
-                "pattern": "^(Exponent|Expo)PushToken\\[.+\\]$"
+                "maxLength": 2000
               },
               {
                 "type": "null"
