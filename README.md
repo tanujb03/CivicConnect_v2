@@ -654,11 +654,12 @@ Full specification: [`docs/CivicConnect_v2_V1_System_Design.md`](docs/CivicConne
 ---
 ## Roadmap
 
-- Expo push notifications for case updates
-- Automatic malware scanning of uploaded evidence
-- Tamil and further Indian languages
-- Distributed tracing and metrics dashboards
-- Generated typed API client shared by all four apps
+Built since this list was written (details in `docs/V1_CHANGE_LOG.md`): Expo push notifications (at-least-once; remote push needs a development build, not Expo Go, and has not been run against real Expo), malware scanning of uploads with ClamAV (verified against a live clamd), distributed tracing with OpenTelemetry and Jaeger (off by default), and a generated typed API client in `packages/api-client` (the apps have not adopted it yet).
+
+Still open:
+
+- Tamil and further Indian languages (the backend knows `en`, `hi`, `mr`; new notification wording needs a native reviewer)
+- Metrics dashboards (traces exist; no metrics pipeline)
 - Community review of Hindi and Marathi wording
 
 **Scale-up extension points** (the `EvidenceItem` abstraction is client-independent): smartwatch quick-signal (GPS, voice, timestamp) · municipal sensors (sensor, evidence, case correlation) · dashcams (repeated road observations) · inspection teams (field-generated cases) · API ingestion from existing municipal systems · future IoT adapters.
