@@ -703,3 +703,8 @@ The interface is tactile and loud on purpose, because it should feel like it was
 - **Numbers are real.** Figures on screen come from the API, never from copy; demo data carries a **SYNTHETIC DEMO DATA** label.
 - **A person can always act.** Every AI suggestion can be accepted, edited or rejected, and the reason is recorded.
 
+| Source code | https://github.com/tanujb03/CivicConnect_v2 |
+| Admin web app | https://civic-connect-v2.vercel.app/login |
+| Overlooker web app | https://civic-connect-v2-at7q.vercel.app/login |
+| Citizen app (Android APK, direct install) | `application-9e70af3e-d36c-4933-a41d-b5fc8eedcd5b.apk` |
+| Field Worker app (Android APK, direct install) | `application-6125a266-8016-4404-b32a-9a427e9f87cb.apk` |
